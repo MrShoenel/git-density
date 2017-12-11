@@ -62,7 +62,6 @@
     <Compile Include="Util\ColoredConsole.cs" />
     <Compile Include="Util\CommitPair.cs" />
     <Compile Include="Util\Configuration.cs" />
-    <Compile Include="Util\IRepoDensityStrategy.cs" />
     <Compile Include="Util\RepositoryExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -70,6 +69,7 @@
     <None Include="configuration.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="GitDensity.licenseheader" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
