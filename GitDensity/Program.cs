@@ -1,4 +1,31 @@
-﻿using CommandLine;
+﻿/// ---------------------------------------------------------------------------------
+///
+/// Copyright (c) 2017 Sebastian Hönel [sebastian.honel@lnu.se]
+///
+/// https://github.com/MrShoenel/git-density
+///
+/// This file is part of the project GitDensity. All files in this project,
+/// if not noted otherwise, are licensed under the MIT-license.
+///
+/// ---------------------------------------------------------------------------------
+/// Permission is hereby granted, free of charge, to any person obtaining a
+/// copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation
+/// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software, and to permit persons to whom the
+/// Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in all
+/// copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+/// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+/// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+/// ---------------------------------------------------------------------------------
+using CommandLine;
 using CommandLine.Text;
 using GitDensity.Util;
 using LibGit2Sharp;
@@ -9,6 +36,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static GitDensity.Util.RepositoryExtensions;
 using CC = GitDensity.Util.ColoredConsole;
 
 namespace GitDensity
@@ -34,17 +62,36 @@ namespace GitDensity
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
-			var repo = new LibGit2Sharp.Repository(@"C:\repos\__dummies\merge-test");
+			var repo = new LibGit2Sharp.Repository(@"C:\repos\__dummies\merge-test-octo");
 			using (repo)
 			{
-				var allCommits = repo.Commits.ToArray();
-				for (var i = 0; i < allCommits.Length - 1; i++)
+				foreach (var pair in repo.CommitPairs(skipInitialCommit: false, skipMergeCommits: true, sortOrder: SortOrder.LatestFirst))
 				{
-					CC.YellowLine("Compare parent {0} with child {1}", allCommits[i].Id, allCommits[i + 1].Id);
+					CC.YellowLine("Child {0} with Parent {1}", pair.Child.Sha, pair.Parent?.Sha);
 					CC.SetInitialColors();
-					var patch = repo.Diff.Compare<Patch>(allCommits[i + 1].Tree, allCommits[i].Tree);
-					Console.WriteLine(patch);
+					CC.CyanLine((pair.Child.Tree.First().Target as Blob).GetContentText());
+					CC.MagentaLine((pair.Parent?.Tree.First().Target as Blob)?.GetContentText());
+					CC.SetInitialColors();
+					//Console.Error.Write(pair.Patch);
+					var tc = pair.TreeChanges;
+					Console.Error.Write(tc);
+					//(pair.Child[""].Target as Blob).GetContentText()
+					//Console.WriteLine(pair.Patch);
 				}
+
+
+
+				//var allCommits = repo.Commits.ToArray();
+				//for (var i = 0; i < allCommits.Length - 1; i++)
+				//{
+				//	CC.YellowLine("Compare parent {0} with child {1}", allCommits[i].Id, allCommits[i + 1].Id);
+				//	CC.SetInitialColors();
+				//	var patch = repo.Diff.Compare<Patch>(allCommits[i + 1].Tree, allCommits[i].Tree);
+				//	Console.WriteLine(patch);
+				//}
+
+
+
 
 
 				//var fo2o = repo.Commits.Skip(3).First().Parents.ToList();

@@ -56,10 +56,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Density\IDensityMeasure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util\ColoredConsole.cs" />
+    <Compile Include="Util\CommitPair.cs" />
     <Compile Include="Util\Configuration.cs" />
+    <Compile Include="Util\IRepoDensityStrategy.cs" />
+    <Compile Include="Util\RepositoryExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
