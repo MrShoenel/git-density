@@ -85,6 +85,7 @@
   <ItemGroup>
     <Compile Include="Data\DataFactory.cs" />
     <Compile Include="Data\EntitiesMappings\CommitPairMap.cs" />
+    <Compile Include="Data\Entities\Developer.cs" />
     <Compile Include="Density\IDensityMeasure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -98,9 +99,7 @@
     <None Include="GitDensity.licenseheader" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Data\Entities\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
