@@ -28,6 +28,16 @@ namespace GitDensity.Density
 		/// </summary>
 		public Commit Parent { get { return this.pair.Item2; } }
 
+		/// <summary>
+		/// Returns a string that uniquely identifies this pair. The string
+		/// is guaranteed not to be longer than 32 characters and contains
+		/// sub-strings of the parent- and child-commit's SHA1-IDs.
+		/// </summary>
+		public String Id
+		{
+			get => $"{this.Parent.Sha.Substring(0, 15)}_{Child.Sha.Substring(0, 15)}";
+		}
+
 		private Lazy<Patch> lazyPatch;
 
 		/// <summary>
@@ -64,6 +74,24 @@ namespace GitDensity.Density
 			{
 				return diff.Compare<TreeChanges>(this.Parent?.Tree, this.Child.Tree);
 			});
+		}
+
+		/// <summary>
+		/// Retrieves a <see cref="CommitPair"/> by ID, where the ID has been
+		/// obtained from <see cref="CommitPair.Id"/> (and follows its format).
+		/// </summary>
+		/// <param name="commitPairId"></param>
+		/// <param name="repository"></param>
+		/// <returns></returns>
+		public static CommitPair FromId(String commitPairId, Repository repository)
+		{
+			var parentId = commitPairId.Split('_')[0];
+			var childId = commitPairId.Split('_')[1];
+
+			var parentCommit = repository.Commits.Where(c => c.Sha.StartsWith(parentId)).Single();
+			var childCommit = repository.Commits.Where(c => c.Sha.StartsWith(childId)).Single();
+
+			return new CommitPair(repository.Diff, childCommit, parentCommit);
 		}
 
 		#region Equals
