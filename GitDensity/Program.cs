@@ -64,6 +64,7 @@ namespace GitDensity
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Density.CloneDensity.ClonesXml.Test();
 			//using (var repo = new Repository(@"C:\repos\__dummies\merge-test-octo"))
 			//{
 			//	var commit = repo.Commits.First();

@@ -86,6 +86,7 @@
     <Compile Include="Data\DataFactory.cs" />
     <Compile Include="Data\EntitiesMappings\CommitPairMap.cs" />
     <Compile Include="Data\Entities\Developer.cs" />
+    <Compile Include="Density\CloneDensity\ClonesXml.cs" />
     <Compile Include="Density\IDensityMeasure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
