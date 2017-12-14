@@ -1,4 +1,5 @@
-﻿using LibGit2Sharp;
+﻿using GitDensity.Density;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
