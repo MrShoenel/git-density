@@ -1,6 +1,7 @@
 ﻿using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,7 +13,8 @@ namespace GitDensity.Density
 	/// </summary>
 	/// <remarks>If disposed and the <see cref="Patch"/> has been
 	/// accessed, will dispose the <see cref="Patch"/>.</remarks>
-	public sealed class CommitPair : IDisposable, IEquatable<CommitPair>
+	[DebuggerDisplay("CommitPair of {Parent}  and  {Child}")]
+	public class CommitPair : IDisposable, IEquatable<CommitPair>
 	{
 		private Tuple<Commit, Commit> pair;
 

@@ -64,13 +64,16 @@ namespace GitDensity
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
-			Density.CloneDensity.ClonesXml.Test();
-			//using (var repo = new Repository(@"C:\repos\__dummies\merge-test-octo"))
+			//using (var repo = new Repository(@"C:\repos\__dummies\merge-test"))
 			//{
-			//	var commit = repo.Commits.First();
-			//}
+			//	var pair = repo.CommitPairs().Skip(1).First();
+			//	var patch = pair.Patch;
+			//	var treec = pair.TreeChanges;
 
-			CC.TransparentLine();
+			//	Console.WriteLine(patch);
+			//	Console.WriteLine(treec);
+			//}
+			
 			var configFilePath = Path.Combine(WorkingDirOfExecutable, Util.Configuration.DefaultFileName);
 			var options = new CommandLineOptions();
 
@@ -98,9 +101,12 @@ namespace GitDensity
 				{
 					Program.Configuration = JsonConvert.DeserializeObject<Util.Configuration>(
 						File.ReadAllText(configFilePath));
+
 					CC.YellowLine("Successfully read the configuration.");
 
 					DataFactory.Configure(Program.Configuration);
+					using (var tempSess = DataFactory.Instance.OpenSession()) { }
+					CC.YellowLine("Successfully probed the configured database.");
 				}
 				catch
 				{

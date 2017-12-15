@@ -42,7 +42,9 @@ namespace GitDensity.Data.EntitiesMappings
 	{
 		public CommitPairMap()
 		{
-			this.Id(x => x.Id);
+			this.Id(x => x.Id).Length(32);
+			this.Map(cp => cp.Child.Sha).Column("sha_child").Length(40).Index("idx_sha_child");
+			this.Map(cp => cp.Parent.Sha).Column("sha_parent").Length(40).Index("idx_sha_parent");
 		}
 	}
 }
