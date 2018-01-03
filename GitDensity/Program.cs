@@ -34,9 +34,11 @@ using LibGit2Sharp;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static GitDensity.Util.RepositoryExtensions;
 using CC = GitDensity.Util.ColoredConsole;
@@ -64,16 +66,24 @@ namespace GitDensity
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
-			//using (var repo = new Repository(@"C:\repos\__dummies\merge-test"))
-			//{
-			//	var pair = repo.CommitPairs().Skip(1).First();
-			//	var patch = pair.Patch;
-			//	var treec = pair.TreeChanges;
+			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
-			//	Console.WriteLine(patch);
-			//	Console.WriteLine(treec);
-			//}
-			
+			using (var repo = new Repository(@"C:\repos\__dummies\merge-test-octo"))
+			{
+				var rStatus = repo.RetrieveStatus();
+				var foo = rStatus.ToList();
+				var cmp = repo.Diff.Compare<TreeChanges>(new String[] { "./" });
+
+				var pair = repo.CommitPairs().Skip(1).First();
+				var patch = pair.Patch;
+				var treec = pair.TreeChanges;
+
+				var m = treec.Modified.First();
+
+				Console.WriteLine(patch);
+				Console.WriteLine(treec);
+			}
+
 			var configFilePath = Path.Combine(WorkingDirOfExecutable, Util.Configuration.DefaultFileName);
 			var options = new CommandLineOptions();
 

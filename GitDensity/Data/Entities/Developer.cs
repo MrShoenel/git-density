@@ -39,8 +39,8 @@ namespace GitDensity.Data.Entities
 {
 	/// <summary>
 	/// Represents a single developer. Note that git distinguishes between author
-	/// and committer and has no such notion of a developer. However, in git density,
-	/// we assume that author and committer are the same person.
+	/// and committer and has no such notion of a developer. However, in git-density,
+	/// we assume that author and committer represent the same person.
 	/// </summary>
 	public class Developer : IEquatable<Developer>, IEqualityComparer<Developer>
 	{
@@ -66,22 +66,17 @@ namespace GitDensity.Data.Entities
 		public bool Equals(Developer other)
 		{
 			return other is Developer &&
-				(this.Name.ToLower() == other.Name.ToLowerInvariant() || this.Email == other.Email);
-		}
-
-		public static ISet<Developer> DevelopersOfRepository(Repository repo)
-		{
-			throw new NotImplementedException();
+				(this.Name == other.Name || this.Email == other.Email);
 		}
 
 		public bool Equals(Developer x, Developer y)
 		{
-			throw new NotImplementedException();
+			return x is Developer && x.Equals(y);
 		}
 
 		public int GetHashCode(Developer obj)
 		{
-			throw new NotImplementedException();
+			return this.Name.GetHashCode() ^ this.Email.GetHashCode();
 		}
 	}
 }
