@@ -1,6 +1,5 @@
 ﻿using GitDensity.Density;
 using LibGit2Sharp;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -50,7 +49,7 @@ namespace GitDensity.Util
 
 
 				// Note that the parent can be null, if initial commit is not skipped.
-				yield return new CommitPair(repo.Diff, commit, commit.Parents.FirstOrDefault());
+				yield return new CommitPair(repo, commit, commit.Parents.FirstOrDefault());
 			}
 		}
 	}

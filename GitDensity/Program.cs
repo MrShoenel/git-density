@@ -68,15 +68,18 @@ namespace GitDensity
 		{
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
-			using (var repo = new Repository(@"C:\repos\__dummies\merge-test-octo"))
+			using (var repo = new Repository(@"C:\repos\mrsh_scream-dummy"))
 			{
 				var rStatus = repo.RetrieveStatus();
 				var foo = rStatus.ToList();
 				var cmp = repo.Diff.Compare<TreeChanges>(new String[] { "./" });
 
-				var pair = repo.CommitPairs().Skip(1).First();
-				var patch = pair.Patch;
+				var pair = repo.CommitPairs().Skip(7).First();
+				var patch = pair.Patch.Reverse().First();
 				var treec = pair.TreeChanges;
+
+				var hList = Density.Hunk.HunksForPatch(pair.Patch.Reverse().First()).ToList();
+				var h = new Density.Hunk(patch.Patch);
 
 				var m = treec.Modified.First();
 

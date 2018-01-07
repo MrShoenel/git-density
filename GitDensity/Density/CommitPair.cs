@@ -18,6 +18,8 @@ namespace GitDensity.Density
 	{
 		private Tuple<Commit, Commit> pair;
 
+		public Repository Repository { get; protected set; }
+
 		/// <summary>
 		/// The child-commit represents the next commit on the same branch
 		/// that springs off its parent (i.e. it is younger/newer).
@@ -60,21 +62,22 @@ namespace GitDensity.Density
 		/// <summary>
 		/// C'tor; initializes the pair and its patch.
 		/// </summary>
-		/// <param name="diff"></param>
+		/// <param name="repo"></param>
 		/// <param name="child"></param>
 		/// <param name="parent"></param>
-		internal CommitPair(Diff diff, Commit child, Commit parent = null)
+		internal CommitPair(Repository repo, Commit child, Commit parent = null)
 		{
+			this.Repository = repo;
 			this.pair = Tuple.Create(child, parent);
 
 			this.lazyPatch = new Lazy<Patch>(() =>
 			{
-				return diff.Compare<Patch>(this.Parent?.Tree, this.Child.Tree);
+				return this.Repository.Diff.Compare<Patch>(this.Parent?.Tree, this.Child.Tree);
 			});
 
 			this.lazyTree = new Lazy<TreeChanges>(() =>
 			{
-				return diff.Compare<TreeChanges>(this.Parent?.Tree, this.Child.Tree);
+				return this.Repository.Diff.Compare<TreeChanges>(this.Parent?.Tree, this.Child.Tree);
 			});
 		}
 
@@ -93,7 +96,7 @@ namespace GitDensity.Density
 			var parentCommit = repository.Commits.Where(c => c.Sha.StartsWith(parentId)).Single();
 			var childCommit = repository.Commits.Where(c => c.Sha.StartsWith(childId)).Single();
 
-			return new CommitPair(repository.Diff, childCommit, parentCommit);
+			return new CommitPair(repository, childCommit, parentCommit);
 		}
 
 		#region Equals

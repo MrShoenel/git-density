@@ -145,13 +145,18 @@
     <Compile Include="Data\EntitiesMappings\CommitPairMap.cs" />
     <Compile Include="Data\Entities\Developer.cs" />
     <Compile Include="Density\CloneDensity\ClonesXml.cs" />
+    <Compile Include="Density\GitDensity.cs" />
+    <Compile Include="Density\GitDensityAnalysisResult.cs" />
+    <Compile Include="Density\Hunk.cs" />
     <Compile Include="Density\IDensityMeasure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Util\ColoredConsole.cs" />
     <Compile Include="Density\CommitPair.cs" />
     <Compile Include="Util\Configuration.cs" />
+    <Compile Include="Util\IEnumerableExtensions.cs" />
     <Compile Include="Util\RepositoryExtensions.cs" />
+    <Compile Include="Util\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
