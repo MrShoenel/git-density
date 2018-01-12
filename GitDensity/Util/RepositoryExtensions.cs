@@ -1,7 +1,10 @@
 ﻿using GitDensity.Density;
 using LibGit2Sharp;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace GitDensity.Util
 {
@@ -50,6 +53,28 @@ namespace GitDensity.Util
 
 				// Note that the parent can be null, if initial commit is not skipped.
 				yield return new CommitPair(repo, commit, commit.Parents.FirstOrDefault());
+			}
+		}
+
+		/// <summary>
+		/// Writes a <see cref="TreeEntry"/> with its relative path into the target
+		/// directory. Recursively creates all required directories.
+		/// </summary>
+		/// <param name="treeEntry"></param>
+		/// <param name="targetDirectory"></param>
+		/// <returns>An awaitable <see cref="Task"/></returns>
+		public static async Task WriteOutTreeEntry(this TreeEntry treeEntry, DirectoryInfo targetDirectory)
+		{
+			var contentStream = (treeEntry.Target as Blob).GetContentStream();
+			var targetPath = Path.Combine(targetDirectory.FullName, treeEntry.Path);
+			var targetDir = new DirectoryInfo(
+				Path.Combine(targetDirectory.FullName, Path.GetDirectoryName(treeEntry.Path)));
+
+			if (!targetDir.Exists) { targetDir.Create(); }
+
+			using (var fs = new FileStream(targetPath, FileMode.Create))
+			{
+				await contentStream.CopyToAsync(fs);
 			}
 		}
 	}
