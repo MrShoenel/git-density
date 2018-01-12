@@ -1,9 +1,10 @@
-﻿using LibGit2Sharp;
+﻿using GitDensity.Util;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace GitDensity.Density
@@ -98,6 +99,65 @@ namespace GitDensity.Density
 
 			return new CommitPair(repository, childCommit, parentCommit);
 		}
+
+		#region CommitPair specific methods
+		/// <summary>
+		/// Writes out all changes of a <see cref="Tree"/>. A change is obtained as a result
+		/// from comparing two <see cref="Commit"/>s (or a <see cref="CommitPair"/>). Writes
+		/// out all files with their relative  path into the target directory that existed in
+		/// the old/previous commit and the new/current commit.
+		/// </summary>
+		/// <param name="changes">List of changes (differences) between two files.</param>
+		/// <param name="targetDirectory">Relative root-directory to write files to.</param>
+		/// <param name="wipeTargetDirectoryBefore">True, if the target directory should be
+		/// cleared first.</param>
+		/// <param name="parentDirectoryName">Name of directory in target-directory to write
+		/// files of old/previous commit to.</param>
+		/// <param name="childDirectoryName">Name of directory in target-directory to write
+		/// files of new/current commit to.</param>
+		public void WriteOutTree(IEnumerable<TreeEntryChanges> changes, DirectoryInfo targetDirectory, Boolean wipeTargetDirectoryBefore = true, String parentDirectoryName = "old", String childDirectoryName = "new")
+		{
+			if (!targetDirectory.Exists)
+			{
+				targetDirectory.Create();
+			}
+
+			if (wipeTargetDirectoryBefore && targetDirectory.Exists)
+			{
+				Directory.Delete(targetDirectory.FullName, true);
+				targetDirectory.Create();
+			}
+
+			var diOld = new DirectoryInfo(Path.Combine(targetDirectory.FullName, parentDirectoryName));
+			if (!diOld.Exists) { diOld.Create(); }
+			var diNew = new DirectoryInfo(Path.Combine(targetDirectory.FullName, childDirectoryName));
+			if (!diNew.Exists) { diNew.Create(); }
+
+			Parallel.ForEach(changes, async change =>
+			{
+				// We can only write out changes where an old an a new version exists.
+				// That means that adds and deletes cannot be written out.
+
+				// Get old and new TreeEntry first
+				var oldTreeEntry = this.Parent[change.OldPath];
+				var newTreeEntry = this.Child[change.Path];
+
+				if (!(oldTreeEntry is TreeEntry) || !(newTreeEntry is TreeEntry))
+				{
+					return;
+				}
+
+
+				if (oldTreeEntry.TargetType == TreeEntryTargetType.Blob
+					&& newTreeEntry.TargetType == TreeEntryTargetType.Blob)
+				{
+					await Task.WhenAll(
+						oldTreeEntry.WriteOutTreeEntry(diOld),
+						newTreeEntry.WriteOutTreeEntry(diNew));
+				}
+			});
+		}
+		#endregion
 
 		#region Equals
 		public bool Equals(CommitPair other)
