@@ -1,9 +1,40 @@
-﻿using System;
+﻿/// ---------------------------------------------------------------------------------
+///
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+///
+/// https://github.com/MrShoenel/git-density
+///
+/// This file is part of the project GitDensity. All files in this project,
+/// if not noted otherwise, are licensed under the MIT-license.
+///
+/// ---------------------------------------------------------------------------------
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a
+/// copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation
+/// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software, and to permit persons to whom the
+/// Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in all
+/// copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+/// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+/// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
+/// ---------------------------------------------------------------------------------
+///
+using System;
 using System.IO;
 using System.Threading;
 
 namespace GitDensity.Util
 {
+
 	/// <summary>
 	/// A class for writing colored messages to the Console conveniently. It is
 	/// recommended to use this class with an alias, e.g. 'using CC = ColoredConsole;'.
@@ -11,6 +42,28 @@ namespace GitDensity.Util
 	/// <remarks>@Copyright Sebastian Hönel [sebastian.honel@lnu.se]</remarks>
 	public static class ColoredConsole
 	{
+		/// <summary>
+		/// Used to convey color information that will be restored upon disposal.
+		/// </summary>
+		protected struct ColorScope : IDisposable
+		{
+			public ConsoleColor Background { get; private set; }
+
+			public ConsoleColor Foreground { get; private set; }
+
+			public ColorScope(ConsoleColor background, ConsoleColor foreground)
+			{
+				this.Background = background;
+				this.Foreground = foreground;
+			}
+
+			public void Dispose()
+			{
+				ColoredConsole.BackgroundColor = this.Background;
+				ColoredConsole.ForegroundColor = this.Foreground;
+			}
+		}
+
 		private static readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
 		public static string Title
@@ -23,6 +76,12 @@ namespace GitDensity.Util
 		{
 			get { return Console.BackgroundColor; }
 			set { Console.BackgroundColor = value; }
+		}
+
+		public static ConsoleColor ForegroundColor
+		{
+			get { return Console.ForegroundColor; }
+			set { Console.ForegroundColor = value; }
 		}
 
 		public static readonly ConsoleColor InitialBackgroundColor = Console.BackgroundColor;
@@ -41,6 +100,36 @@ namespace GitDensity.Util
 		{
 			Title = Path.GetFileNameWithoutExtension(AppDomain.CurrentDomain.FriendlyName);
 		}
+
+		#region Color-Scope
+		/// <summary>
+		/// Can be used within a using-block that will restore the previous colors
+		/// after disposal.
+		/// </summary>
+		/// <returns></returns>
+		public static IDisposable WithColorScope()
+		{
+			semaphore.Wait();
+			var cc = new ColorScope(Console.BackgroundColor, Console.ForegroundColor);
+			semaphore.Release();
+			return cc;
+		}
+
+		/// <summary>
+		/// Can be used within a using-block that will set the given colors again
+		/// when disposed.
+		/// </summary>
+		/// <param name="background"></param>
+		/// <param name="foreground"></param>
+		/// <returns></returns>
+		public static IDisposable WithColorScope(ConsoleColor background, ConsoleColor foreground)
+		{
+			semaphore.Wait();
+			var cc = new ColorScope(background, foreground);
+			semaphore.Release();
+			return cc;
+		}
+		#endregion
 
 
 		#region Console-control
@@ -137,6 +226,40 @@ namespace GitDensity.Util
 		{
 			semaphore.Wait();
 			C(ConsoleColor.White);
+			Line(format, vals);
+			semaphore.Release();
+		}
+		#endregion
+
+		#region Gray
+		public static void GrayLine()
+		{
+			semaphore.Wait();
+			C(ConsoleColor.Gray);
+			Console.WriteLine();
+			semaphore.Release();
+		}
+
+		public static void GrayLine<T>(T val) where T : struct
+		{
+			semaphore.Wait();
+			C(ConsoleColor.Gray);
+			Line(val);
+			semaphore.Release();
+		}
+
+		public static void GrayLine(object val)
+		{
+			semaphore.Wait();
+			C(ConsoleColor.Gray);
+			Line(val);
+			semaphore.Release();
+		}
+
+		public static void GrayLine(string format, params object[] vals)
+		{
+			semaphore.Wait();
+			C(ConsoleColor.Gray);
 			Line(format, vals);
 			semaphore.Release();
 		}
