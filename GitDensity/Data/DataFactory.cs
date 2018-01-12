@@ -25,9 +25,15 @@
 /// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 /// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /// ---------------------------------------------------------------------------------
+using FluentNHibernate.Automapping;
 using FluentNHibernate.Cfg.Db;
+using GitDensity.Data.Entities;
+using GitDensity.Util;
+using Microsoft.Extensions.Logging;
 using NHibernate;
 using System;
+using System.IO;
+using System.Linq;
 
 namespace GitDensity.Data
 {
@@ -60,6 +66,8 @@ namespace GitDensity.Data
 	/// </summary>
 	public class DataFactory
 	{
+		private static BaseLogger<DataFactory> logger = Program.CreateLogger<DataFactory>();
+
 		/// <summary>
 		/// The static instance to the factory.
 		/// </summary>
@@ -87,20 +95,32 @@ namespace GitDensity.Data
 		/// requires that this method has been called before.
 		/// </summary>
 		/// <param name="configuration"></param>
-		internal static void Configure(Util.Configuration configuration)
+		internal static void Configure(Util.Configuration configuration, String tempDirectory = null)
 		{
 			lazySessionFactory = new Lazy<ISessionFactory>(() =>
 			{
 				var factory = FluentNHibernate.Cfg.Fluently.Configure()
-					.Database(DatabaseTypeWithConnectionStringToConfigurer(configuration))
+					.Database(DatabaseTypeWithConnectionStringToConfigurer(configuration, tempDirectory))
 					.ExposeConfiguration(config =>
 					{
+						config.SetInterceptor(new SqlStatementInterceptor());
+
 						var update = new NHibernate.Tool.hbm2ddl.SchemaUpdate(config);
-						update.Execute(false, true);
+						update.Execute(script: false, doUpdate: true);
+						if (update.Exceptions.Count > 0)
+						{
+							foreach (var ex in update.Exceptions)
+							{
+								logger.LogError(ex, $"{ex.Message}\nStacktrace:\n{ex.StackTrace}");
+							}
+							throw new InvalidOperationException("Cannot create/update the DB schema.");
+						}
 					})
 					.Mappings(mappings =>
 					{
-						mappings.FluentMappings.AddFromAssemblyOf<DataFactory>();
+						mappings.FluentMappings
+						.AddFromAssemblyOf<DataFactory>()
+						.Conventions.Add(typeof(IndexedConvention));
 					})
 					.BuildSessionFactory();
 
@@ -109,16 +129,30 @@ namespace GitDensity.Data
 		}
 
 		/// <summary>
+		/// Used to log queries issued by <see cref="NHibernate"/> when the application's
+		/// log-level is set to <see cref="Microsoft.Extensions.Logging.LogLevel.Trace"/>.
+		/// </summary>
+		internal class SqlStatementInterceptor : EmptyInterceptor
+		{
+			public override NHibernate.SqlCommand.SqlString OnPrepareStatement(NHibernate.SqlCommand.SqlString sql)
+			{
+				logger.LogTrace(sql.ToString());
+				return sql;
+			}
+		}
+
+		/// <summary>
 		/// Returns the correct type of <see cref="IPersistenceConfigurer"/> for the selected
 		/// database-type.
 		/// </summary>
 		/// <param name="configuration"></param>
 		/// <returns></returns>
-		private static IPersistenceConfigurer DatabaseTypeWithConnectionStringToConfigurer(Util.Configuration configuration)
+		private static IPersistenceConfigurer DatabaseTypeWithConnectionStringToConfigurer(Util.Configuration configuration, String tempDirectory = null)
 		{
 			if (configuration.DatabaseType == DatabaseType.SQLiteTemp)
 			{
-				return SQLiteConfiguration.Standard.UsingFile(System.IO.Path.GetTempFileName());
+				return SQLiteConfiguration.Standard.UsingFile(
+					$"{Path.Combine(tempDirectory ?? Path.GetTempPath(), Path.GetRandomFileName())}.sqlite");
 			}
 
 			var connString = configuration.DatabaseConnectionString;
