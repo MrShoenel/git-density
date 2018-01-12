@@ -3,14 +3,68 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace GitDensity.Util
 {
+	/// <summary>
+	/// An enumeration of programming languages we currently support and have
+	/// also mapping for in <see cref="Configuration.LanguagesAndFileExtensions"/>.
+	/// The clone detection we used also supports the not yet implemented languages
+	/// Cpp, Scala, TypeScript, VB, XML, Pascal, Cobol, ASP, Ruby, Text, JavaScript,
+	/// ADA, Python, ST and SQL.
+	/// </summary>
+	public enum ProgrammingLanguage
+	{
+		/// <summary>
+		/// C
+		/// </summary>
+		C,
+
+		/// <summary>
+		/// C#
+		/// </summary>
+		CS,
+
+		/// <summary>
+		/// Java
+		/// </summary>
+		Java,
+
+		/// <summary>
+		/// PHP
+		/// </summary>
+		PHP
+	}
+
 	public class Configuration
 	{
+		/// <summary>
+		/// A Dictionary that holds for each <see cref="ProgrammingLanguage"/>
+		/// a collection of accepted filename extensions. This is important so that only
+		/// relevant files are diff'ed or compared later.
+		/// </summary>
+		public static readonly IReadOnlyDictionary<ProgrammingLanguage, IReadOnlyCollection<String>> LanguagesAndFileExtensions = new ReadOnlyDictionary<ProgrammingLanguage, IReadOnlyCollection<String>>(new Dictionary<ProgrammingLanguage, IReadOnlyCollection<String>> {
+			{ ProgrammingLanguage.C, new ReadOnlyCollection<String>(
+				new [] { "c", "h" }.ToList()
+			)},
+
+			{ ProgrammingLanguage.CS, new ReadOnlyCollection<String>(
+				new [] { "cs" }.ToList()
+			)},
+
+			{ ProgrammingLanguage.Java, new ReadOnlyCollection<String>(
+				new [] { "java" }.ToList()
+			)},
+
+			{ ProgrammingLanguage.PHP, new ReadOnlyCollection<String>(
+				new [] { "php", "phtml", "php3", "php4", "php5" }.ToList()
+			)}
+		});
+
 		public const String DefaultFileName = "configuration.json";
 
 		/// <summary>
@@ -64,11 +118,14 @@ namespace GitDensity.Util
 		{
 			Help = $@"This is the Helptext for this configuration. Launch the program with '--help' to get more help on available switches. Most of the properties you may adjust are boolean, numbers or strings. Some properties require a specific value - those will be listed below:
 
--> List of supported Database-Types: {{ { String.Join(", ", Enum.GetValues(typeof(DatabaseType))
-									.Cast<DatabaseType>().Select(dbt => dbt.ToString())) } }}",
+-> List of supported Database-Types: {{ { String.Join(", ",
+									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }}",
+
 
 			PathToCloneDetectionBinary = @"C:\temp\binary.exe",
-			CloneDetectionArgs = "-myarg 2 -bla true",
+			// Detect clones of at least one line, ignore identifier names, ignore self-clones,
+			// ignore numeric and string literals
+			CloneDetectionArgs = "-min 1 -Id -self -Num -Str",
 			DatabaseType = DatabaseType.SQLiteTemp,
 			DatabaseConnectionString = null
 		};
