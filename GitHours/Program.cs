@@ -30,58 +30,106 @@
 ///
 using CommandLine;
 using CommandLine.Text;
+using GitDensity.Util;
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Globalization;
-using CC = GitDensity.Util.ColoredConsole;
+using System.IO;
+using System.Linq;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitHours
 {
+	internal enum ExitCodes : Int32
+	{
+		OK = 0,
+		RepoInvalid = -2,
+		UsageInvalid = -3
+	}
+
 	/// <summary>
 	/// Uses command-line options from <see cref="CommandLineOptions"/>. This program
 	/// outputs its result as formatted JSON.
 	/// </summary>
 	class Program
 	{
+		/// <summary>
+		/// The current global <see cref="LogLevel"/>.
+		/// </summary>
+		public static LogLevel LogLevel { get; private set; }
+
+		/// <summary>
+		/// Shortcut provider for obtaining equally configured loggers per <see cref="Type"/>.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		public static BaseLogger<T> CreateLogger<T>()
+		{
+			return new ColoredConsoleLogger<T>
+			{
+				LogCurrentScope = true,
+				LogCurrentTime = true,
+				LogCurrentType = true,
+				LogLevel = Program.LogLevel
+			};
+		}
+
+		private static BaseLogger<Program> logger = CreateLogger<Program>();
+
+		/// <summary>
+		/// Main entry point of application git-hours.
+		/// </summary>
+		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))
 			{
+				Program.LogLevel = options.LogLevel;
+				logger.LogLevel = options.LogLevel;
+
 				if (options.ShowHelp)
 				{
-					CC.Line(options.GetUsage());
-					Environment.Exit(0);
+					logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
+					logger.LogInformation(options.GetUsage());
+					Environment.Exit((int)ExitCodes.OK);
 				}
 
 				try
 				{
-					using (var repo = new Repository(options.RepoPath))
+					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
 						var ic = CultureInfo.InvariantCulture;
 						var gitHours = new Hours.GitHours(repo, options.MaxCommitDiff, options.FirstCommitAdd,
 							options.Since == null ? (DateTime?)null : DateTime.ParseExact(options.Since, Hours.GitHours.DateTimeFormat, ic),
 							options.Until == null ? (DateTime?)null : DateTime.ParseExact(options.Until, Hours.GitHours.DateTimeFormat, ic));
 
-						var obj = gitHours.Analyze();
-						Console.Write(JsonConvert.SerializeObject(obj, Formatting.Indented));
+						var obj = JsonConvert.SerializeObject(gitHours.Analyze(), Formatting.Indented);
+						if (String.IsNullOrEmpty(options.OutputFile))
+						{
+							Console.Write(obj);
+						}
+						else
+						{
+							File.WriteAllText(options.OutputFile, obj);
+							logger.LogInformation("Wrote the result to file: {0}", options.OutputFile);
+						}
 					}
 				}
 				catch (Exception ex)
 				{
-					CC.RedLine(ex.Message);
-					CC.SetInitialColors();
-					Environment.Exit(-1);
+					logger.LogError(ex.Message);
+					Environment.Exit((int)ExitCodes.RepoInvalid);
 				}
 			}
 			else
 			{
-				CC.RedLine("The supplied options are not valid.");
-				CC.WhiteLine(options.GetUsage());
-				CC.SetInitialColors();
-				Environment.Exit(-1);
+				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
+				logger.LogInformation(options.GetUsage());
+				Environment.Exit((int)ExitCodes.UsageInvalid);
 			}
 		}
 	}
@@ -93,20 +141,29 @@ namespace GitHours
 	/// </summary>
 	internal class CommandLineOptions
 	{
-		[Option('r', "repo-path", Required = true, DefaultValue = null, HelpText = "Absolute path to a git-repository.")]
+		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
 		public String RepoPath { get; set; }
 
-		[Option('d', "max-commit-diff", Required = false, DefaultValue = 120u, HelpText = "[Optional] Maximum difference in minutes between commits counted to one session")]
+		[Option('d', "max-commit-diff", Required = false, DefaultValue = 120u, HelpText = "Optional. Maximum difference in minutes between commits counted to one session")]
 		public UInt32 MaxCommitDiff { get; set; }
 
-		[Option('a', "first-commit-add", Required = false, DefaultValue = 120u, HelpText = "[Optional] How many minutes first commit of session should add to total")]
+		[Option('a', "first-commit-add", Required = false, DefaultValue = 120u, HelpText = "Optional. How many minutes first commit of session should add to total")]
 		public UInt32 FirstCommitAdd { get; set; }
 
-		[Option('s', "since", Required = false, DefaultValue = null, HelpText = "[Optional] Analyze data since certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
+		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
+		public String OutputFile { get; set; }
+
+		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
 		public String Since { get; set; }
 
-		[Option('u', "until", Required = false, DefaultValue = null, HelpText = "[Optional] Analyze data until (exclusive) certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
+		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (exclusive) certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
 		public String Until { get; set; }
+
+		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]
+		public String TempDirectory { get; set; }
+
+		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest to lowest) Trace, Debug, Information, Warning, Error, Critical, None.")]
+		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
 		public Boolean ShowHelp { get; set; }
@@ -120,6 +177,7 @@ namespace GitHours
 		/// <returns></returns>
 		public String GetUsage()
 		{
+			var fullLine = new String('-', Console.WindowWidth);
 			var ht = new HelpText
 			{
 				Heading = HeadingInfo.Default,
@@ -131,7 +189,8 @@ namespace GitHours
 
 			HelpText.DefaultParsingErrorsHandler(this, ht);
 			ht.AddOptions(this);
-			return ht;
+			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>().Select(ec => $"{ec.ToString()} ({(int)ec})"));
+			return $"{fullLine}\n{ht}\n\nPossible Exit-Codes: {exitCodes}\n\n{fullLine}";
 		}
 	}
 }
