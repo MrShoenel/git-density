@@ -3,8 +3,6 @@ using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GitDensity.Density
 {
@@ -19,7 +17,7 @@ namespace GitDensity.Density
 
 		public Boolean SkipMergeCommits { get; protected internal set; } = true;
 
-		public IEnumerable<String> FileTypeExtensions { get; protected internal set; } = GitDensity.DefaultFileTypeExtensions;
+		public ICollection<String> FileTypeExtensions { get; protected internal set; } = GitDensity.DefaultFileTypeExtensions;
 
 		public GitDensity(Repository repository, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null)
 		{
@@ -35,7 +33,7 @@ namespace GitDensity.Density
 			}
 			if (fileTypeExtensions is IEnumerable<String> && fileTypeExtensions.Any())
 			{
-				this.FileTypeExtensions = fileTypeExtensions.Skip(0); // Clone the IEnumerable
+				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
 			}
 		}
 
