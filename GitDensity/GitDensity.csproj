@@ -171,6 +171,7 @@
     <Compile Include="Data\Entities\DeveloperEntity.cs" />
     <Compile Include="Data\Entities\ProjectEntity.cs" />
     <Compile Include="Data\Entities\RepositoryEntity.cs" />
+    <Compile Include="Data\Entities\SimilarityEntity.cs" />
     <Compile Include="Data\Entities\TreeEntryChangesEntity.cs" />
     <Compile Include="Data\Indexed.cs" />
     <Compile Include="Data\StringEnumMapper.cs" />
