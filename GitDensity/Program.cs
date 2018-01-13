@@ -197,7 +197,7 @@ namespace GitDensity
 			else
 			{
 				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-				logger.LogInformation(options.GetUsage());
+				logger.LogInformation(options.GetUsage(ExitCodes.UsageInvalid));
 				Environment.Exit((int)ExitCodes.UsageInvalid);
 			}
 		}
@@ -261,7 +261,7 @@ namespace GitDensity
 		/// Returns a help-text generated using the options of this class.
 		/// </summary>
 		/// <returns></returns>
-		public String GetUsage()
+		public String GetUsage(ExitCodes exitCode = ExitCodes.OK)
 		{
 			var fullLine = new String('-', Console.WindowWidth);
 			var ht = new HelpText
@@ -277,8 +277,10 @@ namespace GitDensity
 			ht.AddOptions(this);
 			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>().Select(ec => $"{ec.ToString()} ({(int)ec})"));
 			var supportedLanguages = String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
+			var exitReason = exitCode == ExitCodes.UsageInvalid ?
+				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Please check the usage below.\n\n" : String.Empty;
 
-			return $"{fullLine}\n{ht}\n\n> Supported programming languages: {supportedLanguages}\n\n> Possible Exit-Codes: {exitCodes}\n\n{fullLine}";
+			return $"{fullLine}\n{exitReason}{ht}\n\n> Supported programming languages: {supportedLanguages}\n\n> Possible Exit-Codes: {exitCodes}\n\n{fullLine}";
 		}
 
 		/// <summary>

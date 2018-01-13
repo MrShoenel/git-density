@@ -128,7 +128,7 @@ namespace GitHours
 			else
 			{
 				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-				logger.LogInformation(options.GetUsage());
+				logger.LogInformation(options.GetUsage(ExitCodes.UsageInvalid));
 				Environment.Exit((int)ExitCodes.UsageInvalid);
 			}
 		}
@@ -175,7 +175,7 @@ namespace GitHours
 		/// Returns a help-text generated using the options of this class.
 		/// </summary>
 		/// <returns></returns>
-		public String GetUsage()
+		public String GetUsage(ExitCodes exitCode = ExitCodes.OK)
 		{
 			var fullLine = new String('-', Console.WindowWidth);
 			var ht = new HelpText
@@ -189,8 +189,12 @@ namespace GitHours
 
 			HelpText.DefaultParsingErrorsHandler(this, ht);
 			ht.AddOptions(this);
+
 			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>().Select(ec => $"{ec.ToString()} ({(int)ec})"));
-			return $"{fullLine}\n{ht}\n\nPossible Exit-Codes: {exitCodes}\n\n{fullLine}";
+			var exitReason = exitCode == ExitCodes.UsageInvalid ?
+				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Please check the usage below.\n\n" : String.Empty;
+
+			return $"{fullLine}\n{exitReason}{ht}\n\nPossible Exit-Codes: {exitCodes}\n\n{fullLine}";
 		}
 	}
 }

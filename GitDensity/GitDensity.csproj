@@ -163,12 +163,16 @@
     <Reference Include="System.Xml.ReaderWriter, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Xml.ReaderWriter.4.3.0\lib\net46\System.Xml.ReaderWriter.dll</HintPath>
     </Reference>
+    <Reference Include="ValueUtils, Version=1.4.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ValueUtils.1.4.0\lib\net452\ValueUtils.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\DataFactory.cs" />
     <Compile Include="Data\Entities\CommitEntity.cs" />
     <Compile Include="Data\Entities\CommitPairEntity.cs" />
     <Compile Include="Data\Entities\DeveloperEntity.cs" />
+    <Compile Include="Data\Entities\FileBlockEntity.cs" />
     <Compile Include="Data\Entities\ProjectEntity.cs" />
     <Compile Include="Data\Entities\RepositoryEntity.cs" />
     <Compile Include="Data\Entities\SimilarityEntity.cs" />
@@ -188,6 +192,7 @@
     <Compile Include="Density\CommitPair.cs" />
     <Compile Include="Util\ColoredConsoleLogger.cs" />
     <Compile Include="Util\Configuration.cs" />
+    <Compile Include="Util\DirectoryInfoExtensions.cs" />
     <Compile Include="Util\IEnumerableExtensions.cs" />
     <Compile Include="Util\RepositoryExtensions.cs" />
     <Compile Include="Util\BaseLogger.cs" />
