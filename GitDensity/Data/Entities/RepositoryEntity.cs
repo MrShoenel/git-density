@@ -29,6 +29,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using GitDensity.Util;
 using System;
 using System.Collections.Generic;
 
@@ -59,6 +60,8 @@ namespace GitDensity.Data.Entities
 	{
 		public RepositoryEntityMap()
 		{
+			this.Table(nameof(RepositoryEntity).ToSimpleUnderscoreCase());
+
 			this.Id(x => x.ID).GeneratedBy.Identity();
 			this.Map(x => x.Url).Not.Nullable();
 			this.Map(x => x.ShaHead).Not.Nullable().Length(40);

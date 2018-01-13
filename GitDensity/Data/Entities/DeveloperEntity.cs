@@ -29,12 +29,9 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
-using LibGit2Sharp;
+using GitDensity.Util;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GitDensity.Data.Entities
 {
@@ -55,6 +52,8 @@ namespace GitDensity.Data.Entities
 	{
 		public DeveloperEntityMap()
 		{
+			this.Table(nameof(DeveloperEntity).ToSimpleUnderscoreCase());
+
 			this.Id(x => x.ID).GeneratedBy.Identity();
 			this.Map(x => x.Name).Not.Nullable();
 			this.Map(x => x.Email).Not.Nullable();

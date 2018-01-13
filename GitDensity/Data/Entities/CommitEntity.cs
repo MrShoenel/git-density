@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using LibGit2Sharp;
-using FluentNHibernate.Mapping;
+﻿using FluentNHibernate.Mapping;
+using GitDensity.Util;
+using System;
 
 namespace GitDensity.Data.Entities
 {
@@ -34,6 +30,8 @@ namespace GitDensity.Data.Entities
 	{
 		public CommitEntityMap()
 		{
+			this.Table(nameof(CommitEntity).ToSimpleUnderscoreCase());
+
 			this.Id(x => x.ID).GeneratedBy.Identity();
 			this.Map(x => x.HashSHA1).Not.Nullable().Length(40);
 			this.Map(x => x.CommitDate).Not.Nullable();
