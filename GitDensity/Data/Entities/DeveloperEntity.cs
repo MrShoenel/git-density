@@ -64,47 +64,4 @@ namespace GitDensity.Data.Entities
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 		}
 	}
-
-	///// <summary>
-	///// Represents a single developer. Note that git distinguishes between author
-	///// and committer and has no such notion of a developer. However, in git-density,
-	///// we assume that author and committer represent the same person.
-	///// </summary>
-	//public class DeveloperEntity : IEquatable<DeveloperEntity>, IEqualityComparer<DeveloperEntity>
-	//{
-	//	public virtual String Name { get; set; }
-
-	//	public virtual String Email { get; set; }
-
-	//	public DeveloperEntity(String name, String email)
-	//	{
-	//		if (String.IsNullOrEmpty(name) || String.IsNullOrWhiteSpace(name))
-	//		{
-	//			throw new ArgumentException(nameof(name));
-	//		}
-	//		if (String.IsNullOrEmpty(email) || String.IsNullOrWhiteSpace(email))
-	//		{
-	//			throw new ArgumentNullException(nameof(email));
-	//		}
-
-	//		this.Name = name;
-	//		this.Email = email;
-	//	}
-
-	//	public bool Equals(DeveloperEntity other)
-	//	{
-	//		return other is DeveloperEntity &&
-	//			(this.Name == other.Name || this.Email == other.Email);
-	//	}
-
-	//	public bool Equals(DeveloperEntity x, DeveloperEntity y)
-	//	{
-	//		return x is DeveloperEntity && x.Equals(y);
-	//	}
-
-	//	public int GetHashCode(DeveloperEntity obj)
-	//	{
-	//		return this.Name.GetHashCode() ^ this.Email.GetHashCode();
-	//	}
-	//}
 }
