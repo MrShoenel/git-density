@@ -74,5 +74,16 @@ namespace GitDensity.Util
 				return new Repository(@string);
 			}
 		}
+
+		/// <summary>
+		/// Simple method that prefixes any uppercase letter with an underscore (except
+		/// for the first letter).
+		/// </summary>
+		/// <param name="str"></param>
+		/// <returns></returns>
+		public static string ToSimpleUnderscoreCase(this string str)
+		{
+			return string.Concat(str.Select((x, i) => i > 0 && Char.IsUpper(x) ? $"_{x}" : $"{x}"));
+		}
 	}
 }
