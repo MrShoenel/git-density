@@ -28,6 +28,7 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using GitDensity.Util;
 using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
@@ -110,13 +111,12 @@ namespace GitHours.Hours
 		/// <returns></returns>
 		public GitHoursAnalysisResult Analyze()
 		{
-			var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown");
-			var authorWorks = commitsByEmail.Where(authorCommits => authorCommits.Any()).Select(authorCommits =>
+			var commitsByDeveloper = this.commits.GroupByDeveloper();
+			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown");
+			var authorWorks = commitsByDeveloper.Where(authorCommits => authorCommits.Any()).Select(authorCommits =>
 			{
-				return new GitHoursAuthorStats
+				return new GitHoursAuthorStats(authorCommits.Key)
 				{
-					Email = authorCommits.Key,
-					Name = authorCommits.First().Author.Name,
 					Hours = this.Estimate(authorCommits.Select(commit => commit.Committer.When.DateTime).ToArray()),
 					Commits = (UInt32)authorCommits.Count()
 				};

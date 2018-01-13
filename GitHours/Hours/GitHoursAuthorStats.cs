@@ -28,7 +28,10 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using static GitDensity.Util.RepositoryExtensions;
 
 namespace GitHours.Hours
 {
@@ -37,12 +40,30 @@ namespace GitHours.Hours
 	/// </summary>
 	internal class GitHoursAuthorStats
 	{
-		public String Email { get; set; }
+		public GitHoursAuthorStats(DeveloperWithAlternativeNamesAndEmails developer)
+		{
+			this.Developer = developer;
+		}
 
-		public String Name { get; set; }
+		[JsonIgnore]
+		public DeveloperWithAlternativeNamesAndEmails Developer { get; private set; }
 
+		[JsonProperty(Order = 1)]
+		public String Name { get { return this.Developer.Name; } }
+
+		[JsonProperty(Order = 5)]
+		public IReadOnlyCollection<String> AlternativeNames { get { return this.Developer.AlternativeNames; } }
+
+		[JsonProperty(Order = 2)]
+		public String Email { get { return this.Developer.Email; } }
+
+		[JsonProperty(Order = 6)]
+		public IReadOnlyCollection<String> AlternativeEmails { get { return this.Developer.AlternativeEmails; } }
+
+		[JsonProperty(Order = 3)]
 		public Double Hours { get; set; }
 
+		[JsonProperty(Order = 4)]
 		public UInt32 Commits { get; set; }
 	}
 }
