@@ -28,17 +28,98 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using F23.StringSimilarity;
+using F23.StringSimilarity.Interfaces;
 using FluentNHibernate.Mapping;
+using GitDensity.Util;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GitDensity.Data.Entities
 {
 	/// <summary>
-	/// NormLeven, Jaro, MLCS, NGr(2-6), Cos(2-6), Jacc(2-6), Soren(2-6)
+	/// This attribute is intended to simplify string similarity measure usages. It
+	/// supports the annotation of a specific type of string similarity measure and
+	/// an optional shingle-parameter (if supported by the type).
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+	public sealed class SimilarityTypeAttribute : Attribute
+	{
+		private static readonly Type similarityInterfaceType =
+			typeof(INormalizedStringSimilarity);
+
+		private static readonly Type distanceInterfaceType =
+			typeof(INormalizedStringDistance);
+
+		/// <summary>
+		/// The <see cref="System.Type"/> of the similarity measure.
+		/// </summary>
+		public Type Type { get; private set; }
+
+		private Int32 shingleParameter;
+
+		/// <summary>
+		/// Returns true, iff the shingles were specified with a value greater than 0.
+		/// </summary>
+		public Boolean UsesShingles { get { return this.shingleParameter >= 0; } }
+
+		/// <summary>
+		/// The amount of shingles, the similarity measure uses. Throws an
+		/// <see cref="InvalidOperationException"/> if obtained for a type,
+		/// that does not support shingles.
+		/// Use <see cref="UsesShingles"/> to obtain a value that indicates
+		/// whether this instance uses shingles or not.
+		/// </summary>
+		public Int32 Shingles
+		{
+			private set { this.shingleParameter = value; }
+
+			get
+			{
+				if (this.shingleParameter < 0)
+				{
+					throw new InvalidOperationException($"This type ({this.Type.FullName}) does not support a shingle-parameter.");
+				}
+
+				return this.shingleParameter;
+			}
+		}
+
+		/// <summary>
+		/// The type must implement <see cref="INormalizedStringSimilarity"/>. Some types have
+		/// a shingle-parameter, which can optionally be passed.
+		/// </summary>
+		/// <param name="type">A <see cref="System.Type"/> that is required to
+		/// derive from <see cref="INormalizedStringSimilarity"/>.</param>
+		/// <param name="shingleParameter">If less than zero, it is ignored.</param>
+		public SimilarityTypeAttribute(Type type, Int32 shingleParameter = -1)
+		{
+			if (!type.GetInterfaces().Any(intf =>
+				intf == similarityInterfaceType || intf == distanceInterfaceType))
+			{
+				throw new TypeInitializationException(nameof(SimilarityTypeAttribute), null);
+			}
+
+			this.Type = type;
+			this.shingleParameter = shingleParameter;
+		}
+
+		/// <summary>
+		/// Returns the name of metric and optional shingle-parameter in parentheses.
+		/// </summary>
+		/// <returns></returns>
+		public override string ToString()
+		{
+			var shingleString = this.UsesShingles ? $"({this.Shingles})" : String.Empty;
+			return $"{this.Type.Name}{shingleString}";
+		}
+	}
+
+
+
+
+	/// <summary>
+	/// NormLeven, Jaro, MLCS, NGr(2-6), Cos(2-6), Jacc(2-6), Soren(2-6) = 23
 	/// <see cref="http://www.scielo.br/pdf/gmb/v22n3/22n3a24.pdf"/>
 	/// </summary>
 	public class SimilarityEntity
@@ -46,16 +127,19 @@ namespace GitDensity.Data.Entities
 		public virtual UInt32 ID { get; set; }
 
 		#region Similarity measures
+		[SimilarityType(typeof(NormalizedLevenshtein))]
 		public virtual Double NormalizedLevenshtein { get; set; }
 
 		/// <summary>
 		/// We use the Jaro-Winkler distance without any alterations to the default parameters.
 		/// </summary>
+		[SimilarityType(typeof(JaroWinkler))]
 		public virtual Double JaroWinkler { get; set; }
 
 		/// <summary>
-		/// Metric Longest Common Subsequence
+		/// Metric Longest Common Subsequence as normalized metric
 		/// </summary>
+		[SimilarityType(typeof(MetricLCS))]
 		public virtual Double MetricLongestCommonSubSeq { get; set; }
 
 		#region Variated similiarity measures
@@ -64,10 +148,15 @@ namespace GitDensity.Data.Entities
 		/// 
 		/// <note>Kondrak, G., 2005. N-gram similarity and distance. In String processing and information retrieval (pp. 115-126). Springer Berlin/Heidelberg.</note>
 		/// </summary>
+		[SimilarityType(typeof(NGram), 2)]
 		public virtual Double NGram2 { get; set; }
+		[SimilarityType(typeof(NGram), 3)]
 		public virtual Double NGram3 { get; set; }
+		[SimilarityType(typeof(NGram), 4)]
 		public virtual Double NGram4 { get; set; }
+		[SimilarityType(typeof(NGram), 5)]
 		public virtual Double NGram5 { get; set; }
+		[SimilarityType(typeof(NGram), 6)]
 		public virtual Double NGram6 { get; set; }
 
 		/// <summary>
@@ -75,10 +164,15 @@ namespace GitDensity.Data.Entities
 		/// 
 		/// <note>The similarity between the two strings is the cosine of the angle between these two vectors representation, and is computed as V1 . V2 / (|V1| * |V2|) Distance is computed as 1 - cosine similarity.</note>
 		/// </summary>
+		[SimilarityType(typeof(Cosine), 2)]
 		public virtual Double Cosine2 { get; set; }
+		[SimilarityType(typeof(Cosine), 3)]
 		public virtual Double Cosine3 { get; set; }
+		[SimilarityType(typeof(Cosine), 4)]
 		public virtual Double Cosine4 { get; set; }
+		[SimilarityType(typeof(Cosine), 5)]
 		public virtual Double Cosine5 { get; set; }
+		[SimilarityType(typeof(Cosine), 6)]
 		public virtual Double Cosine6 { get; set; }
 
 		/// <summary>
@@ -86,10 +180,15 @@ namespace GitDensity.Data.Entities
 		/// 
 		/// <note>Jaccard P (1901) Étude comparative de la distribuition florale dans une portion des Alpes et des Jura.Bull Soc Vandoise Sci Nat 37:547-579.</note>
 		/// </summary>
+		[SimilarityType(typeof(Jaccard), 2)]
 		public virtual Double JaccardIdx2 { get; set; }
+		[SimilarityType(typeof(Jaccard), 3)]
 		public virtual Double JaccardIdx3 { get; set; }
+		[SimilarityType(typeof(Jaccard), 4)]
 		public virtual Double JaccardIdx4 { get; set; }
+		[SimilarityType(typeof(Jaccard), 5)]
 		public virtual Double JaccardIdx5 { get; set; }
+		[SimilarityType(typeof(Jaccard), 6)]
 		public virtual Double JaccardIdx6 { get; set; }
 
 		/// <summary>
@@ -99,10 +198,15 @@ namespace GitDensity.Data.Entities
 		/// </note>
 		/// <note>Sorensen T (1948) A method of establishing groups of equal amplitude in plant sociology based on similarity of species content and its application to analyses of the vegetation on Danish commons.Vidensk Selsk Biol Skr 5:1-34.</note>
 		/// </summary>
+		[SimilarityType(typeof(SorensenDice), 2)]
 		public virtual Double SorensenDice2 { get; set; }
+		[SimilarityType(typeof(SorensenDice), 3)]
 		public virtual Double SorensenDice3 { get; set; }
+		[SimilarityType(typeof(SorensenDice), 4)]
 		public virtual Double SorensenDice4 { get; set; }
+		[SimilarityType(typeof(SorensenDice), 5)]
 		public virtual Double SorensenDice5 { get; set; }
+		[SimilarityType(typeof(SorensenDice), 6)]
 		public virtual Double SorensenDice6 { get; set; }
 		#endregion
 		#endregion
@@ -112,7 +216,7 @@ namespace GitDensity.Data.Entities
 	{
 		public SimilarityEntityMapper()
 		{
-			this.Table(nameof(SimilarityEntity));
+			this.Table(nameof(SimilarityEntity).ToSimpleUnderscoreCase());
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
 
