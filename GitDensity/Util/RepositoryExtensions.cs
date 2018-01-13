@@ -1,10 +1,13 @@
-﻿using GitDensity.Density;
+﻿using GitDensity.Data.Entities;
+using GitDensity.Density;
 using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections;
+using ValueUtils;
 
 namespace GitDensity.Util
 {
@@ -75,6 +78,189 @@ namespace GitDensity.Util
 			using (var fs = new FileStream(targetPath, FileMode.Create))
 			{
 				await contentStream.CopyToAsync(fs);
+			}
+		}
+
+		/// <summary>
+		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit})"/>.
+		/// </summary>
+		private class CommitGroupingByDeveloper : IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>
+		{
+			public DeveloperWithAlternativeNamesAndEmails Key { get; private set; }
+
+			private IEnumerable<Commit> items;
+
+			internal CommitGroupingByDeveloper(DeveloperWithAlternativeNamesAndEmails key, IEnumerable<Commit> ie)
+			{
+				this.Key = key;
+				this.items = ie;
+			}
+
+			public IEnumerator<Commit> GetEnumerator()
+			{
+				return this.items.GetEnumerator();
+			}
+
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return this.GetEnumerator();
+			}
+		}
+
+		/// <summary>
+		/// An extension to the <see cref="DeveloperEntity"/> that holds additional,
+		/// alternative names and email addresses. This is necessary, as developers
+		/// sometimes uses (slightly) different names or email addresses. Also, sometimes
+		/// either of these is missing.
+		/// </summary>
+		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity, IEquatable<DeveloperWithAlternativeNamesAndEmails>, IEqualityComparer<DeveloperWithAlternativeNamesAndEmails>
+		{
+			private ISet<String> altNames;
+			public IReadOnlyCollection<String> AlternativeNames {
+				get { return this.altNames.ToList().AsReadOnly(); } }
+
+			private ISet<String> altEmails;
+			public IReadOnlyCollection<String> AlternativeEmails {
+				get { return this.altEmails.ToList().AsReadOnly(); } }
+
+			public DeveloperWithAlternativeNamesAndEmails() : base()
+			{
+				this.altNames = new HashSet<String>();
+				this.altEmails = new HashSet<String>();
+			}
+
+			internal void AddName(String name)
+			{
+				if (name != this.Name)
+				{
+					this.altNames.Add(name);
+				}
+			}
+
+			internal void AddEmail(String email)
+			{
+				if (email != this.Email)
+				{
+					this.altEmails.Add(email);
+				}
+			}
+
+			#region Equality, Hash-code
+			public bool Equals(DeveloperWithAlternativeNamesAndEmails other)
+			{
+				return FieldwiseEquality.AreEqual(this, other);
+			}
+
+			public bool Equals(DeveloperWithAlternativeNamesAndEmails x, DeveloperWithAlternativeNamesAndEmails y)
+			{
+				return FieldwiseEquality<DeveloperWithAlternativeNamesAndEmails>.Instance(x, y);
+			}
+
+			public int GetHashCode(DeveloperWithAlternativeNamesAndEmails obj)
+			{
+				return FieldwiseHasher<DeveloperWithAlternativeNamesAndEmails>.Instance(this);
+			}
+			#endregion
+		}
+
+		/// <summary>
+		/// Groups an <see cref="IEnumerable{Commit}"/> into groups where the key is a
+		/// <see cref="DeveloperWithAlternativeNamesAndEmails"/>. This is better than
+		/// grouping developers/authors just by name or email, as it avoids redundancies.
+		/// The <see cref="Commit"/>s are ordered from oldest to newest to retain a de-
+		/// terministic developer-entity (where the name and email represent the first
+		/// used identities and the alternatives are those that had been used later).
+		/// </summary>
+		/// <param name="commits"></param>
+		/// <returns>Enumerables of groups, where the key is the developer and the enumerable
+		/// group itself represents their commits.</returns>
+		public static IEnumerable<IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>> GroupByDeveloper(this IEnumerable<Commit> commits)
+		{
+			var byNameDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
+			var byMailDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
+
+			var emptyDev = new DeveloperWithAlternativeNamesAndEmails { Name = String.Empty, Email = String.Empty };
+			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ICollection<Signature>>();
+
+			foreach (var signature in commits.Select(c => c.Author).Where(sig => sig is Signature).OrderBy(c => c.When))
+			{
+				var name = String.IsNullOrEmpty(signature.Name) ? String.Empty :
+					signature.Name.Trim().ToLowerInvariant();
+				var mail = String.IsNullOrEmpty(signature.Email) ? String.Empty :
+					signature.Email.Trim().ToLowerInvariant();
+
+				DeveloperWithAlternativeNamesAndEmails devEntity;
+
+				if (name == String.Empty && mail == String.Empty)
+				{
+					devEntity = emptyDev; // Special case
+				}
+				else if (name == String.Empty)
+				{
+					if (byMailDict.ContainsKey(mail))
+					{
+						devEntity = byMailDict[mail];
+					}
+					else
+					{
+						devEntity = byMailDict[mail] = new DeveloperWithAlternativeNamesAndEmails
+						{ Name = String.Empty, Email = signature.Email };
+					}
+				}
+				else if (mail == String.Empty)
+				{
+					if (byNameDict.ContainsKey(name))
+					{
+						devEntity = byNameDict[name];
+					}
+					else
+					{
+						devEntity = byNameDict[name] = new DeveloperWithAlternativeNamesAndEmails
+						{ Name = signature.Name, Email = String.Empty };
+					}
+				}
+				else
+				{
+					// Both are present, give precedence to email
+					if (byMailDict.ContainsKey(mail))
+					{
+						devEntity = byMailDict[mail];
+					}
+					else if (byNameDict.ContainsKey(name))
+					{
+						devEntity = byNameDict[name];
+					}
+					else
+					{
+						// new entity, add to both dictionaries
+						devEntity = new DeveloperWithAlternativeNamesAndEmails
+						{ Name = signature.Name, Email = signature.Email };
+						byMailDict[mail] = devEntity;
+						byNameDict[name] = devEntity;
+					}
+				}
+
+				if (!dict.ContainsKey(devEntity))
+				{
+					dict[devEntity] = new List<Signature>();
+				}
+
+				dict[devEntity].Add(signature);
+				if (name != String.Empty)
+				{
+					devEntity.AddName(signature.Name);
+				}
+				if (mail != String.Empty)
+				{
+					devEntity.AddEmail(signature.Email);
+				}
+			}
+
+
+			foreach (var devEntityKv in dict)
+			{
+				yield return new CommitGroupingByDeveloper(devEntityKv.Key,
+					commits.Where(c => dict[devEntityKv.Key].Contains(c.Author)));
 			}
 		}
 	}
