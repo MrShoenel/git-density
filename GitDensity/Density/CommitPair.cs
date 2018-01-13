@@ -40,7 +40,7 @@ namespace GitDensity.Density
 		/// </summary>
 		public String Id
 		{
-			get => $"{this.Parent.Sha.Substring(0, 15)}_{Child.Sha.Substring(0, 15)}";
+			get => $"{this.Parent?.Sha.Substring(0, 15) ?? "(initial)"}_{Child.Sha.Substring(0, 15)}";
 		}
 
 		private Lazy<Patch> lazyPatch;
@@ -124,8 +124,7 @@ namespace GitDensity.Density
 
 			if (wipeTargetDirectoryBefore && targetDirectory.Exists)
 			{
-				Directory.Delete(targetDirectory.FullName, true);
-				targetDirectory.Create();
+				targetDirectory.Clear();
 			}
 
 			var diOld = new DirectoryInfo(Path.Combine(targetDirectory.FullName, parentDirectoryName));
