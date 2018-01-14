@@ -32,10 +32,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace GitDensity.Util
 {
-	public abstract class BaseLogger<T> : ILogger<T>
+	public abstract class BaseLogger<T> : ILogger<T>, IDisposable
 	{
 		protected static Lazy<IDictionary<Type, String>> lazyLoadedTypes = new Lazy<IDictionary<Type, String>>(() =>
 		{
@@ -90,11 +91,11 @@ namespace GitDensity.Util
 		/// </summary>
 		public virtual Boolean LogCurrentScope { get; set; } = false;
 
-		protected Stack<IScope> scopeStack;
+		protected IDictionary<Type, Stack<IScope>> scopeStacks;
 
 		public BaseLogger()
 		{
-			this.scopeStack = new Stack<IScope>();
+			this.scopeStacks = new Dictionary<Type, Stack<IScope>>();
 		}
 
 
@@ -112,14 +113,18 @@ namespace GitDensity.Util
 		{
 			public TState ScopeValue { get; private set; }
 
-			public Scope(TState scopeValue)
+			private BaseLogger<T> baseLogger;
+
+			public Scope(TState scopeValue, BaseLogger<T> bl)
 			{
 				this.ScopeValue = scopeValue;
+				this.baseLogger = bl;
 			}
 
 			public void Dispose()
 			{
 				this.ScopeValue = default(TState);
+				this.baseLogger.PopScope(this);
 			}
 
 			public override string ToString()
@@ -153,19 +158,43 @@ namespace GitDensity.Util
 		{
 			get
 			{
-				return this.scopeStack.Count == 0 ? String.Empty :
-					$"[{ String.Join(", ", this.scopeStack.Reverse().Select(sc => sc.ToString())) }]";
+				return this.scopeStacks.Count == 0 ? String.Empty :
+					$"[{ String.Join(", ", this.scopeStacks.Reverse().Select(sc => sc.ToString())) }]";
 			}
 		}
 		#endregion
 		#endregion
 
 		#region ILogger<T>
+		private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
 		public virtual IDisposable BeginScope<TState>(TState state)
 		{
-			var scope = new Scope<TState>(state);
-			this.scopeStack.Push(scope);
+			var type = typeof(T);
+			this.semaphore.Wait();
+			if (!this.scopeStacks.ContainsKey(type))
+			{
+				this.scopeStacks[type] = new Stack<IScope>();
+			}
+
+			var scope = new Scope<TState>(state, this);
+			this.scopeStacks[type].Push(scope);
+			this.semaphore.Release();
 			return scope;
+		}
+
+		private void PopScope<TState>(Scope<TState> scope)
+		{
+			var type = typeof(T);
+			this.semaphore.Wait();
+
+			if (this.scopeStacks[type].Peek() != scope)
+			{
+				throw new InvalidOperationException("Invalid nesting of Scopes. The current Scope is not on top of the stack.");
+			}
+
+			this.scopeStacks[type].Pop();
+			this.semaphore.Release();
 		}
 
 		/// <summary>
@@ -180,6 +209,28 @@ namespace GitDensity.Util
 		}
 
 		public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter);
+		#endregion
+
+		#region IDisposable Support
+		private bool disposedValue = false; // To detect redundant calls
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!disposedValue)
+			{
+				if (disposing)
+				{
+					this.semaphore.Dispose();
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			Dispose(true);
+		}
 		#endregion
 	}
 }
