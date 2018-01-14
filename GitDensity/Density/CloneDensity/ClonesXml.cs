@@ -30,6 +30,7 @@
 ///
 using System;
 using System.IO;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace GitDensity.Density.CloneDensity
@@ -98,5 +99,14 @@ namespace GitDensity.Density.CloneDensity
 
 		[XmlAttribute(AttributeName = "end")]
 		public Int32 End { get; set; }
+
+		/// <summary>
+		/// Returns an <see cref="Int32[]"/> of affected line numbers.
+		/// </summary>
+		[XmlIgnore]
+		public Int32[] LineNumbers
+		{
+			get => Enumerable.Range(this.Start, 1 + this.End - this.Start).ToArray();
+		}
 	}
 }
