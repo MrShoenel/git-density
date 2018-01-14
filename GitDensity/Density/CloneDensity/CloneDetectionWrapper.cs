@@ -49,6 +49,8 @@ namespace GitDensity.Density.CloneDensity
 		private static BaseLogger<CloneDetectionWrapper> logger =
 			Program.CreateLogger<CloneDetectionWrapper>();
 
+		private const String stdErrNoMatchingFiles = "No matching files found under";
+
 		/// <summary>
 		/// The directory to analyze for clones.
 		/// </summary>
@@ -92,7 +94,7 @@ namespace GitDensity.Density.CloneDensity
 				{
 					WorkingDirectory = this.Directory.FullName,
 					FileName = Program.Configuration.PathToCloneDetectionBinary,
-					Arguments = $"{Program.Configuration.CloneDetectionArgs} -l {this.Language.ToString()} " +
+					Arguments = $"{Program.Configuration.CloneDetectionArgs} -l {this.Language.ToString().ToLowerInvariant()} " +
 						$"-t {tempFile} -s \"{this.Directory.FullName}\"",
 					RedirectStandardError = true,
 					RedirectStandardOutput = true,
@@ -114,10 +116,18 @@ namespace GitDensity.Density.CloneDensity
 						throw new InvalidOperationException(
 							"The process exited with a non-zero exitcode.");
 					}
-					logger.LogInformation("Clone detection output:\n\n{0}", stdOut);
+					logger.LogInformation("Clone detection output:\n\n{0}{1}", stdOut, stdErr);
 
 					if (!ClonesXml.TryDeserialize(tempFile, out ClonesXml clonesXml))
 					{
+						// It might be the case that there had been no relevant/matching files,
+						// in which our used clone detection does not write an output. We can
+						// detect this case by looking into stdErr:
+						if (stdErr.Contains(stdErrNoMatchingFiles))
+						{
+							return Enumerable.Empty<ClonesXmlSet>();
+						}
+
 						logger.LogError("Cannot de-serialize output of Clone detection.");
 						throw new IOException("Cannot deserialize the analysis' result.");
 					}
@@ -127,7 +137,10 @@ namespace GitDensity.Density.CloneDensity
 			}
 			finally
 			{
-				File.Delete(tempFile);
+				if (File.Exists(tempFile))
+				{
+					File.Delete(tempFile);
+				}
 			}
 		}
 	}
