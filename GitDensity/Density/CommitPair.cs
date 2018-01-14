@@ -132,7 +132,11 @@ namespace GitDensity.Density
 			var diNew = new DirectoryInfo(Path.Combine(targetDirectory.FullName, childDirectoryName));
 			if (!diNew.Exists) { diNew.Create(); }
 
-			Parallel.ForEach(changes, async change =>
+			Parallel.ForEach(changes,
+#if DEBUG
+				new ParallelOptions{ MaxDegreeOfParallelism = 1 },
+#endif
+				async change =>
 			{
 				// We can only write out changes where an old an a new version exists.
 				// That means that adds and deletes cannot be written out.
