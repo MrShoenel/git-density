@@ -7,7 +7,8 @@ namespace GitDensity.Data.Entities
 	public enum FileBlockType
 	{
 		Added,
-		Deleted
+		Deleted,
+		Modified
 	}
 
 	public class FileBlockEntity
