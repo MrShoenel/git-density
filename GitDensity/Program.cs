@@ -158,13 +158,13 @@ namespace GitDensity
 						var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree, new String[] { "GitDensity/Program.cs" });
 						var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
 
-						//var simm = new Similarity.Similarity(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>());
-
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
 						var density = new Density.GitDensity(repo, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
 
 						density.InitializeStringSimilarityMeasures(typeof(Data.Entities.SimilarityEntity));
+
+						var simm = new Similarity.Similarity(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
 
 						var result = density.Analyze();
 

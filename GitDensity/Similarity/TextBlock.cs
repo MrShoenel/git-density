@@ -54,14 +54,14 @@ namespace GitDensity.Similarity
 	/// </summary>
 	internal class TextBlock
 	{
-		protected IDictionary<Int32, String> linesWithLineNumber;
+		protected IDictionary<Int32, Line> linesWithLineNumber;
 
-		private ReadOnlyDictionary<Int32, String> linesWithLineNumberReadOnly;
+		private ReadOnlyDictionary<Int32, Line> linesWithLineNumberReadOnly;
 
 		/// <summary>
 		/// A read-only dictionary with lines and their line number.
 		/// </summary>
-		public IReadOnlyDictionary<Int32, String> LinesWithNumber
+		public IReadOnlyDictionary<Int32, Line> LinesWithNumber
 		{
 			get => this.linesWithLineNumberReadOnly;
 		}
@@ -73,7 +73,7 @@ namespace GitDensity.Similarity
 		public String WholeBlock
 		{
 			get => String.Join("\n", this.linesWithLineNumber.OrderBy(kv => kv.Key)
-				.Select(kv => kv.Value));
+				.Select(kv => kv.Value.String));
 		}
 
 		/// <summary>
@@ -81,9 +81,9 @@ namespace GitDensity.Similarity
 		/// </summary>
 		public TextBlock()
 		{
-			this.linesWithLineNumber = new Dictionary<Int32, String>();
+			this.linesWithLineNumber = new Dictionary<Int32, Line>();
 			this.linesWithLineNumberReadOnly =
-				new ReadOnlyDictionary<int, string>(this.linesWithLineNumber);
+				new ReadOnlyDictionary<Int32, Line>(this.linesWithLineNumber);
 		}
 
 		/// <summary>
@@ -101,19 +101,29 @@ namespace GitDensity.Similarity
 			foreach (var line in hunk.Patch.GetLines())
 			{
 				var firstChar = line.Length == 0 ? 'X' : line[0];
+				var added = firstChar == '+';
+				var untouched = firstChar != '-' && firstChar != '+';
 
-				if ((firstChar != '-' && firstChar != '+')
+				if (untouched
 						|| (old && firstChar == '-')
 						|| (!old && firstChar == '+'))
 				{
-					if (line.Length == 1 && (firstChar == '-' || firstChar == '+'))
+					// Empty lines added/removed:
+					if (line.Length == 1 && !untouched)
 					{
-						this.AddLine(idx++, String.Empty);
+						this.AddLine(new Line(
+							added ? LineType.Added : LineType.Deleted, idx++, String.Empty));
+						//this.AddLine(idx++, String.Empty);
 						continue;
 					}
 
-					this.AddLine(idx++, // remove first two chars (white or +/-)
-						(line.Length > 1 ? line.Substring(2) : line).TrimEnd());
+					// Ordinary lines:
+					this.AddLine(new Line(
+						added ? LineType.Added : (untouched ? LineType.Untouched : LineType.Deleted),
+						// remove first two chars (white or +/-)
+						idx++, (line.Length > 1 ? line.Substring(2) : line).TrimEnd()));
+					//this.AddLine(idx++, // remove first two chars (white or +/-)
+					//	(line.Length > 1 ? line.Substring(2) : line).TrimEnd());
 				}
 			}
 		}
@@ -123,16 +133,15 @@ namespace GitDensity.Similarity
 		/// </summary>
 		/// <exception cref="InvalidOperationException">If this block already
 		/// contains a line with the given number.</exception>
-		/// <param name="lineNumber"></param>
 		/// <param name="line"></param>
-		public void AddLine(Int32 lineNumber, String line)
+		public void AddLine(Line line)
 		{
-			if (this.linesWithLineNumber.ContainsKey(lineNumber))
+			if (this.linesWithLineNumber.ContainsKey(line.Number))
 			{
-				throw new InvalidOperationException($"This {nameof(TextBlock)} already contains a line with number {lineNumber}.");
+				throw new InvalidOperationException($"This {nameof(TextBlock)} already contains a line with number {line.Number}.");
 			}
 
-			this.linesWithLineNumber[lineNumber] = line;
+			this.linesWithLineNumber[line.Number] = line;
 		}
 
 		/// <summary>
@@ -141,8 +150,8 @@ namespace GitDensity.Similarity
 		/// <exception cref="InvalidOperationException">If this block does not
 		/// contain the line with the specified line number.</exception>
 		/// <param name="lineNumber"></param>
-		/// <returns>The removed line as <see cref="String"/>.</returns>
-		public string RemoveLine(Int32 lineNumber)
+		/// <returns>The removed line as <see cref="Line"/>.</returns>
+		public Line RemoveLine(Int32 lineNumber)
 		{
 			if (!this.linesWithLineNumber.ContainsKey(lineNumber))
 			{
@@ -166,7 +175,7 @@ namespace GitDensity.Similarity
 			var tb = new TextBlock();
 			foreach (var lineNumber in lineNumbers)
 			{
-				tb.AddLine(lineNumber, this.RemoveLine(lineNumber));
+				tb.AddLine(this.RemoveLine(lineNumber));
 			}
 			return tb;
 		}

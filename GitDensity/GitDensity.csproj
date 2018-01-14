@@ -187,6 +187,7 @@
     <Compile Include="Density\IDensityMeasure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Similarity\Line.cs" />
     <Compile Include="Similarity\Similarity.cs" />
     <Compile Include="Similarity\SimilarityComparisonType.cs" />
     <Compile Include="Similarity\TextBlock.cs" />

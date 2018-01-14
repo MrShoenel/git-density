@@ -5,6 +5,7 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -32,9 +33,16 @@ namespace GitDensity.Density
 
 		protected IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures;
 
+		private ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance> roSimMeasures;
+		public ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance> SimilarityMeasures
+		{
+			get => this.roSimMeasures;
+		}
+
 		public GitDensity(Repository repository, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
 			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
+			this.roSimMeasures = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.similarityMeasures);
 			this.Repository = repository;
 			this.ProgrammingLanguages = languages.ToArray();
 			this.TempDirectory = new DirectoryInfo(tempPath ?? Path.GetTempPath());
