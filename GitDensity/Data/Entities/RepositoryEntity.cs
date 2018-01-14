@@ -54,6 +54,12 @@ namespace GitDensity.Data.Entities
 		public virtual ISet<CommitEntity> Commits { get; set; }
 
 		public virtual ProjectEntity Project { get; set; }
+
+		public RepositoryEntity()
+		{
+			this.Developers = new HashSet<DeveloperEntity>();
+			this.Commits = new HashSet<CommitEntity>();
+		}
 	}
 
 	public class RepositoryEntityMap : ClassMap<RepositoryEntity>

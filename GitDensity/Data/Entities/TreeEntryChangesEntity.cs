@@ -20,6 +20,24 @@ namespace GitDensity.Data.Entities
 		public virtual CommitPairEntity CommitPair { get; set; }
 
 		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+
+		#region C'tor, Methods
+		public TreeEntryChangesEntity()
+		{
+			this.FileBlocks = new HashSet<FileBlockEntity>();
+		}
+
+		/// <summary>
+		/// Add a <see cref="FileBlockEntity"/> to this <see cref="TreeEntryChangesEntity"/>.
+		/// </summary>
+		/// <param name="fileBlock"></param>
+		/// <returns>This (<see cref="TreeEntryChangesEntity"/>) for chaining.</returns>
+		public virtual TreeEntryChangesEntity AddFileBlock(FileBlockEntity fileBlock)
+		{
+			this.FileBlocks.Add(fileBlock);
+			return this;
+		}
+		#endregion
 	}
 
 	public class TreeEntryChangesEntityMap : ClassMap<TreeEntryChangesEntity>

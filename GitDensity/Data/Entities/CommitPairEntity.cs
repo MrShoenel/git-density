@@ -18,6 +18,20 @@ namespace GitDensity.Data.Entities
 		public virtual ISet<TreeEntryChangesEntity> TreeEntryChanges { get; set; }
 
 		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+
+		public CommitPairEntity()
+		{
+			this.TreeEntryChanges = new HashSet<TreeEntryChangesEntity>();
+			this.FileBlocks = new HashSet<FileBlockEntity>();
+		}
+
+		#region Methods
+		public virtual CommitPairEntity AddTreeEntryChanges(TreeEntryChangesEntity tece)
+		{
+			this.TreeEntryChanges.Add(tece);
+			return this;
+		}
+		#endregion
 	}
 
 	public class CommitPairEntityMap : ClassMap<CommitPairEntity>
