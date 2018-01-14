@@ -27,7 +27,6 @@
 /// ---------------------------------------------------------------------------------
 using CommandLine;
 using CommandLine.Text;
-using F23.StringSimilarity.Interfaces;
 using GitDensity.Data;
 using GitDensity.Util;
 using Microsoft.Extensions.Logging;
@@ -137,12 +136,10 @@ namespace GitDensity
 					logger.LogInformation("Successfully read the configuration.");
 
 					DataFactory.Configure(Program.Configuration, options.TempDirectory);
-					using (var tempSess = DataFactory.Instance.OpenSession()) {
-						var foo = tempSess.QueryOver<Data.Entities.ProjectEntity>()
-							.Where(x => x.Language == Data.Entities.ProjectEntityLanguage.PHP)
-							.Take(5).List();
+					using (var tempSess = DataFactory.Instance.OpenSession())
+					{
+						logger.LogInformation("Successfully probed the configured database.");
 					}
-					logger.LogInformation("Successfully probed the configured database.");
 				}
 				catch (Exception ex)
 				{
@@ -157,9 +154,32 @@ namespace GitDensity
 				{
 					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
+						var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("85d")).First(), repo.Commits.Where(c => c.Sha.StartsWith("473")).First());
+						var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree, new String[] { "GitDensity/Program.cs" });
+						var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
+
+						//var simm = new Similarity.Similarity(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>());
+
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
-						var density = new Density.GitDensity(repo, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value));
+						var density = new Density.GitDensity(repo, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
+
+						density.InitializeStringSimilarityMeasures(typeof(Data.Entities.SimilarityEntity));
+
+						var result = density.Analyze();
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -212,7 +232,7 @@ namespace GitDensity
 	{
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
 		public String RepoPath { get; set; }
-		
+
 		/// <summary>
 		/// To obtains the actual <see cref="ICollection{ProgrammingLanguage}"/>s, use the
 		/// property <see cref="ProgrammingLanguages"/>.
@@ -291,8 +311,7 @@ namespace GitDensity
 		{
 			try
 			{
-				this.ProgrammingLanguages.Count();
-				return true;
+				return this.ProgrammingLanguages.Count() > 0;
 			}
 			catch
 			{
