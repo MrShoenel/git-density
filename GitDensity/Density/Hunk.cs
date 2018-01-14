@@ -45,8 +45,11 @@ namespace GitDensity.Density
 	/// </summary>
 	internal class Hunk
 	{
-		public static readonly Regex HunkSplitRegex =
-			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+([0-9]+),([0-9]+)\s+@@", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
+		/// <summary>
+		/// Used to split and analyze a git-diff hunk.
+		/// </summary>
+		protected internal static readonly Regex HunkSplitRegex =
+			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+([0-9]+),([0-9]+)\s+@@.*$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
 
 		public Int32 OldLineStart { get; protected internal set; }
 
@@ -56,40 +59,69 @@ namespace GitDensity.Density
 
 		public Int32 NewNumberOfLines { get; protected internal set; }
 
+		public String SourceFilePath { get; protected internal set; }
+
 		public String TargetFilePath { get; protected internal set; }
 
 		public Int32 NumberOfLinesAdded { get { return this.lineNumbersAdded.Count; } }
 
 		public Int32 NumberOfLinesDeleted { get { return this.lineNumbersDeleted.Count; } }
-
-		protected String patch { get; set; }
+		
+		internal String Patch { get; private set; }
 
 		protected IList<Int32> lineNumbersAdded;
 
 		protected IList<Int32> lineNumbersDeleted;
 
-		public Hunk(String patch)
+		private Hunk(String patch)
 		{
-			this.patch = patch;
+			this.Patch = patch;
 
 			this.lineNumbersAdded = new List<Int32>();
 			this.lineNumbersDeleted = new List<Int32>();
+		}
 
-			var i = 1;
-			foreach (var line in patch.GetLines().Where(l => l.Length > 0))
+		/// <summary>
+		/// Computes the numbers (their index) of lines that have been added
+		/// or removed. Note that indexes start with 1, not 0.
+		/// It is essential to only call this method _after_ the properties
+		/// <see cref="OldLineStart"/> and <see cref="NewLineStart"/> have been
+		/// set; otherwise, the computed numbers will be off by these.
+		/// </summary>
+		/// <returns>This <see cref="Hunk"/> for chaining.</returns>
+		private Hunk ComputeLinesAddedAndDeleted()
+		{
+			var idxOld = this.OldLineStart;
+			var idxNew = this.NewLineStart;
+
+			foreach (var line in Patch.GetLines())
 			{
-				var firstChar = line[0];
-				if (firstChar == '+')
+				var firstChar = line.Length == 0 ? 'X' : line[0];
+				if (firstChar != '+' && firstChar != '-')
 				{
-					this.lineNumbersAdded.Add(i);
+					// No line affected
+					idxOld++;
+					idxNew++;
+					continue;
 				}
-				else if (firstChar == '-')
+				
+				if (firstChar == '-')
 				{
-					this.lineNumbersDeleted.Add(i);
+					this.lineNumbersDeleted.Add(idxOld++);
 				}
-
-				i++;
+				else if (firstChar == '+')
+				{
+					this.lineNumbersAdded.Add(idxNew++);
+				}
+				else
+				{
+					// No addition or deletion
+					idxOld++;
+					idxNew++;
+				}
 			}
+
+			return this;
 		}
 
 		/// <summary>
@@ -107,14 +139,15 @@ namespace GitDensity.Density
 				// The item 0 is just the diff-header.
 				// The structure is 4 variables followed by text (the hunk).
 
-				yield return new Hunk(part[4])
+				yield return new Hunk(part[4].TrimStart('\n'))
 				{
 					OldLineStart = Int32.Parse(part[0]),
 					OldNumberOfLines = Int32.Parse(part[1]),
 					NewLineStart = Int32.Parse(part[2]),
 					NewNumberOfLines = Int32.Parse(part[3]),
+					SourceFilePath = pec.OldPath,
 					TargetFilePath = pec.Path
-				};
+				}.ComputeLinesAddedAndDeleted(); // Important to call having set the props
 			}
 		}
 	}
