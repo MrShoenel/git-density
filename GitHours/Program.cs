@@ -31,6 +31,7 @@
 using CommandLine;
 using CommandLine.Text;
 using GitDensity.Util;
+using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
@@ -45,7 +46,8 @@ namespace GitHours
 	{
 		OK = 0,
 		RepoInvalid = -2,
-		UsageInvalid = -3
+		UsageInvalid = -3,
+		OtherError = -4
 	}
 
 	/// <summary>
@@ -97,11 +99,22 @@ namespace GitHours
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
+				Repository repository = null;
 				try
 				{
-					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
+					repository = options.RepoPath.OpenRepository(options.TempDirectory);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex.Message);
+					Environment.Exit((int)ExitCodes.RepoInvalid);
+				}
+
+				try
+				{
+					using (repository)
 					{
-						var span = new GitHours.Hours.GitHoursSpan(repo, options.Since, options.Until);
+						var span = new Hours.GitHoursSpan(repository, options.Since, options.Until);
 						var ic = CultureInfo.InvariantCulture;
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
@@ -120,7 +133,7 @@ namespace GitHours
 				catch (Exception ex)
 				{
 					logger.LogError(ex.Message);
-					Environment.Exit((int)ExitCodes.RepoInvalid);
+					Environment.Exit((int)ExitCodes.OtherError);
 				}
 			}
 			else
@@ -188,7 +201,8 @@ namespace GitHours
 			HelpText.DefaultParsingErrorsHandler(this, ht);
 			ht.AddOptions(this);
 
-			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>().Select(ec => $"{ec.ToString()} ({(int)ec})"));
+			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
+				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
 			var exitReason = exitCode == ExitCodes.UsageInvalid ?
 				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Please check the usage below.\n\n" : String.Empty;
 
