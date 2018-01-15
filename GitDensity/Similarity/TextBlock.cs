@@ -52,7 +52,7 @@ namespace GitDensity.Similarity
 	/// Represents a block of text where the block consists of lines and their
 	/// line numbers.
 	/// </summary>
-	internal class TextBlock
+	internal class TextBlock : IEquatable<TextBlock>
 	{
 		protected IDictionary<Int32, Line> linesWithLineNumber;
 
@@ -75,6 +75,11 @@ namespace GitDensity.Similarity
 			get => String.Join("\n", this.linesWithLineNumber.OrderBy(kv => kv.Key)
 				.Select(kv => kv.Value.String));
 		}
+
+		/// <summary>
+		/// Returns true if no lines were added.
+		/// </summary>
+		public Boolean IsEmpty => this.linesWithLineNumber.Count == 0;
 
 		/// <summary>
 		/// Initializes a new, empty <see cref="TextBlock"/>.
@@ -144,6 +149,14 @@ namespace GitDensity.Similarity
 			this.linesWithLineNumber[line.Number] = line;
 		}
 
+		public void AddLines(IEnumerable<Line> lines)
+		{
+			foreach (var line in lines)
+			{
+				this.AddLine(line);
+			}
+		}
+
 		/// <summary>
 		/// Removes a line from this <see cref="TextBlock"/>.
 		/// </summary>
@@ -189,6 +202,11 @@ namespace GitDensity.Similarity
 		public Boolean HasLineNumber(Int32 lineNumber)
 		{
 			return this.linesWithLineNumber.ContainsKey(lineNumber);
+		}
+
+		public bool Equals(TextBlock other)
+		{
+			return other is TextBlock && this.WholeBlock == other.WholeBlock;
 		}
 	}
 }

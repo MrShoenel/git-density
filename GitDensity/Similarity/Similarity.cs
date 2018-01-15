@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace GitDensity.Similarity
 {
-	internal class Similarity
+	internal class Similarity<T> where T : new()
 	{
 		private Lazy<TextBlock> lazyOldTextBlock;
 		public TextBlock OldTextBlock { get { return this.lazyOldTextBlock.Value; } }
@@ -27,6 +27,13 @@ namespace GitDensity.Similarity
 
 		private IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures;
 
+		private Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>> lazySims;
+
+		public ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>> Similarities
+		{
+			get => new ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>>(this.lazySims.Value);
+		}
+
 		public Similarity(Hunk hunk, IEnumerable<ClonesXmlSet> cloneSets, IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures)
 		{
 			this.lazyOldTextBlock = new Lazy<TextBlock>(() =>
@@ -37,9 +44,13 @@ namespace GitDensity.Similarity
 			this.hunk = hunk;
 			this.cloneSets = cloneSets;
 			this.similarityMeasures = similarityMeasures;
+			this.lazySims = new Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>>(() =>
+			{
+				return this.ComputeSimilarities();
+			});
 		}
 
-		private IDictionary<SimilarityComparisonType, ICollection<T>> Bla<T>() where T : new()
+		private IDictionary<SimilarityComparisonType, ICollection<T>> ComputeSimilarities()
 		{
 			var dict = new Dictionary<SimilarityComparisonType, ICollection<T>>
 			{
@@ -48,23 +59,55 @@ namespace GitDensity.Similarity
 				[SimilarityComparisonType.PostCloneBlockSimilarity] = new List<T>()
 			};
 
-			#region BlockSimilarity
-			foreach (var simMeasure in this.similarityMeasures)
+			Action<TextBlock, TextBlock, ICollection<T>> computeSim = (oldBlock, newBlock, coll) =>
 			{
-				var similarity = 1d - simMeasure.Value.Distance(
-					this.OldTextBlock.WholeBlock, this.NewTextBlock.WholeBlock);
-
 				// populate a new instance of T
 				var t = new T();
-				simMeasure.Key.SetValue(t, similarity);
 
-				dict[SimilarityComparisonType.BlockSimilarity].Add(t);
+				foreach (var simMeasure in this.similarityMeasures)
+				{
+					Double similarity;
+					if (oldBlock.IsEmpty && newBlock.IsEmpty) // Empty & Same; similarity is 100%
+					{
+						similarity = 1d;
+					}
+					else if (oldBlock.IsEmpty ^ newBlock.IsEmpty) // One empty, one not: sim is 0%
+					{
+						similarity = 0d;
+					}
+					else if (oldBlock.Equals(newBlock)) // A more expensive check
+					{
+						similarity = 1d;
+					}
+					else
+					{
+						// Compute: Both non-empty:
+						similarity = 1d - simMeasure.Value.Distance(
+							oldBlock.WholeBlock, newBlock.WholeBlock);
+					}
+
+					simMeasure.Key.SetValue(t, similarity);
+				}
+
+				coll.Add(t);
+			};
+
+			foreach (var simMeasure in this.similarityMeasures)
+			{
+				#region BlockSimilarity
+				computeSim(this.OldTextBlock, this.NewTextBlock,
+					dict[SimilarityComparisonType.BlockSimilarity]);
+				#endregion
+
+				#region Clone similarity
+				var tbh = this.ToPostCloneBlockAndClonedLinesBlock(this.OldTextBlock, this.NewTextBlock);
+				computeSim(tbh.OldPostClone, tbh.NewPostClone,
+					dict[SimilarityComparisonType.PostCloneBlockSimilarity]);
+
+				computeSim(tbh.OldBlockClonedLines, tbh.NewBlockClonedLines,
+					dict[SimilarityComparisonType.ClonedBlockLinesSimilarity]);
+				#endregion
 			}
-			#endregion
-
-			#region Clone similarity
-
-			#endregion
 
 			return dict;
 		}
@@ -80,9 +123,30 @@ namespace GitDensity.Similarity
 				var newSetBlock = set.Blocks
 					.Where(b => b.Source.EndsWith(this.hunk.TargetFilePath)).First();
 
+				// Fill up the old post-clone block
+				tbh.OldPostClone.AddLines(oldBlock.LinesWithNumber.Select(kv => kv.Value));
 
+				foreach (var lineNumber in oldSetBlock.LineNumbers)
+				{
+					if (tbh.OldPostClone.HasLineNumber(lineNumber))
+					{
+						tbh.OldBlockClonedLines.AddLine(tbh.OldPostClone.RemoveLine(lineNumber));
+					}
+				}
+
+				// Fill up the new post-clone block
+				tbh.NewPostClone.AddLines(newBlock.LinesWithNumber.Select(kv => kv.Value));
+
+				foreach (var lineNumber in newSetBlock.LineNumbers)
+				{
+					if (tbh.NewPostClone.HasLineNumber(lineNumber))
+					{
+						tbh.NewBlockClonedLines.AddLine(tbh.NewPostClone.RemoveLine(lineNumber));
+					}
+				}
 			}
-			throw new NotImplementedException();
+
+			return tbh;
 		}
 
 		private class TextBlockHelper

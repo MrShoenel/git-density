@@ -154,8 +154,9 @@ namespace GitDensity
 				{
 					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
-						var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("85d")).First(), repo.Commits.Where(c => c.Sha.StartsWith("473")).First());
-						var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree, new String[] { "GitDensity/Program.cs" });
+						// 85d, 473
+						var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("380")).First(), repo.Commits.Where(c => c.Sha.StartsWith("653")).First());
+						var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree/*, new String[] { "GitDensity/Program.cs" }*/);
 						var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
 
 						// Instantiate the Density analysis with the selected programming
@@ -164,7 +165,8 @@ namespace GitDensity
 
 						density.InitializeStringSimilarityMeasures(typeof(Data.Entities.SimilarityEntity));
 
-						var simm = new Similarity.Similarity(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
+						var simm = new Similarity.Similarity<Data.Entities.SimilarityEntity>(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
+						var foo = simm.Similarities;
 
 						var result = density.Analyze();
 
