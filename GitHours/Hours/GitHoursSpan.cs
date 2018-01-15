@@ -138,9 +138,7 @@ namespace GitHours.Hours
 					orderedOldToNew.TakeWhile(commit => commit.Author.When.DateTime <= this.UntilDateTime).Count() - 1
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
-
-
-
+				
 				if (idxSince == -1 || idxUntil < idxSince)
 				{
 					throw new IndexOutOfRangeException("Cannot use the supplied Since/Until values as valid delimiters.");
