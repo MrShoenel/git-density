@@ -28,6 +28,7 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -47,8 +48,10 @@ namespace GitHours.Hours
 
 		public UInt32 FirstCommitAdditionInMinutes { get; protected internal set; }
 
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public String Sha1FirstCommit { get; protected internal set; }
 
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public String Sha1LastCommit { get; protected internal set; }
 
 		public GitHoursSpan GitHoursSpan { get; protected internal set; }

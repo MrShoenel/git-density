@@ -139,6 +139,13 @@ namespace GitHours.Hours
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
 
+
+
+				if (idxSince == -1 || idxUntil < idxSince)
+				{
+					throw new IndexOutOfRangeException("Cannot use the supplied Since/Until values as valid delimiters.");
+				}
+
 				return orderedOldToNew.Skip(idxSince).Take(1 + idxUntil - idxSince).ToList();
 			});
 		}

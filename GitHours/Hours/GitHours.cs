@@ -93,8 +93,8 @@ namespace GitHours.Hours
 				AuthorStats = authorWorks.OrderBy(aw => aw.Hours),
 
 				FirstCommitAdditionInMinutes = this.FirstCommitAdditionInMinutes,
-				Sha1FirstCommit = this.GitHoursSpan.FilteredCommits.First().Sha,
-				Sha1LastCommit = this.GitHoursSpan.FilteredCommits.Last().Sha,
+				Sha1FirstCommit = this.GitHoursSpan.FilteredCommits.FirstOrDefault()?.Sha,
+				Sha1LastCommit = this.GitHoursSpan.FilteredCommits.LastOrDefault()?.Sha,
 				MaxCommitDiffInMinutes = this.MaxCommitDiffInMinutes,
 				RepositoryPath = this.GitHoursSpan.Repository.Info.WorkingDirectory,
 				GitHoursSpan = this.GitHoursSpan
