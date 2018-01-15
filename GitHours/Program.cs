@@ -31,7 +31,6 @@
 using CommandLine;
 using CommandLine.Text;
 using GitDensity.Util;
-using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
@@ -102,10 +101,9 @@ namespace GitHours
 				{
 					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
+						var span = new GitHours.Hours.GitHoursSpan(repo, options.Since, options.Until);
 						var ic = CultureInfo.InvariantCulture;
-						var gitHours = new Hours.GitHours(repo, options.MaxCommitDiff, options.FirstCommitAdd,
-							options.Since == null ? (DateTime?)null : DateTime.ParseExact(options.Since, Hours.GitHours.DateTimeFormat, ic),
-							options.Until == null ? (DateTime?)null : DateTime.ParseExact(options.Until, Hours.GitHours.DateTimeFormat, ic));
+						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
 						var obj = JsonConvert.SerializeObject(gitHours.Analyze(), Formatting.Indented);
 						if (String.IsNullOrEmpty(options.OutputFile))
@@ -153,10 +151,10 @@ namespace GitHours
 		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
 		public String OutputFile { get; set; }
 
-		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
+		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
-		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (exclusive) certain date. The required format is 'yyyy-MM-dd HH:mm'.")]
+		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) acertain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]

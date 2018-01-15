@@ -42,44 +42,22 @@ namespace GitHours.Hours
 	/// </summary>
 	internal class GitHours
 	{
-		/// <summary>
-		/// Used for <see cref="Since"/> and <see cref="Until"/>. If such date/times are
-		/// supplied, they must match this format exactly (24 hours format).
-		/// </summary>
-		public static readonly String DateTimeFormat = "yyyy-MM-dd HH:mm";
-
-		public Repository Repository { get; protected set; }
-
 		public UInt32 MaxCommitDiffInMinutes { get; protected set; } = 2 * 60;
 
 		public UInt32 FirstCommitAdditionInMinutes { get; protected set; } = 2 * 60;
 
-		/// <summary>
-		/// Defaults to <see cref="DateTime.MinValue"/> if not supplied to c'tor.
-		/// </summary>
-		public DateTime Since { get; protected set; } = DateTime.MinValue;
-
-		/// <summary>
-		/// Defaults to <see cref="DateTime.MaxValue"/> if not supplied to c'tor.
-		/// </summary>
-		public DateTime Until { get; protected set; } = DateTime.MaxValue;
-
-		/// <summary>
-		/// Created by c'tor and based on <see cref="Since"/>/<see cref="Until"/> dates.
-		/// </summary>
-		private IList<Commit> commits;
+		public GitHoursSpan GitHoursSpan { get; protected set; }
 
 		/// <summary>
 		/// Constructor for the <see cref="GitHours"/> class.
 		/// </summary>
-		/// <param name="repo">The <see cref="Repository"/> to analyze.</param>
+		/// <param name="gitHoursSpan">Contains the (time-)span of commits to include.</param>
 		/// <param name="maxCommitDiffInMinutes"></param>
 		/// <param name="firstCommitAdditionInMinutes"></param>
-		/// <param name="since"></param>
-		/// <param name="until"></param>
-		public GitHours(Repository repo, UInt32? maxCommitDiffInMinutes = null, UInt32? firstCommitAdditionInMinutes = null, DateTime? since = null, DateTime? until = null)
+		public GitHours(GitHoursSpan gitHoursSpan, UInt32? maxCommitDiffInMinutes = null, UInt32? firstCommitAdditionInMinutes = null)
 		{
-			this.Repository = repo;
+			this.GitHoursSpan = gitHoursSpan;
+
 			if (maxCommitDiffInMinutes.HasValue)
 			{
 				this.MaxCommitDiffInMinutes = maxCommitDiffInMinutes.Value;
@@ -88,20 +66,6 @@ namespace GitHours.Hours
 			{
 				this.FirstCommitAdditionInMinutes = firstCommitAdditionInMinutes.Value;
 			}
-			if (since.HasValue)
-			{
-				this.Since = since.Value;
-			}
-			if (until.HasValue)
-			{
-				this.Until = until.Value;
-			}
-
-
-			this.commits = this.Repository.Commits.Where(commit =>
-			{
-				return commit.Committer.When.DateTime >= this.Since && commit.Committer.When.DateTime < this.Until;
-			}).ToList();
 		}
 
 		/// <summary>
@@ -111,7 +75,7 @@ namespace GitHours.Hours
 		/// <returns></returns>
 		public GitHoursAnalysisResult Analyze()
 		{
-			var commitsByDeveloper = this.commits.GroupByDeveloper();
+			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper();
 			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown");
 			var authorWorks = commitsByDeveloper.Where(authorCommits => authorCommits.Any()).Select(authorCommits =>
 			{
@@ -125,14 +89,15 @@ namespace GitHours.Hours
 			return new GitHoursAnalysisResult
 			{
 				TotalHours = Math.Round(authorWorks.Aggregate(0d, (sum, authorWork) => sum + authorWork.Hours), 2),
-				TotalCommits = (UInt32)this.commits.Count(),
+				TotalCommits = (UInt32)this.GitHoursSpan.FilteredCommits.Count,
 				AuthorStats = authorWorks.OrderBy(aw => aw.Hours),
 
 				FirstCommitAdditionInMinutes = this.FirstCommitAdditionInMinutes,
+				Sha1FirstCommit = this.GitHoursSpan.FilteredCommits.First().Sha,
+				Sha1LastCommit = this.GitHoursSpan.FilteredCommits.Last().Sha,
 				MaxCommitDiffInMinutes = this.MaxCommitDiffInMinutes,
-				RepositoryPath = this.Repository.Info.WorkingDirectory,
-				Since = this.Since,
-				Until = this.Until
+				RepositoryPath = this.GitHoursSpan.Repository.Info.WorkingDirectory,
+				GitHoursSpan = this.GitHoursSpan
 			};
 		}
 

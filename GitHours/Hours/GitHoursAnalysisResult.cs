@@ -47,9 +47,11 @@ namespace GitHours.Hours
 
 		public UInt32 FirstCommitAdditionInMinutes { get; protected internal set; }
 
-		public DateTime Since { get; protected internal set; }
+		public String Sha1FirstCommit { get; protected internal set; }
 
-		public DateTime Until { get; protected internal set; }
+		public String Sha1LastCommit { get; protected internal set; }
+
+		public GitHoursSpan GitHoursSpan { get; protected internal set; }
 
 		public String RepositoryPath { get; protected internal set; }
 
