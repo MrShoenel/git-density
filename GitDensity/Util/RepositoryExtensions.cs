@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections;
-using ValueUtils;
 
 namespace GitDensity.Util
 {
@@ -113,7 +112,7 @@ namespace GitDensity.Util
 		/// sometimes uses (slightly) different names or email addresses. Also, sometimes
 		/// either of these is missing.
 		/// </summary>
-		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity, IEquatable<DeveloperWithAlternativeNamesAndEmails>, IEqualityComparer<DeveloperWithAlternativeNamesAndEmails>
+		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity
 		{
 			private ISet<String> altNames;
 			public IReadOnlyCollection<String> AlternativeNames {
@@ -144,23 +143,6 @@ namespace GitDensity.Util
 					this.altEmails.Add(email);
 				}
 			}
-
-			#region Equality, Hash-code
-			public bool Equals(DeveloperWithAlternativeNamesAndEmails other)
-			{
-				return FieldwiseEquality.AreEqual(this, other);
-			}
-
-			public bool Equals(DeveloperWithAlternativeNamesAndEmails x, DeveloperWithAlternativeNamesAndEmails y)
-			{
-				return FieldwiseEquality<DeveloperWithAlternativeNamesAndEmails>.Instance(x, y);
-			}
-
-			public int GetHashCode(DeveloperWithAlternativeNamesAndEmails obj)
-			{
-				return FieldwiseHasher<DeveloperWithAlternativeNamesAndEmails>.Instance(this);
-			}
-			#endregion
 		}
 
 		/// <summary>
