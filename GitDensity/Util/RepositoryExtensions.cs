@@ -245,5 +245,48 @@ namespace GitDensity.Util
 					commits.Where(c => dict[devEntityKv.Key].Contains(c.Author)));
 			}
 		}
+
+		/// <summary>
+		/// Similar to and based on <see cref="GroupByDeveloper(IEnumerable{Commit})"/>, this
+		/// method returns a collection of <see cref="Signatures"/> for each unified developer
+		/// represented as <see cref="DeveloperWithAlternativeNamesAndEmails"/>.
+		/// </summary>
+		/// <param name="commits"></param>
+		/// <returns>A dictionary where each developer has a set of signatures used.</returns>
+		public static IDictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>> GroupByDeveloperToSignatures(this IEnumerable<Commit> commits)
+		{
+			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>>();
+
+			foreach (var group in commits.GroupByDeveloper())
+			{
+				dict[group.Key] = new HashSet<Signature>(group.Select(commit => commit.Author));
+			}
+
+			return dict;
+		}
+
+		/// <summary>
+		/// Similar to <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit})"/>, this
+		/// method returns a mapping from each <see cref="LibGit2Sharp.Signature"/> to a
+		/// <see cref="DeveloperEntity"/>. More than one <see cref="LibGit2Sharp.Signature"/>
+		/// can point to the same <see cref="DeveloperEntity"/>.
+		/// </summary>
+		/// <param name="commits"></param>
+		/// <returns></returns>
+		public static IDictionary<Signature, DeveloperEntity> GroupByDeveloperAsSignatures(this IEnumerable<Commit> commits)
+		{
+			var fromDict = commits.GroupByDeveloperToSignatures();
+			var toDict = new Dictionary<Signature, DeveloperEntity>();
+
+			foreach (var fromKv in fromDict)
+			{
+				foreach (var signature in fromKv.Value)
+				{
+					toDict[signature] = fromKv.Key;
+				}
+			}
+
+			return toDict;
+		}
 	}
 }
