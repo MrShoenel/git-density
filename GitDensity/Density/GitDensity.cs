@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace GitDensity.Density
 {
@@ -112,12 +113,24 @@ namespace GitDensity.Density
 				logger.LogWarning($"No similarity-measures have been initialized. This can be done by calling {nameof(InitializeStringSimilarityMeasures)}(Type fromType).");
 			}
 
-			var repoEntity = this.Repository.AsEntity();
+			this.TempDirectory.Clear();
+
+			var developers = this.Repository.Commits.GroupByDeveloperAsSignatures();
+			var repoEntity = this.Repository.AsEntity().AddDevelopers(
+				new HashSet<DeveloperEntity>(developers.Values));
+			var commits = this.Repository.Commits.Select(commit => {
+				return commit.AsEntity(repoEntity, developers[commit.Author]);
+			}).ToDictionary(commit => commit.HashSHA1, commit => commit);
 			var pairs = this.Repository.CommitPairs(this.SkipInitialCommit, this.SkipMergeCommits);
 
-			foreach (var pair in pairs)
+			Parallel.ForEach(pairs,
+#if DEBUG
+				new ParallelOptions { MaxDegreeOfParallelism = 1 },
+#endif
+				pair =>
 			{
-				var pairEntity = pair.AsEntity(repoEntity);
+				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
+					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
@@ -152,46 +165,24 @@ namespace GitDensity.Density
 						// Filter out relevant sets: those that are concerned with two version
 						// of the same file (and therefore have exactly two blocks).
 						.Where(set => set.Blocks.Length == 2));
-
-					//	// We are interested in (non-)pure modifications only, as for pure ADDs
-					//	// or DELETEs, there is no relevant clone-detection. A non-pure modification
-					//	// may be a file that has been moved and changed at the same time. The differ-
-					//	// ence to a pure modification is that the old and new path to the file are
-					//	// now different.
-					//	foreach (var change in relevantTreeChanges.Where(change => change.Status == ChangeKind.Modified || change.Status == ChangeKind.Renamed))
-					//	{
-					//		var changePathOld = Path.Combine(pairDirectory.FullName, "old", change.OldPath);
-					//		var changePathNew = Path.Combine(pairDirectory.FullName, "new", change.Path);
-
-					//		var clonePathA = set.Blocks.First().Source;
-					//		var clonePathB = set.Blocks.Reverse().First().Source;
-					//	}
-
-					//	return true;
-					//}));
 				}
-
-				//// Now map the changes with the CloneSets:
-				//var treeEntryChangeEntities = relevantTreeChanges
-				//	.Select(change => change.AsEntity()).ToList();
 
 				// The following block concerns all pure ADDs and DELETEs (i.e. the file
 				// in the patch did not exists previously or was deleted in the more recent
 				// patch). That means, for each such file, exactly one FileBlock exists.
 				foreach (var change in relevantTreeChanges.Where(change => change.Status == ChangeKind.Added || change.Status == ChangeKind.Deleted))
 				{
-					var treeChangeEntity = change.AsEntity();
+					var treeChangeEntity = change.AsEntity(pairEntity);
 
 					var patchNew = pair.Patch[change.Path];
-					var patchOld = pair.Patch[change.OldPath];
 
 					var fileBlock = new FileBlockEntity
 					{
 						CommitPair = pairEntity,
 						FileBlockType = change.Status == ChangeKind.Added ? FileBlockType.Added : FileBlockType.Deleted,
-						TreeEntryChanges = change.AsEntity(),
+						TreeEntryChanges = treeChangeEntity,
 
-						NewAmount = change.Status == ChangeKind.Added ?	(uint)patchNew.LinesAdded : 0u,
+						NewAmount = change.Status == ChangeKind.Added ? (uint)patchNew.LinesAdded : 0u,
 						NewStart = change.Status == ChangeKind.Added ? 1u : 0u,
 						OldAmount = change.Status == ChangeKind.Added ? 0u : (uint)patchNew.LinesDeleted,
 						OldStart = change.Status == ChangeKind.Added ? 0u : 1u,
@@ -204,6 +195,7 @@ namespace GitDensity.Density
 					};
 
 					treeChangeEntity.AddFileBlock(fileBlock);
+					pairEntity.AddFileBlock(fileBlock);
 					pairEntity.AddTreeEntryChanges(treeChangeEntity);
 				}
 
@@ -213,52 +205,68 @@ namespace GitDensity.Density
 				// or moved as well (a so-called non-pure modification).
 				foreach (var change in relevantTreeChanges.Where(change => change.Status == ChangeKind.Modified || change.Status == ChangeKind.Renamed))
 				{
-					var treeChangeEntity = change.AsEntity();
-					var changePathOld = Path.Combine(pairDirectory.FullName, dirOld, change.OldPath);
-					var changePathNew = Path.Combine(pairDirectory.FullName, dirNew, change.Path);
+					var treeChangeEntity = change.AsEntity(pairEntity);
+					var changePathOld = Path.GetFullPath(
+						Path.Combine(pairDirectory.FullName, dirOld, change.OldPath));
+					var changePathNew = Path.GetFullPath(
+						Path.Combine(pairDirectory.FullName, dirNew, change.Path));
 
 					var relevantSets = cloneSets.Where(set =>
 					{
-						var clonePathA = set.Blocks.First().Source;
-						var clonePathB = set.Blocks.Reverse().First().Source;
+						var oic = StringComparison.OrdinalIgnoreCase;
+						var clonePathA = Path.GetFullPath(set.Blocks.First().Source);
+						var clonePathB = Path.GetFullPath(set.Blocks.Reverse().First().Source);
 
-						if (clonePathA == changePathOld)
+						if (clonePathA.Equals(changePathOld, oic))
 						{
-							return clonePathB == changePathNew;
+							return clonePathB.Equals(changePathNew, oic);
 						}
-						else if (clonePathA == changePathNew)
+						else if (clonePathA.Equals(changePathNew, oic))
 						{
-							return clonePathB == changePathOld;
+							return clonePathB.Equals(changePathOld, oic);
 						}
 
 						return false;
 					});
 
 					var patchNew = pair.Patch[change.Path];
-					var hunks = Hunk.HunksForPatch(patchNew);
+					var oldDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirOld));
+					var newDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirNew));
+					var hunks = Hunk.HunksForPatch(patchNew, oldDirectory, newDirectory);
+
 
 					var fileBlocks = hunks.Select(hunk =>
 					{
+						var similarity = new Similarity.Similarity<SimilarityEntity>(
+							hunk, relevantSets, this.SimilarityMeasures);
+
 						return new FileBlockEntity
 						{
 							CommitPair = pairEntity,
 							FileBlockType = FileBlockType.Modified,
-							
-							//NewAmount = hunk.NewNumberOfLines,
-							//NumAdded = hunk.num
-						};
+							TreeEntryChanges = treeChangeEntity,
+
+							NewAmount = hunk.NewNumberOfLines,
+							NewStart = hunk.NewLineStart,
+							OldAmount = hunk.OldNumberOfLines,
+							OldStart = hunk.OldNumberOfLines,
+
+							NumAdded = hunk.NumberOfLinesAdded,
+							NumDeleted = hunk.NumberOfLinesDeleted,
+
+							NumAddedPostCloneDetection = similarity.NumberOfLinesAddedPostCloneDetection,
+							NumDeletedPostCloneDetection = similarity.NumberOfLinesDeletedPostCloneDetection
+							// Regard the next line which adds all similarities to the FileBlock:
+						}.AddSimilarities(similarity.Similarities.SelectMany(kv => kv.Value));
 					});
+
+					treeChangeEntity.AddFileBlocks(fileBlocks);
+					pairEntity.AddFileBlocks(fileBlocks);
+					pairEntity.AddTreeEntryChanges(treeChangeEntity);
 				}
+			});
 
-
-
-				// For each pair.Patch.PatchEntryChanges, interpolate the results with those from
-				// the clone detection and prepare for similarity checks.
-			}
-
-
-
-			throw new NotImplementedException();
+			return new GitDensityAnalysisResult(repoEntity);
 		}
 
 		#region IDisposable Support
