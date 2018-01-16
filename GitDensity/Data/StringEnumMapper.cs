@@ -3,6 +3,8 @@ using NHibernate.SqlTypes;
 using NHibernate.UserTypes;
 using System;
 using System.Data;
+using System.Data.Common;
+using NHibernate.Engine;
 
 namespace GitDensity.Data
 {
@@ -17,15 +19,16 @@ namespace GitDensity.Data
 		public Boolean IsMutable { get { return false; } }
 		public Type ReturnedType { get { return typeof(T); } }
 		public SqlType[] SqlTypes { get { return new[] { new SqlType(DbType.String) }; } }
-		
-		public object NullSafeGet(IDataReader rs, string[] names, object owner)
-		{
-			var tmp = NHibernateUtil.String.NullSafeGet(rs, names[0]).ToString();
 
+
+
+		public object NullSafeGet(DbDataReader rs, string[] names, ISessionImplementor session, object owner)
+		{
+			var tmp = NHibernateUtil.String.NullSafeGet(rs, names[0], session, owner).ToString();
 			return Enum.Parse(typeof(T), tmp);
 		}
 
-		public void NullSafeSet(IDbCommand cmd, object value, int index)
+		public void NullSafeSet(DbCommand cmd, object value, int index, ISessionImplementor session)
 		{
 			if (value == null)
 			{
