@@ -20,19 +20,24 @@ namespace GitDensity.Similarity
 	/// <summary>
 	/// Represents a single line in a <see cref="TextBlock"/>.
 	/// </summary>
-	public class Line
+	public class Line : ICloneable
 	{
 		public LineType Type { get; protected internal set; }
 
-		public Int32 Number { get; protected internal set; }
+		public UInt32 Number { get; protected internal set; }
 
 		public String String { get; protected internal set; }
 
-		public Line(LineType type, Int32 number, String @string)
+		public Line(LineType type, UInt32 number, String @string)
 		{
 			this.Type = type;
 			this.Number = number;
 			this.String = @string;
+		}
+
+		public object Clone()
+		{
+			return new Line(this.Type, this.Number, this.String);
 		}
 	}
 }

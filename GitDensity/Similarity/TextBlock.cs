@@ -164,7 +164,7 @@ namespace GitDensity.Similarity
 		/// contain the line with the specified line number.</exception>
 		/// <param name="lineNumber"></param>
 		/// <returns>The removed line as <see cref="Line"/>.</returns>
-		public Line RemoveLine(Int32 lineNumber)
+		public Line RemoveLine(UInt32 lineNumber)
 		{
 			if (!this.linesWithLineNumber.ContainsKey(lineNumber))
 			{
@@ -183,7 +183,7 @@ namespace GitDensity.Similarity
 		/// <param name="lineNumbers">A list of line numbers to remove.</param>
 		/// <returns>A new <see cref="TextBlock"/> consisting of the removed
 		/// lines.</returns>
-		public TextBlock RemoveLines(IEnumerable<Int32> lineNumbers)
+		public TextBlock RemoveLines(IEnumerable<UInt32> lineNumbers)
 		{
 			var tb = new TextBlock();
 			foreach (var lineNumber in lineNumbers)

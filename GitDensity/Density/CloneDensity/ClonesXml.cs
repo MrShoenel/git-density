@@ -104,9 +104,9 @@ namespace GitDensity.Density.CloneDensity
 		/// Returns an <see cref="Int32[]"/> of affected line numbers.
 		/// </summary>
 		[XmlIgnore]
-		public Int32[] LineNumbers
+		public UInt32[] LineNumbers
 		{
-			get => Enumerable.Range(this.Start, 1 + this.End - this.Start).ToArray();
+			get => Enumerable.Range(this.Start, 1 + this.End - this.Start).Select(i => (UInt32)i).ToArray();
 		}
 	}
 }

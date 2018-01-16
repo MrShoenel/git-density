@@ -32,6 +32,7 @@ using GitDensity.Util;
 using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -51,34 +52,34 @@ namespace GitDensity.Density
 		protected internal static readonly Regex HunkSplitRegex =
 			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+([0-9]+),([0-9]+)\s+@@.*$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
 
-		public Int32 OldLineStart { get; protected internal set; }
+		public UInt32 OldLineStart { get; protected internal set; }
 
-		public Int32 OldNumberOfLines { get; protected internal set; }
+		public UInt32 OldNumberOfLines { get; protected internal set; }
 
-		public Int32 NewLineStart { get; protected internal set; }
+		public UInt32 NewLineStart { get; protected internal set; }
 
-		public Int32 NewNumberOfLines { get; protected internal set; }
+		public UInt32 NewNumberOfLines { get; protected internal set; }
 
 		public String SourceFilePath { get; protected internal set; }
 
 		public String TargetFilePath { get; protected internal set; }
 
-		public Int32 NumberOfLinesAdded { get { return this.lineNumbersAdded.Count; } }
+		public UInt32 NumberOfLinesAdded { get { return (UInt32)this.lineNumbersAdded.Count; } }
 
-		public Int32 NumberOfLinesDeleted { get { return this.lineNumbersDeleted.Count; } }
+		public UInt32 NumberOfLinesDeleted { get { return (UInt32)this.lineNumbersDeleted.Count; } }
 		
 		internal String Patch { get; private set; }
 
-		protected IList<Int32> lineNumbersAdded;
+		protected IList<UInt32> lineNumbersAdded;
 
-		protected IList<Int32> lineNumbersDeleted;
+		protected IList<UInt32> lineNumbersDeleted;
 
 		private Hunk(String patch)
 		{
 			this.Patch = patch;
 
-			this.lineNumbersAdded = new List<Int32>();
-			this.lineNumbersDeleted = new List<Int32>();
+			this.lineNumbersAdded = new List<UInt32>();
+			this.lineNumbersDeleted = new List<UInt32>();
 		}
 
 		/// <summary>
@@ -130,7 +131,7 @@ namespace GitDensity.Density
 		/// </summary>
 		/// <param name="pec"></param>
 		/// <returns></returns>
-		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec)
+		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec, DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory)
 		{
 			var parts = HunkSplitRegex.Split(pec.Patch);
 
@@ -141,12 +142,12 @@ namespace GitDensity.Density
 
 				yield return new Hunk(part[4].TrimStart('\n'))
 				{
-					OldLineStart = Int32.Parse(part[0]),
-					OldNumberOfLines = Int32.Parse(part[1]),
-					NewLineStart = Int32.Parse(part[2]),
-					NewNumberOfLines = Int32.Parse(part[3]),
-					SourceFilePath = pec.OldPath,
-					TargetFilePath = pec.Path
+					OldLineStart = UInt32.Parse(part[0]),
+					OldNumberOfLines = UInt32.Parse(part[1]),
+					NewLineStart = UInt32.Parse(part[2]),
+					NewNumberOfLines = UInt32.Parse(part[3]),
+					SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath),
+					TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path)
 				}.ComputeLinesAddedAndDeleted(); // Important to call having set the props
 			}
 		}
