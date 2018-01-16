@@ -2,10 +2,7 @@
 using GitDensity.Density;
 using LibGit2Sharp;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GitDensity.Util
 {
@@ -20,41 +17,69 @@ namespace GitDensity.Util
 			};
 		}
 
-		public static TreeEntryChangesEntity AsEntity(this TreeEntryChanges changes)
+		public static TreeEntryChangesEntity AsEntity(this TreeEntryChanges changes, CommitPairEntity commitPairEntity, Boolean addToCommitPair = true)
 		{
-			return new TreeEntryChangesEntity
+			var entity = new TreeEntryChangesEntity
 			{
 				PathNew = changes.Path,
 				PathOld = changes.OldPath,
-				Status = changes.Status
+				Status = changes.Status,
+				CommitPair = commitPairEntity
 			};
+
+			if (addToCommitPair && commitPairEntity is CommitPairEntity)
+			{
+				commitPairEntity.AddTreeEntryChanges(entity);
+			}
+
+			return entity;
 		}
 
-		public static DeveloperEntity AsEntity(this Signature signature, RepositoryEntity repositoryEntity = null)
+		public static DeveloperEntity AsEntity(this Signature signature, RepositoryEntity repositoryEntity = null, Boolean addToRepository = true)
 		{
-			return new DeveloperEntity
+			var entity = new DeveloperEntity
 			{
 				Email = signature.Email,
 				Name = signature.Email,
 				Repository = repositoryEntity
 			};
+
+			if (addToRepository && repositoryEntity is RepositoryEntity)
+			{
+				repositoryEntity.AddDeveloper(entity);
+			}
+
+			return entity;
 		}
 
-		public static CommitPairEntity AsEntity(this CommitPair pair, RepositoryEntity repositoryEntity = null)
+		public static CommitPairEntity AsEntity(this CommitPair pair, RepositoryEntity repositoryEntity = null, CommitEntity childCommitEntity = null, CommitEntity parentCommitEntity = null, bool addToRepository = true, bool addCommitsToRepository = true)
 		{
-			return new CommitPairEntity
+			var entity = new CommitPairEntity
 			{
-				ChildCommit = pair.Child.AsEntity(repositoryEntity,
-					pair.Child.Author.AsEntity(repositoryEntity)),
-				ParentCommit = pair.Parent?.AsEntity(repositoryEntity,
-					pair.Parent?.Author.AsEntity(repositoryEntity)),
+				ChildCommit = childCommitEntity,
+				ParentCommit = parentCommitEntity,
 				Repository = repositoryEntity
 			};
+
+			if (repositoryEntity is RepositoryEntity)
+			{
+				if (addToRepository)
+				{
+					repositoryEntity.AddCommitPair(entity);
+				}
+				if (addCommitsToRepository)
+				{
+					repositoryEntity.AddCommit(entity.ChildCommit);
+					repositoryEntity.AddCommit(entity.ParentCommit);
+				}
+			}
+
+			return entity;
 		}
 
-		public static CommitEntity AsEntity(this Commit commit, RepositoryEntity repositoryEntity = null, DeveloperEntity developerEntity = null)
+		public static CommitEntity AsEntity(this Commit commit, RepositoryEntity repositoryEntity = null, DeveloperEntity developerEntity = null, Boolean addToRepository = true, Boolean addToDeveloper = true)
 		{
-			return new CommitEntity
+			var entity = new CommitEntity
 			{
 				CommitDate = commit.Author.When.DateTime,
 				HashSHA1 = commit.Sha,
@@ -62,6 +87,17 @@ namespace GitDensity.Util
 				Repository = repositoryEntity,
 				Developer = developerEntity
 			};
+
+			if (addToRepository && repositoryEntity is RepositoryEntity)
+			{
+				repositoryEntity.AddCommit(entity);
+			}
+			if (addToDeveloper && developerEntity is DeveloperEntity)
+			{
+				developerEntity.AddCommit(entity);
+			}
+
+			return entity;
 		}
 	}
 }
