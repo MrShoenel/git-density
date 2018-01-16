@@ -52,29 +52,47 @@ namespace GitDensity.Similarity
 	/// Represents a block of text where the block consists of lines and their
 	/// line numbers.
 	/// </summary>
-	internal class TextBlock : IEquatable<TextBlock>
+	internal class TextBlock : IEquatable<TextBlock>, ICloneable
 	{
-		protected IDictionary<Int32, Line> linesWithLineNumber;
+		protected IDictionary<UInt32, Line> linesWithLineNumber;
 
-		private ReadOnlyDictionary<Int32, Line> linesWithLineNumberReadOnly;
+		private ReadOnlyDictionary<UInt32, Line> linesWithLineNumberReadOnly;
 
 		/// <summary>
 		/// A read-only dictionary with lines and their line number.
 		/// </summary>
-		public IReadOnlyDictionary<Int32, Line> LinesWithNumber
+		public IReadOnlyDictionary<UInt32, Line> LinesWithNumber
 		{
 			get => this.linesWithLineNumberReadOnly;
 		}
+
+		#region Count-properties
+		public UInt32 LinesAdded => (UInt32)this.LinesWithNumber
+			.Count(kv => kv.Value.Type == LineType.Added);
+
+		public UInt32 LinesDeleted => (UInt32)this.LinesWithNumber
+			.Count(kv => kv.Value.Type == LineType.Deleted);
+
+		public UInt32 LinesUntouched => (UInt32)this.linesWithLineNumber
+			.Count(kv => kv.Value.Type == LineType.Untouched);
+		#endregion
 
 		/// <summary>
 		/// The current <see cref="TextBlock"/> represented as a single string,
 		/// where the lines have been joined by a new-line character (\n).
 		/// </summary>
-		public String WholeBlock
-		{
-			get => String.Join("\n", this.linesWithLineNumber.OrderBy(kv => kv.Key)
-				.Select(kv => kv.Value.String));
-		}
+		public String WholeBlock => String.Join("\n",
+			this.linesWithLineNumber.OrderBy(kv => kv.Key).Select(kv => kv.Value.String));
+
+		/// <summary>
+		/// The current <see cref="TextBlock"/> represented as a single string,
+		/// containing only those lines that have <see cref="Line.Type"/> of
+		/// type <see cref="LineType.Added"/> or <see cref="LineType.Deleted"/>.
+		/// The lines have been joined by a new-line character (\n).
+		/// </summary>
+		public String WholeBlockWithoutUntouched => String.Join("\n",
+			this.linesWithLineNumber.Where(l => l.Value.Type != LineType.Untouched)
+			.OrderBy(kv => kv.Key).Select(kv => kv.Value.String));
 
 		/// <summary>
 		/// Returns true if no lines were added.
@@ -86,9 +104,9 @@ namespace GitDensity.Similarity
 		/// </summary>
 		public TextBlock()
 		{
-			this.linesWithLineNumber = new Dictionary<Int32, Line>();
+			this.linesWithLineNumber = new Dictionary<UInt32, Line>();
 			this.linesWithLineNumberReadOnly =
-				new ReadOnlyDictionary<Int32, Line>(this.linesWithLineNumber);
+				new ReadOnlyDictionary<UInt32, Line>(this.linesWithLineNumber);
 		}
 
 		/// <summary>
@@ -118,17 +136,14 @@ namespace GitDensity.Similarity
 					{
 						this.AddLine(new Line(
 							added ? LineType.Added : LineType.Deleted, idx++, String.Empty));
-						//this.AddLine(idx++, String.Empty);
 						continue;
 					}
 
 					// Ordinary lines:
 					this.AddLine(new Line(
 						added ? LineType.Added : (untouched ? LineType.Untouched : LineType.Deleted),
-						// remove first two chars (white or +/-)
-						idx++, (line.Length > 1 ? line.Substring(2) : line).TrimEnd()));
-					//this.AddLine(idx++, // remove first two chars (white or +/-)
-					//	(line.Length > 1 ? line.Substring(2) : line).TrimEnd());
+						// remove first character (white or +/-)
+						idx++, (line.Length > 1 ? line.Substring(1) : line).TrimEnd()));
 				}
 			}
 		}
@@ -199,14 +214,32 @@ namespace GitDensity.Similarity
 		/// </summary>
 		/// <param name="lineNumber"></param>
 		/// <returns></returns>
-		public Boolean HasLineNumber(Int32 lineNumber)
+		public Boolean HasLineNumber(UInt32 lineNumber)
 		{
 			return this.linesWithLineNumber.ContainsKey(lineNumber);
 		}
 
+		/// <summary>
+		/// Returns true, if the other object is an instance of <see cref="TextBlock"/>
+		/// and their blocks as string are equal (<see cref="WholeBlock"/>).
+		/// </summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
 		public bool Equals(TextBlock other)
 		{
 			return other is TextBlock && this.WholeBlock == other.WholeBlock;
+		}
+
+		/// <summary>
+		/// Returns an exact copy of this <see cref="TextBlock"/> that contains
+		/// equal (cloned) <see cref="Line"/>s.
+		/// </summary>
+		/// <returns></returns>
+		public object Clone()
+		{
+			var tb = new TextBlock();
+			tb.AddLines(this.LinesWithNumber.Select(kv => kv.Value.Clone() as Line));
+			return tb;
 		}
 	}
 }
