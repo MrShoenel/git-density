@@ -106,7 +106,11 @@ namespace GitDensity.Data
 						config.SetInterceptor(new SqlStatementInterceptor());
 
 						var update = new NHibernate.Tool.hbm2ddl.SchemaUpdate(config);
-						update.Execute(script: false, doUpdate: true);
+						update.Execute(scripts =>
+						{
+							logger.LogTrace(scripts);
+						}, doUpdate: true);
+
 						if (update.Exceptions.Count > 0)
 						{
 							foreach (var ex in update.Exceptions)
