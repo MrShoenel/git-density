@@ -34,13 +34,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace GitHours.Hours
+namespace Util
 {
-	internal class GitHoursSpan
+	public class GitHoursSpan
 	{
 		/// <summary>
 		/// Used for <see cref="Since"/> and <see cref="Until"/>. If such date/times are

@@ -34,9 +34,9 @@ namespace Util.Extensions
 		/// <param name="sortOrder">If <see cref="SortOrder.OldestFirst"/>, the first pair returned
 		/// contains the initial commit (if not skipped) and null as a parent.</param>
 		/// <returns>An <see cref="IEnumerable{CommitPair}"/> of pairs of commits.</returns>
-		public static IEnumerable<CommitPair> CommitPairs(this Repository repo, bool skipInitialCommit = false, bool skipMergeCommits = true, SortOrder sortOrder = SortOrder.OldestFirst)
+		public static IEnumerable<CommitPair> CommitPairs(this GitHoursSpan gitHoursSpan, bool skipInitialCommit = false, bool skipMergeCommits = true, SortOrder sortOrder = SortOrder.OldestFirst)
 		{
-			var commits = sortOrder == SortOrder.LatestFirst ? repo.Commits : repo.Commits.Reverse();
+			var commits = sortOrder == SortOrder.LatestFirst ? gitHoursSpan.FilteredCommits : gitHoursSpan.FilteredCommits.Reverse();
 
 			foreach (var commit in commits)
 			{
@@ -54,7 +54,7 @@ namespace Util.Extensions
 
 
 				// Note that the parent can be null, if initial commit is not skipped.
-				yield return new CommitPair(repo, commit, commit.Parents.FirstOrDefault());
+				yield return new CommitPair(gitHoursSpan.Repository, commit, commit.Parents.FirstOrDefault());
 			}
 		}
 

@@ -41,7 +41,17 @@ namespace Util.Logging
 		protected static Lazy<IDictionary<Type, String>> lazyLoadedTypes = new Lazy<IDictionary<Type, String>>(() =>
 		{
 			var dict = new Dictionary<Type, String>();
-			foreach (var type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(asmbly => asmbly.GetTypes()))
+			foreach (var type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(asmbly =>
+			{
+				try
+				{
+					return asmbly.GetTypes();
+				}
+				catch
+				{
+					return Enumerable.Empty<Type>();
+				}
+			}))
 			{
 				dict[type] = type.Name;
 			}

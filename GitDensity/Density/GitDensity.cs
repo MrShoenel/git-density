@@ -22,6 +22,8 @@ namespace GitDensity.Density
 		public static readonly String[] DefaultFileTypeExtensions =
 			new [] { "js", "ts", "java", "cs", "php", "phtml", "php3", "php4", "php5", "xml" };
 
+		public GitHoursSpan GitHoursSpan { get; protected internal set; }
+
 		public Repository Repository { get; protected internal set; }
 
 		public ProgrammingLanguage[] ProgrammingLanguages { get; protected internal set; }
@@ -42,11 +44,12 @@ namespace GitDensity.Density
 			get => this.roSimMeasures;
 		}
 
-		public GitDensity(Repository repository, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
+		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
 			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
 			this.roSimMeasures = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.similarityMeasures);
-			this.Repository = repository;
+			this.GitHoursSpan = gitHoursSpan;
+			this.Repository = gitHoursSpan.Repository;
 			this.ProgrammingLanguages = languages.ToArray();
 			this.TempDirectory = new DirectoryInfo(tempPath ?? Path.GetTempPath());
 
@@ -120,10 +123,10 @@ namespace GitDensity.Density
 			var developers = this.Repository.Commits.GroupByDeveloperAsSignatures();
 			var repoEntity = this.Repository.AsEntity().AddDevelopers(
 				new HashSet<DeveloperEntity>(developers.Values));
-			var commits = this.Repository.Commits.Select(commit => {
+			var commits = this.GitHoursSpan.FilteredCommits.Select(commit => {
 				return commit.AsEntity(repoEntity, developers[commit.Author]);
 			}).ToDictionary(commit => commit.HashSHA1, commit => commit);
-			var pairs = this.Repository.CommitPairs(this.SkipInitialCommit, this.SkipMergeCommits);
+			var pairs = this.GitHoursSpan.CommitPairs(this.SkipInitialCommit, this.SkipMergeCommits);
 
 			Parallel.ForEach(pairs,
 #if DEBUG

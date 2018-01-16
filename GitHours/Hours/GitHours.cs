@@ -30,6 +30,7 @@
 ///
 using System;
 using System.Linq;
+using Util;
 using Util.Extensions;
 
 namespace GitHours.Hours

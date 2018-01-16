@@ -157,14 +157,11 @@ namespace GitDensity
 				{
 					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
-						//// 85d, 473
-						//var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("380")).First(), repo.Commits.Where(c => c.Sha.StartsWith("653")).First());
-						//var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree/*, new String[] { "GitDensity/Program.cs" }*/);
-						//var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
+						var span = new GitHoursSpan(repo, options.Since, options.Until);
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
-						var density = new Density.GitDensity(repo, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
+						var density = new Density.GitDensity(span, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
 
 						density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
 
@@ -256,6 +253,12 @@ namespace GitDensity
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
 		public String TempDirectory { get; set; }
+
+		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+		public String Since { get; set; }
+
+		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) acertain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+		public String Until { get; set; }
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest to lowest) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;

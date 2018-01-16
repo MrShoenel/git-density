@@ -37,6 +37,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Util;
 using Util.Extensions;
 using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -115,7 +116,7 @@ namespace GitHours
 				{
 					using (repository)
 					{
-						var span = new Hours.GitHoursSpan(repository, options.Since, options.Until);
+						var span = new GitHoursSpan(repository, options.Since, options.Until);
 						var ic = CultureInfo.InvariantCulture;
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
