@@ -15,20 +15,37 @@ namespace GitDensity.Data.Entities
 
 		public virtual CommitEntity ParentCommit { get; set; }
 
-		public virtual ISet<TreeEntryChangesEntity> TreeEntryChanges { get; set; }
+		public virtual ISet<TreeEntryChangesEntity> TreeEntryChanges { get; set; } = new HashSet<TreeEntryChangesEntity>();
 
-		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
 
-		public CommitPairEntity()
-		{
-			this.TreeEntryChanges = new HashSet<TreeEntryChangesEntity>();
-			this.FileBlocks = new HashSet<FileBlockEntity>();
-		}
+		private readonly Object padLock = new Object();
 
 		#region Methods
 		public virtual CommitPairEntity AddTreeEntryChanges(TreeEntryChangesEntity tece)
 		{
-			this.TreeEntryChanges.Add(tece);
+			lock (this.padLock)
+			{
+				this.TreeEntryChanges.Add(tece);
+				return this;
+			}
+		}
+
+		public virtual CommitPairEntity AddFileBlock(FileBlockEntity fileBlock)
+		{
+			lock (this.padLock)
+			{
+				this.FileBlocks.Add(fileBlock);
+				return this;
+			}
+		}
+
+		public virtual CommitPairEntity AddFileBlocks(IEnumerable<FileBlockEntity> fileBlocks)
+		{
+			foreach (var fileBlock in fileBlocks)
+			{
+				this.AddFileBlock(fileBlock);
+			}
 			return this;
 		}
 		#endregion

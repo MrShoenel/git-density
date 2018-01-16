@@ -31,6 +31,7 @@
 using F23.StringSimilarity;
 using F23.StringSimilarity.Interfaces;
 using FluentNHibernate.Mapping;
+using GitDensity.Similarity;
 using GitDensity.Util;
 using System;
 using System.Linq;
@@ -117,14 +118,28 @@ namespace GitDensity.Data.Entities
 
 
 
+	/// <summary>
+	/// So the setter can be called from within generic code.
+	/// </summary>
+	public interface IHasSimilarityComparisonType
+	{
+		SimilarityComparisonType ComparisonType { set; }
+	}
+
+
+
 
 	/// <summary>
 	/// NormLeven, Jaro, MLCS, NGr(2-6), Cos(2-6), Jacc(2-6), Soren(2-6) = 23
 	/// <see cref="http://www.scielo.br/pdf/gmb/v22n3/22n3a24.pdf"/>
 	/// </summary>
-	public class SimilarityEntity
+	public class SimilarityEntity : IHasSimilarityComparisonType
 	{
 		public virtual UInt32 ID { get; set; }
+
+		public virtual SimilarityComparisonType ComparisonType { get; set; }
+
+		public virtual FileBlockEntity FileBlock { get; set; }
 
 		#region Similarity measures
 		[SimilarityType(typeof(NormalizedLevenshtein))]
@@ -220,6 +235,8 @@ namespace GitDensity.Data.Entities
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
 
+			this.Map(x => x.ComparisonType).CustomType<SimilarityComparisonType>().Not.Nullable();
+
 			this.Map(x => x.NormalizedLevenshtein).Not.Nullable();
 			this.Map(x => x.JaroWinkler).Not.Nullable();
 			this.Map(x => x.MetricLongestCommonSubSeq).Not.Nullable();
@@ -247,6 +264,8 @@ namespace GitDensity.Data.Entities
 			this.Map(x => x.SorensenDice4).Not.Nullable();
 			this.Map(x => x.SorensenDice5).Not.Nullable();
 			this.Map(x => x.SorensenDice6).Not.Nullable();
+
+			this.References<FileBlockEntity>(x => x.FileBlock).Not.Nullable();
 		}
 	}
 }

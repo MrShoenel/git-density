@@ -45,21 +45,75 @@ namespace GitDensity.Data.Entities
 
 		[Indexed(Unique = true)]
 		public virtual String Url { get; set; }
-		
+
 		[Indexed(Unique = true)]
 		public virtual String ShaHead { get; set; }
 
-		public virtual ISet<DeveloperEntity> Developers { get; set; }
+		public virtual ISet<DeveloperEntity> Developers { get; set; } = new HashSet<DeveloperEntity>();
 
-		public virtual ISet<CommitEntity> Commits { get; set; }
+		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
+
+		public virtual ISet<CommitPairEntity> CommitPairs { get; set; } = new HashSet<CommitPairEntity>();
 
 		public virtual ProjectEntity Project { get; set; }
 
-		public RepositoryEntity()
+		private readonly Object padLock = new Object();
+
+		#region Methods
+		public virtual RepositoryEntity AddDeveloper(DeveloperEntity developer)
 		{
-			this.Developers = new HashSet<DeveloperEntity>();
-			this.Commits = new HashSet<CommitEntity>();
+			lock (this.padLock)
+			{
+				this.Developers.Add(developer);
+				return this;
+			}
 		}
+
+		public virtual RepositoryEntity AddDevelopers(IEnumerable<DeveloperEntity> developers)
+		{
+			foreach (var developer in developers)
+			{
+				this.AddDeveloper(developer);
+			}
+			return this;
+		}
+
+		public virtual RepositoryEntity AddCommit(CommitEntity commit)
+		{
+			lock (padLock)
+			{
+				this.Commits.Add(commit);
+				return this;
+			}
+		}
+
+		public virtual RepositoryEntity AddCommits(IEnumerable<CommitEntity> commits)
+		{
+			foreach (var commit in commits)
+			{
+				this.AddCommit(commit);
+			}
+			return this;
+		}
+
+		public virtual RepositoryEntity AddCommitPair(CommitPairEntity commitPair)
+		{
+			lock (padLock)
+			{
+				this.CommitPairs.Add(commitPair);
+				return this;
+			}
+		}
+
+		public virtual RepositoryEntity AddCommitPairs(IEnumerable<CommitPairEntity> commitPairs)
+		{
+			foreach (var commitPair in commitPairs)
+			{
+				this.AddCommitPair(commitPair);
+			}
+			return this;
+		}
+		#endregion
 	}
 
 	public class RepositoryEntityMap : ClassMap<RepositoryEntity>

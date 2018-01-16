@@ -1,6 +1,7 @@
 ﻿using FluentNHibernate.Mapping;
 using GitDensity.Util;
 using System;
+using System.Collections.Generic;
 
 namespace GitDensity.Data.Entities
 {
@@ -36,6 +37,38 @@ namespace GitDensity.Data.Entities
 		public virtual CommitPairEntity CommitPair { get; set; }
 
 		public virtual TreeEntryChangesEntity TreeEntryChanges { get; set; }
+
+		public virtual ISet<SimilarityEntity> Similarities { get; set; } = new HashSet<SimilarityEntity>();
+
+		private readonly Object padLock = new Object();
+
+		/// <summary>
+		/// Add a <see cref="SimilarityEntity"/> to this <see cref="FileBlockEntity"/>.
+		/// </summary>
+		/// <param name="similarity"></param>
+		/// <returns>This (<see cref="FileBlockEntity"/>) for chaining.</returns>
+		public virtual FileBlockEntity AddSimilarity(SimilarityEntity similarity)
+		{
+			lock (this.padLock)
+			{
+				this.Similarities.Add(similarity);
+				return this;
+			}
+		}
+
+		/// <summary>
+		/// Add all <see cref="SimilarityEntity"/>s to this <see cref="FileBlockEntity"/>.
+		/// </summary>
+		/// <param name="similarities"></param>
+		/// <returns>This (<see cref="FileBlockEntity"/>) for chaining.</returns>
+		public virtual FileBlockEntity AddSimilarities(IEnumerable<SimilarityEntity> similarities)
+		{
+			foreach (var similarity in similarities)
+			{
+				this.AddSimilarity(similarity);
+			}
+			return this;
+		}
 	}
 
 	public class FileBlockEntityMap : ClassMap<FileBlockEntity>
@@ -45,6 +78,7 @@ namespace GitDensity.Data.Entities
 			this.Table(nameof(FileBlockEntity).ToSimpleUnderscoreCase());
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
+
 			this.Map(x => x.FileBlockType).CustomType<FileBlockType>().Not.Nullable();
 			this.Map(x => x.OldStart).Not.Nullable();
 			this.Map(x => x.OldAmount).Not.Nullable();
@@ -57,6 +91,8 @@ namespace GitDensity.Data.Entities
 
 			this.References<CommitPairEntity>(x => x.CommitPair).Not.Nullable();
 			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Not.Nullable();
+
+			this.HasMany<SimilarityEntity>(x => x.Similarities).Cascade.Lock();
 		}
 	}
 }

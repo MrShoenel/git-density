@@ -19,14 +19,11 @@ namespace GitDensity.Data.Entities
 
 		public virtual CommitPairEntity CommitPair { get; set; }
 
-		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
 
-		#region C'tor, Methods
-		public TreeEntryChangesEntity()
-		{
-			this.FileBlocks = new HashSet<FileBlockEntity>();
-		}
+		private readonly Object padLock = new Object();
 
+		#region Methods
 		/// <summary>
 		/// Add a <see cref="FileBlockEntity"/> to this <see cref="TreeEntryChangesEntity"/>.
 		/// </summary>
@@ -34,7 +31,24 @@ namespace GitDensity.Data.Entities
 		/// <returns>This (<see cref="TreeEntryChangesEntity"/>) for chaining.</returns>
 		public virtual TreeEntryChangesEntity AddFileBlock(FileBlockEntity fileBlock)
 		{
-			this.FileBlocks.Add(fileBlock);
+			lock (this.padLock)
+			{
+				this.FileBlocks.Add(fileBlock);
+				return this;
+			}
+		}
+
+		/// <summary>
+		/// Add all <see cref="FileBlockEntity"/>s to this <see cref="TreeEntryChangesEntity"/>.
+		/// </summary>
+		/// <param name="fileBlocks"></param>
+		/// <returns>This (<see cref="TreeEntryChangesEntity"/>) for chaining.</returns>
+		public virtual TreeEntryChangesEntity AddFileBlocks(IEnumerable<FileBlockEntity> fileBlocks)
+		{
+			foreach (var fileBlock in fileBlocks)
+			{
+				this.AddFileBlock(fileBlock);
+			}
 			return this;
 		}
 		#endregion

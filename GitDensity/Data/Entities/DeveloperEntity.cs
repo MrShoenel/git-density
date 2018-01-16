@@ -45,12 +45,29 @@ namespace GitDensity.Data.Entities
 
 		public virtual RepositoryEntity Repository { get; set; }
 
-		public virtual ISet<CommitEntity> Commits { get; set; }
+		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
 
-		public DeveloperEntity()
+		private readonly Object padLock = new Object();
+
+		#region Methods
+		public virtual DeveloperEntity AddCommit(CommitEntity commit)
 		{
-			this.Commits = new HashSet<CommitEntity>();
+			lock (this.padLock)
+			{
+				this.Commits.Add(commit);
+				return this;
+			}
 		}
+
+		public virtual DeveloperEntity AddCommits(IEnumerable<CommitEntity> commits)
+		{
+			foreach (var commit in commits)
+			{
+				this.AddCommit(commit);
+			}
+			return this;
+		}
+		#endregion
 	}
 
 	public class DeveloperEntityMap : ClassMap<DeveloperEntity>
