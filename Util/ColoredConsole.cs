@@ -32,7 +32,7 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace GitDensity.Util
+namespace Util
 {
 
 	/// <summary>

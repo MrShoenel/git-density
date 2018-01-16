@@ -29,14 +29,15 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
-using GitDensity.Util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Util.Extensions;
+using Util.Logging;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
 	public enum ProjectEntityLanguage
 	{
@@ -57,8 +58,6 @@ namespace GitDensity.Data.Entities
 
 		public virtual RepositoryEntity Repository { get; set; }
 
-		private static BaseLogger<ProjectEntity> logger = Program.CreateLogger<ProjectEntity>();
-
 		/// <summary>
 		/// Cleans up <see cref="ProjectEntity"/>s in the database and attempts to probe
 		/// and repair the git clone-URL. Checks and modifies <see cref="ProjectEntity.WasCorrected"/> as the status of an entity. Some entities
@@ -68,7 +67,7 @@ namespace GitDensity.Data.Entities
 		/// that do not have a clone-URL. This method was primarily made to fix broken
 		/// URLs. Entities without a repairable URL or any URL at all were considered
 		/// useless.</param>
-		public static void CleanUpDatabase(bool deleteUselessEntities = false)
+		public static void CleanUpDatabase(BaseLogger<ProjectEntity> logger, bool deleteUselessEntities = false)
 		{
 			using (var tempSess = DataFactory.Instance.OpenSession())
 			{

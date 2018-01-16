@@ -27,8 +27,6 @@
 /// ---------------------------------------------------------------------------------
 using CommandLine;
 using CommandLine.Text;
-using GitDensity.Data;
-using GitDensity.Util;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
@@ -38,7 +36,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using Configuration = GitDensity.Util.Configuration;
+using Util;
+using Util.Data;
+using Util.Extensions;
+using Util.Logging;
+using Configuration = Util.Configuration;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitDensity
@@ -84,7 +86,7 @@ namespace GitDensity
 		/// <summary>
 		/// The program's configuration, as read from 'configuration.json'.
 		/// </summary>
-		public static Util.Configuration Configuration { private set; get; }
+		public static Configuration Configuration { private set; get; }
 
 		private static BaseLogger<Program> logger = CreateLogger<Program>();
 
@@ -115,7 +117,7 @@ namespace GitDensity
 					logger.LogCritical("Writing example to file: {0}", configFilePath);
 
 					File.WriteAllText(configFilePath,
-						JsonConvert.SerializeObject(Util.Configuration.Example, Formatting.Indented));
+						JsonConvert.SerializeObject(Configuration.Example, Formatting.Indented));
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
@@ -125,7 +127,7 @@ namespace GitDensity
 				{
 					try
 					{
-						Program.Configuration = JsonConvert.DeserializeObject<Util.Configuration>(
+						Program.Configuration = JsonConvert.DeserializeObject<Configuration>(
 							File.ReadAllText(configFilePath));
 					}
 					catch (Exception ex)
@@ -135,7 +137,8 @@ namespace GitDensity
 
 					logger.LogInformation("Successfully read the configuration.");
 
-					DataFactory.Configure(Program.Configuration, options.TempDirectory);
+					DataFactory.Configure(Program.Configuration,
+						Program.CreateLogger<DataFactory>(), options.TempDirectory);
 					using (var tempSess = DataFactory.Instance.OpenSession())
 					{
 						logger.LogInformation("Successfully probed the configured database.");
@@ -154,19 +157,19 @@ namespace GitDensity
 				{
 					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
 					{
-						// 85d, 473
-						var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("380")).First(), repo.Commits.Where(c => c.Sha.StartsWith("653")).First());
-						var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree/*, new String[] { "GitDensity/Program.cs" }*/);
-						var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
+						//// 85d, 473
+						//var pair = new Density.CommitPair(repo, repo.Commits.Where(c => c.Sha.StartsWith("380")).First(), repo.Commits.Where(c => c.Sha.StartsWith("653")).First());
+						//var patch = repo.Diff.Compare<LibGit2Sharp.Patch>(pair.Parent.Tree, pair.Child.Tree/*, new String[] { "GitDensity/Program.cs" }*/);
+						//var hunks = Density.Hunk.HunksForPatch(patch.First()).ToList();
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
 						var density = new Density.GitDensity(repo, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
 
-						density.InitializeStringSimilarityMeasures(typeof(Data.Entities.SimilarityEntity));
+						density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
 
-						var simm = new Similarity.Similarity<Data.Entities.SimilarityEntity>(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
-						var foo = simm.Similarities;
+						//var simm = new Similarity.Similarity<Data.Entities.SimilarityEntity>(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
+						//var foo = simm.Similarities;
 
 						var result = density.Analyze();
 

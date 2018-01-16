@@ -30,7 +30,6 @@
 ///
 using CommandLine;
 using CommandLine.Text;
-using GitDensity.Util;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -38,6 +37,8 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Util.Extensions;
+using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitHours

@@ -28,13 +28,14 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
-using GitDensity.Util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Util;
+using Util.Logging;
 
 namespace GitDensity.Density.CloneDensity
 {

@@ -1,9 +1,9 @@
 ﻿using FluentNHibernate.Mapping;
-using GitDensity.Util;
 using System;
 using System.Collections.Generic;
+using Util.Extensions;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
 	public class CommitPairEntity
 	{

@@ -31,12 +31,12 @@
 using F23.StringSimilarity;
 using F23.StringSimilarity.Interfaces;
 using FluentNHibernate.Mapping;
-using GitDensity.Similarity;
-using GitDensity.Util;
 using System;
 using System.Linq;
+using Util.Extensions;
+using Util.Similarity;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
 	/// <summary>
 	/// This attribute is intended to simplify string similarity measure usages. It

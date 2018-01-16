@@ -1,6 +1,4 @@
 ﻿using F23.StringSimilarity.Interfaces;
-using GitDensity.Data.Entities;
-using GitDensity.Util;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
@@ -10,6 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Util;
+using Util.Data.Entities;
+using Util.Extensions;
+using Util.Logging;
 
 namespace GitDensity.Density
 {

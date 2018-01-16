@@ -1,13 +1,13 @@
-﻿using GitDensity.Util;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Util.Extensions;
 
-namespace GitDensity.Density
+namespace Util.Density
 {
 	/// <summary>
 	/// 

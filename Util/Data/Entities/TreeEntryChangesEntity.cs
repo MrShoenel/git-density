@@ -1,10 +1,10 @@
 ﻿using FluentNHibernate.Mapping;
-using GitDensity.Util;
 using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
+using Util.Extensions;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
 	public class TreeEntryChangesEntity
 	{

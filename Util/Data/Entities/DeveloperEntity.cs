@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2017 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -29,65 +29,37 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
-using GitDensity.Util;
 using System;
 using System.Collections.Generic;
+using Util.Extensions;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
-	/// <summary>
-	/// Represents a <see cref="LibGit2Sharp.Repository"/> that is associated with
-	/// a number of developers through <see cref="DeveloperEntity"/> objects.
-	/// </summary>
-	public class RepositoryEntity
+	public class DeveloperEntity
 	{
 		public virtual UInt32 ID { get; set; }
 
-		[Indexed(Unique = true)]
-		public virtual String Url { get; set; }
+		public virtual String Name { get; set; }
 
-		[Indexed(Unique = true)]
-		public virtual String ShaHead { get; set; }
+		public virtual String Email { get; set; }
 
-		public virtual ISet<DeveloperEntity> Developers { get; set; } = new HashSet<DeveloperEntity>();
+		public virtual RepositoryEntity Repository { get; set; }
 
 		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
-
-		public virtual ISet<CommitPairEntity> CommitPairs { get; set; } = new HashSet<CommitPairEntity>();
-
-		public virtual ProjectEntity Project { get; set; }
 
 		private readonly Object padLock = new Object();
 
 		#region Methods
-		public virtual RepositoryEntity AddDeveloper(DeveloperEntity developer)
+		public virtual DeveloperEntity AddCommit(CommitEntity commit)
 		{
 			lock (this.padLock)
-			{
-				this.Developers.Add(developer);
-				return this;
-			}
-		}
-
-		public virtual RepositoryEntity AddDevelopers(IEnumerable<DeveloperEntity> developers)
-		{
-			foreach (var developer in developers)
-			{
-				this.AddDeveloper(developer);
-			}
-			return this;
-		}
-
-		public virtual RepositoryEntity AddCommit(CommitEntity commit)
-		{
-			lock (padLock)
 			{
 				this.Commits.Add(commit);
 				return this;
 			}
 		}
 
-		public virtual RepositoryEntity AddCommits(IEnumerable<CommitEntity> commits)
+		public virtual DeveloperEntity AddCommits(IEnumerable<CommitEntity> commits)
 		{
 			foreach (var commit in commits)
 			{
@@ -95,41 +67,22 @@ namespace GitDensity.Data.Entities
 			}
 			return this;
 		}
-
-		public virtual RepositoryEntity AddCommitPair(CommitPairEntity commitPair)
-		{
-			lock (padLock)
-			{
-				this.CommitPairs.Add(commitPair);
-				return this;
-			}
-		}
-
-		public virtual RepositoryEntity AddCommitPairs(IEnumerable<CommitPairEntity> commitPairs)
-		{
-			foreach (var commitPair in commitPairs)
-			{
-				this.AddCommitPair(commitPair);
-			}
-			return this;
-		}
 		#endregion
 	}
 
-	public class RepositoryEntityMap : ClassMap<RepositoryEntity>
+	public class DeveloperEntityMap : ClassMap<DeveloperEntity>
 	{
-		public RepositoryEntityMap()
+		public DeveloperEntityMap()
 		{
-			this.Table(nameof(RepositoryEntity).ToSimpleUnderscoreCase());
+			this.Table(nameof(DeveloperEntity).ToSimpleUnderscoreCase());
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
-			this.Map(x => x.Url).Not.Nullable();
-			this.Map(x => x.ShaHead).Not.Nullable().Length(40);
+			this.Map(x => x.Name).Not.Nullable();
+			this.Map(x => x.Email).Not.Nullable();
 
-			this.HasMany<DeveloperEntity>(x => x.Developers).Cascade.Lock();
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
 
-			this.References<ProjectEntity>(x => x.Project).Unique();
+			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 		}
 	}
 }

@@ -6,7 +6,7 @@ using System.Data;
 using System.Data.Common;
 using NHibernate.Engine;
 
-namespace GitDensity.Data
+namespace Util.Data
 {
 	/// <summary>
 	/// A class that can handle enums as strings (not integers) and supports generic

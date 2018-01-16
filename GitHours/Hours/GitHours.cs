@@ -28,11 +28,9 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
-using GitDensity.Util;
-using LibGit2Sharp;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Util.Extensions;
 
 namespace GitHours.Hours
 {

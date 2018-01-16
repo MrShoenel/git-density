@@ -1,14 +1,14 @@
-﻿using GitDensity.Data.Entities;
-using GitDensity.Density;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections;
+using Util.Data.Entities;
+using Util.Density;
 
-namespace GitDensity.Util
+namespace Util.Extensions
 {
 	public static class RepositoryExtensions
 	{

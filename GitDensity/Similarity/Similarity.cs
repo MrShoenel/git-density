@@ -1,15 +1,14 @@
 ﻿using F23.StringSimilarity.Interfaces;
-using GitDensity.Data.Entities;
 using GitDensity.Density;
 using GitDensity.Density.CloneDensity;
-using GitDensity.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
+using Util.Data.Entities;
+using Util.Similarity;
 
 namespace GitDensity.Similarity
 {

@@ -1,10 +1,9 @@
-﻿using GitDensity.Data.Entities;
-using LibGit2Sharp;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Util.Data.Entities;
 
 namespace GitDensity.Density
 {

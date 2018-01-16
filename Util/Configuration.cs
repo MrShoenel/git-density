@@ -1,12 +1,12 @@
-﻿using GitDensity.Data;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Util.Data;
 
-namespace GitDensity.Util
+namespace Util
 {
 	/// <summary>
 	/// An enumeration of programming languages we currently support and have

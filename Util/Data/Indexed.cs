@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2017 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -28,61 +28,41 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
-using FluentNHibernate.Mapping;
-using GitDensity.Util;
+using FluentNHibernate.Conventions;
+using FluentNHibernate.Conventions.Instances;
 using System;
-using System.Collections.Generic;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data
 {
-	public class DeveloperEntity
+	/// <summary>
+	/// Used to annotate an entity's property so that it becomes indexed.
+	/// This attribute can also be used for properties that shall be unique.
+	/// </summary>
+	public class IndexedAttribute : Attribute
 	{
-		public virtual UInt32 ID { get; set; }
+		public Boolean Unique { get; set; }
 
-		public virtual String Name { get; set; }
+		public String Name { get; set; }
 
-		public virtual String Email { get; set; }
-
-		public virtual RepositoryEntity Repository { get; set; }
-
-		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
-
-		private readonly Object padLock = new Object();
-
-		#region Methods
-		public virtual DeveloperEntity AddCommit(CommitEntity commit)
+		public IndexedAttribute()
 		{
-			lock (this.padLock)
-			{
-				this.Commits.Add(commit);
-				return this;
-			}
 		}
-
-		public virtual DeveloperEntity AddCommits(IEnumerable<CommitEntity> commits)
-		{
-			foreach (var commit in commits)
-			{
-				this.AddCommit(commit);
-			}
-			return this;
-		}
-		#endregion
 	}
 
-	public class DeveloperEntityMap : ClassMap<DeveloperEntity>
+	public class IndexedConvention : AttributePropertyConvention<IndexedAttribute>
 	{
-		public DeveloperEntityMap()
+		protected override void Apply(IndexedAttribute attribute, IPropertyInstance instance)
 		{
-			this.Table(nameof(DeveloperEntity).ToSimpleUnderscoreCase());
+			var name = (attribute.Name ?? instance.Name).ToUpperInvariant();
 
-			this.Id(x => x.ID).GeneratedBy.Identity();
-			this.Map(x => x.Name).Not.Nullable();
-			this.Map(x => x.Email).Not.Nullable();
-
-			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
-
-			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
+			if (attribute.Unique)
+			{
+				instance.UniqueKey($"UNQ_{name}");
+			}
+			else
+			{
+				instance.Index($"IDX_{name}");
+			}
 		}
 	}
 }

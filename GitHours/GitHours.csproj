@@ -85,9 +85,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GitDensity\GitDensity.csproj">
-      <Project>{a387fe6e-4a84-4971-a8a7-3e60fb08b569}</Project>
-      <Name>GitDensity</Name>
+    <ProjectReference Include="..\Util\Util.csproj">
+      <Project>{459dd3d3-8a12-4f92-9df6-f1e6296cc6d6}</Project>
+      <Name>Util</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

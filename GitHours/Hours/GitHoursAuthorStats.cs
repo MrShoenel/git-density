@@ -31,7 +31,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using static GitDensity.Util.RepositoryExtensions;
+using static Util.Extensions.RepositoryExtensions;
 
 namespace GitHours.Hours
 {

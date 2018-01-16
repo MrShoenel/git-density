@@ -34,7 +34,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace GitDensity.Util
+namespace Util.Logging
 {
 	public abstract class BaseLogger<T> : ILogger<T>, IDisposable
 	{

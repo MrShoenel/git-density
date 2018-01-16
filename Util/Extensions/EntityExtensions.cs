@@ -1,10 +1,10 @@
-﻿using GitDensity.Data.Entities;
-using GitDensity.Density;
+﻿using Util.Data.Entities;
 using LibGit2Sharp;
 using System;
 using System.Linq;
+using Util.Density;
 
-namespace GitDensity.Util
+namespace Util.Extensions
 {
 	public static class EntityExtensions
 	{

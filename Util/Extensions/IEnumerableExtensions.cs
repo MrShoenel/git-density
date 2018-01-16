@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace GitDensity.Util
+namespace Util.Extensions
 {
 	public static class IEnumerableExtensions
 	{

@@ -1,8 +1,8 @@
 ﻿using FluentNHibernate.Mapping;
-using GitDensity.Util;
 using System;
+using Util.Extensions;
 
-namespace GitDensity.Data.Entities
+namespace Util.Data.Entities
 {
 	/// <summary>
 	/// An entity that can represent the most essential parts of a <see cref="Commit"/>.

@@ -25,17 +25,15 @@
 /// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 /// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /// ---------------------------------------------------------------------------------
-using FluentNHibernate.Automapping;
+
 using FluentNHibernate.Cfg.Db;
-using GitDensity.Data.Entities;
-using GitDensity.Util;
 using Microsoft.Extensions.Logging;
 using NHibernate;
 using System;
 using System.IO;
-using System.Linq;
+using Util.Logging;
 
-namespace GitDensity.Data
+namespace Util.Data
 {
 	/// <summary>
 	/// Enumeration of supported database-types.
@@ -66,7 +64,7 @@ namespace GitDensity.Data
 	/// </summary>
 	public class DataFactory
 	{
-		private static BaseLogger<DataFactory> logger = Program.CreateLogger<DataFactory>();
+		private static BaseLogger<DataFactory> logger;
 
 		/// <summary>
 		/// The static instance to the factory.
@@ -91,11 +89,11 @@ namespace GitDensity.Data
 		private static Lazy<ISessionFactory> lazySessionFactory;
 
 		/// <summary>
-		/// Called by <see cref="Program"/>. The public static getter for <see cref="Instance"/>
+		/// Called only be the main Program. The public static getter for <see cref="Instance"/>
 		/// requires that this method has been called before.
 		/// </summary>
 		/// <param name="configuration"></param>
-		internal static void Configure(Util.Configuration configuration, String tempDirectory = null)
+		public static void Configure(Configuration configuration, BaseLogger<DataFactory> logger, String tempDirectory = null)
 		{
 			lazySessionFactory = new Lazy<ISessionFactory>(() =>
 			{

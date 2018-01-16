@@ -30,12 +30,11 @@
 ///
 using Microsoft.Extensions.Logging;
 using System;
-using CC = GitDensity.Util.ColoredConsole;
+using CC = Util.ColoredConsole;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
-namespace GitDensity.Util
+namespace Util.Logging
 {
-
 	public class ColoredConsoleLogger<T> : BaseLogger<T>
 	{
 		/// <summary>

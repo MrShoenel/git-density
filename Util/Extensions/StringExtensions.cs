@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GitDensity.Util
+namespace Util.Extensions
 {
 	public static class StringExtensions
 	{
