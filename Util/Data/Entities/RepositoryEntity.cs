@@ -47,7 +47,10 @@ namespace Util.Data.Entities
 		public virtual String Url { get; set; }
 
 		[Indexed(Unique = true)]
-		public virtual String ShaHead { get; set; }
+		public virtual String SinceCommitSha1 { get; set; }
+
+		[Indexed(Unique = true)]
+		public virtual String UntilCommitSha1 { get; set; }
 
 		public virtual ISet<DeveloperEntity> Developers { get; set; } = new HashSet<DeveloperEntity>();
 
@@ -124,7 +127,8 @@ namespace Util.Data.Entities
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
 			this.Map(x => x.Url).Not.Nullable();
-			this.Map(x => x.ShaHead).Not.Nullable().Length(40);
+			this.Map(x => x.SinceCommitSha1).Not.Nullable().Length(40);
+			this.Map(x => x.UntilCommitSha1).Not.Nullable().Length(40);
 
 			this.HasMany<DeveloperEntity>(x => x.Developers).Cascade.Lock();
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();

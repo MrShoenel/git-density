@@ -121,7 +121,7 @@ namespace GitDensity.Density
 			this.TempDirectory.Clear();
 
 			var developers = this.Repository.Commits.GroupByDeveloperAsSignatures();
-			var repoEntity = this.Repository.AsEntity().AddDevelopers(
+			var repoEntity = this.Repository.AsEntity(this.GitHoursSpan).AddDevelopers(
 				new HashSet<DeveloperEntity>(developers.Values));
 			var commits = this.GitHoursSpan.FilteredCommits.Select(commit => {
 				return commit.AsEntity(repoEntity, developers[commit.Author]);

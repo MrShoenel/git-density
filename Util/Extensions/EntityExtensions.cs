@@ -8,12 +8,13 @@ namespace Util.Extensions
 {
 	public static class EntityExtensions
 	{
-		public static RepositoryEntity AsEntity(this Repository repository)
+		public static RepositoryEntity AsEntity(this Repository repository, GitHoursSpan gitHoursSpan)
 		{
 			return new RepositoryEntity
 			{
-				ShaHead = repository.Head.Tip.Sha,
-				Url = repository.Info.Path
+				Url = repository.Info.Path,
+				SinceCommitSha1 = gitHoursSpan.FilteredCommits.First().Sha,
+				UntilCommitSha1 = gitHoursSpan.FilteredCommits.Last().Sha
 			};
 		}
 
