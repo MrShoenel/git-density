@@ -38,10 +38,15 @@ using System.Text.RegularExpressions;
 
 namespace Util
 {
+	/// <summary>
+	/// Represents a segment that spans from a point in time or <see cref="Commit"/>
+	/// to another point in time or <see cref="Commit"/> and thus represents a range
+	/// of <see cref="Commit"/>s.
+	/// </summary>
 	public class GitHoursSpan
 	{
 		/// <summary>
-		/// Used for <see cref="Since"/> and <see cref="Until"/>. If such date/times are
+		/// Used for parsing the date/time, if given as string. If such date/times are
 		/// supplied, they must match this format exactly (24 hours format).
 		/// </summary>
 		public static readonly String DateTimeFormat = "yyyy-MM-dd HH:mm";
@@ -57,12 +62,12 @@ namespace Util
 		[JsonIgnore]
 		public Repository Repository { get; private set; }
 
-		private Lazy<IList<Commit>> lazyFilteredCommits;
+		private Lazy<LinkedList<Commit>> lazyFilteredCommits;
 		/// <summary>
 		/// Get a collection of commits to consider according to the since/until values.
 		/// </summary>
 		[JsonIgnore]
-		public IList<Commit> FilteredCommits => this.lazyFilteredCommits.Value;
+		public LinkedList<Commit> FilteredCommits => this.lazyFilteredCommits.Value;
 
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public DateTime? SinceDateTime { get; private set; }
@@ -76,6 +81,31 @@ namespace Util
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public String UntilCommitSha { get; private set; }
 
+		/// <summary>
+		/// Constructs a new <see cref="GitHoursSpan"/> using two <see cref="Commit"/>s
+		/// to delimit the range. Both <see cref="Commit"/>s will be included in the span.
+		/// </summary>
+		/// <see cref="GitHoursSpan(Repository, string, string)"/>.
+		/// <param name="repository"></param>
+		/// <param name="sinceCommit"></param>
+		/// <param name="untilCommit"></param>
+		public GitHoursSpan(Repository repository, Commit sinceCommit, Commit untilCommit)
+			: this(repository, sinceCommit.Sha, untilCommit.Sha)
+		{
+		}
+
+		/// <summary>
+		/// Constructs a new <see cref="GitHoursSpan"/> using two <see cref="String"/>s,
+		/// where each of these can represent a (partial) SHA1 of commit's hash or a properly
+		/// formatted date and time.
+		/// </summary>
+		/// <param name="repository"></param>
+		/// <param name="sinceDateTimeOrCommitSha">(Partial) SHA1 of commit or parseable
+		/// date/time (according to <see cref="DateTimeFormat"/>). This offset is the
+		/// inclusive start of the span.</param>
+		/// <param name="untilDatetimeOrCommitSha">(Partial) SHA1 of commit or parseable
+		/// date/time (according to <see cref="DateTimeFormat"/>). This offset is the
+		/// inclusive end of the span.</param>
 		public GitHoursSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null)
 		{
 			this.Repository = repository;
@@ -115,7 +145,7 @@ namespace Util
 				}
 			}
 
-			this.lazyFilteredCommits = new Lazy<IList<Commit>>(() =>
+			this.lazyFilteredCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
 				var orderedOldToNew = this.Repository.Commits.OrderBy(commit => commit.Author.When).ToList();
 				var idxSince = orderedOldToNew.FindIndex(commit =>
@@ -147,7 +177,7 @@ namespace Util
 					throw new InvalidOperationException($"The parameter for 'until' points to a commit that comes before the one identified by the parameter 'since'.");
 				}
 
-				return orderedOldToNew.Skip(idxSince).Take(1 + idxUntil - idxSince).ToList();
+				return new LinkedList<Commit>(orderedOldToNew.Skip(idxSince).Take(1 + idxUntil - idxSince));
 			});
 		}
 	}
