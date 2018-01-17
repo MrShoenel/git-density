@@ -35,7 +35,7 @@ using Util.Extensions;
 
 namespace Util.Data.Entities
 {
-	public class DeveloperEntity
+	public class DeveloperEntity : IEquatable<DeveloperEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -46,6 +46,8 @@ namespace Util.Data.Entities
 		public virtual RepositoryEntity Repository { get; set; }
 
 		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
+
+		public virtual ISet<HoursEntity> Hours { get; set; } = new HashSet<HoursEntity>();
 
 		private readonly Object padLock = new Object();
 
@@ -67,6 +69,29 @@ namespace Util.Data.Entities
 			}
 			return this;
 		}
+
+		public virtual DeveloperEntity AddHour(HoursEntity hour)
+		{
+			lock (this.padLock)
+			{
+				this.Hours.Add(hour);
+				return this;
+			}
+		}
+
+		public virtual DeveloperEntity AddHours(IEnumerable<HoursEntity> hours)
+		{
+			foreach (var hour in hours)
+			{
+				this.AddHour(hour);
+			}
+			return this;
+		}
+
+		public virtual bool Equals(DeveloperEntity other)
+		{
+			return other is DeveloperEntity && this.Name == other.Name && this.Email == other.Email;
+		}
 		#endregion
 	}
 
@@ -81,6 +106,7 @@ namespace Util.Data.Entities
 			this.Map(x => x.Email).Not.Nullable();
 
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
+			this.HasMany<HoursEntity>(x => x.Hours).Cascade.Lock();
 
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 		}

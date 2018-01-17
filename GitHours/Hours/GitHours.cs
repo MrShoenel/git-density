@@ -68,8 +68,21 @@ namespace GitHours.Hours
 		}
 
 		/// <summary>
-		/// Analyzes the <see cref="Repository"/> and returns the computed hours for each
-		/// developer and in total as <see cref="GitHoursAnalysisResult"/>.
+		/// Conducts a full git-hours analysis and returns the <see cref="GitHoursAuthorStats"/>
+		/// for the developer that was supplied.
+		/// </summary>
+		/// <param name="developer"></param>
+		/// <returns></returns>
+		public GitHoursAuthorStats AnalyzeForDeveloper(Util.Data.Entities.DeveloperEntity developer)
+		{
+			var result = this.Analyze();
+
+			return result.AuthorStats.Where(stats => stats.Developer.Equals(developer)).First();
+		}
+
+		/// <summary>
+		/// Analyzes the <see cref="LibGit2Sharp.Repository"/> and returns the computed hours
+		/// for each developer and in total as <see cref="GitHoursAnalysisResult"/>.
 		/// </summary>
 		/// <returns></returns>
 		public GitHoursAnalysisResult Analyze()
