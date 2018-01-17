@@ -95,6 +95,7 @@ namespace Util.Data
 		/// <param name="configuration"></param>
 		public static void Configure(Configuration configuration, BaseLogger<DataFactory> logger, String tempDirectory = null)
 		{
+			DataFactory.logger = logger;
 			lazySessionFactory = new Lazy<ISessionFactory>(() =>
 			{
 				var factory = FluentNHibernate.Cfg.Fluently.Configure()

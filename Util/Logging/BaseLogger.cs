@@ -33,14 +33,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace Util.Logging
 {
+	/// <summary>
+	/// Provides common logging functionality for derived loggers.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
 	public abstract class BaseLogger<T> : ILogger<T>, IDisposable
 	{
+		/// <summary>
+		/// A dictionary will all runtime-types. The logger can log the current type.
+		/// </summary>
 		protected static Lazy<IDictionary<Type, String>> lazyLoadedTypes = new Lazy<IDictionary<Type, String>>(() =>
 		{
 			var dict = new Dictionary<Type, String>();
+
 			foreach (var type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(asmbly =>
 			{
 				try
@@ -101,8 +110,14 @@ namespace Util.Logging
 		/// </summary>
 		public virtual Boolean LogCurrentScope { get; set; } = false;
 
+		/// <summary>
+		/// A <see cref="Stack{T}"/> of <see cref="Scope{TState}"/> for each type.
+		/// </summary>
 		protected IDictionary<Type, Stack<IScope>> scopeStacks;
 
+		/// <summary>
+		/// Initialites the stack of scopes and must be called.
+		/// </summary>
 		public BaseLogger()
 		{
 			this.scopeStacks = new Dictionary<Type, Stack<IScope>>();
