@@ -142,8 +142,8 @@ namespace Util.Density
 				// That means that adds and deletes cannot be written out.
 
 				// Get old and new TreeEntry first
-				var oldTreeEntry = this.Parent[change.OldPath];
-				var newTreeEntry = this.Child[change.Path];
+				var oldTreeEntry = this.Parent?[change.OldPath];
+				var newTreeEntry = this.Child?[change.Path];
 
 				if (!(oldTreeEntry is TreeEntry) || !(newTreeEntry is TreeEntry))
 				{

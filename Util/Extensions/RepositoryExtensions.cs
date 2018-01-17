@@ -36,13 +36,17 @@ namespace Util.Extensions
 		/// <returns>An <see cref="IEnumerable{CommitPair}"/> of pairs of commits.</returns>
 		public static IEnumerable<CommitPair> CommitPairs(this GitHoursSpan gitHoursSpan, bool skipInitialCommit = false, bool skipMergeCommits = true, SortOrder sortOrder = SortOrder.OldestFirst)
 		{
-			var commits = sortOrder == SortOrder.LatestFirst ? gitHoursSpan.FilteredCommits : gitHoursSpan.FilteredCommits.Reverse();
+			var commits = (sortOrder == SortOrder.LatestFirst ?
+				gitHoursSpan.FilteredCommits.Reverse() : gitHoursSpan.FilteredCommits).ToList();
 
 			foreach (var commit in commits)
 			{
 				var parentCount = commit.Parents.Count();
+				var isInitialCommit = parentCount == 0
+					|| (sortOrder == SortOrder.OldestFirst && commit == commits[0])
+					|| (sortOrder == SortOrder.LatestFirst && commit == commits.Last());
 
-				if (skipInitialCommit && parentCount == 0)
+				if (skipInitialCommit && isInitialCommit)
 				{
 					continue;
 				}
@@ -54,7 +58,8 @@ namespace Util.Extensions
 
 
 				// Note that the parent can be null, if initial commit is not skipped.
-				yield return new CommitPair(gitHoursSpan.Repository, commit, commit.Parents.FirstOrDefault());
+				yield return new CommitPair(gitHoursSpan.Repository,
+					commit, isInitialCommit ? null : commit.Parents.FirstOrDefault());
 			}
 		}
 
