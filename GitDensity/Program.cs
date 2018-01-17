@@ -161,7 +161,13 @@ namespace GitDensity
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
-						var density = new Density.GitDensity(span, options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits, Configuration.LanguagesAndFileExtensions.Where(kv => options.ProgrammingLanguages.Contains(kv.Key)).SelectMany(kv => kv.Value), options.TempDirectory);
+						var density = new Density.GitDensity(
+							span, options.ProgrammingLanguages,
+							options.SkipInitialCommit, options.SkipMergeCommits,
+							Configuration.LanguagesAndFileExtensions
+								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
+								.SelectMany(kv => kv.Value),
+							options.TempDirectory);
 
 						density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
 

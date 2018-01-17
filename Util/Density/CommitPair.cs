@@ -138,7 +138,7 @@ namespace Util.Density
 #endif
 				async change =>
 			{
-				// We can only write out changes where an old an a new version exists.
+				// We can only write out changes where an old and a new version exists.
 				// That means that adds and deletes cannot be written out.
 
 				// Get old and new TreeEntry first

@@ -117,7 +117,6 @@ namespace GitHours
 					using (repository)
 					{
 						var span = new GitHoursSpan(repository, options.Since, options.Until);
-						var ic = CultureInfo.InvariantCulture;
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
 						var obj = JsonConvert.SerializeObject(gitHours.Analyze(), Formatting.Indented);
