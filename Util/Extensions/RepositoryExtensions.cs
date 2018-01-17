@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections;
 using Util.Data.Entities;
 using Util.Density;
+using Util.Metrics;
 
 namespace Util.Extensions
 {
@@ -61,6 +62,46 @@ namespace Util.Extensions
 				yield return new CommitPair(gitHoursSpan.Repository,
 					commit, isInitialCommit ? null : commit.Parents.FirstOrDefault());
 			}
+		}
+
+		/// <summary>
+		/// Returns a <see cref="StreamReader"/> based on <see cref="Blob"/> of
+		/// the <see cref="TreeEntry"/> that can be used to obtain its contents.
+		/// </summary>
+		/// <param name="treeEntry"></param>
+		/// <returns></returns>
+		public static StreamReader GetReader(this TreeEntry treeEntry)
+		{
+			var contentStream = (treeEntry.Target as Blob).GetContentStream();
+			return new StreamReader(contentStream);
+		}
+
+		/// <summary>
+		/// Using <see cref="GetReader(TreeEntry)"/> to obtain a reader, this method
+		/// returns every line that represents the content of this <see cref="TreeEntry"/>.
+		/// </summary>
+		/// <param name="treeEntry"></param>
+		/// <returns></returns>
+		public static IEnumerable<String> GetLines(this TreeEntry treeEntry)
+		{
+			using (var reader = treeEntry.GetReader())
+			{
+				String line;
+				while ((line = reader.ReadLine()) != null) {
+					yield return line;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Returns a metric of type <see cref="SimpleLOC"/> for the file represented
+		/// by this <see cref="TreeEntry"/>.
+		/// </summary>
+		/// <param name="treeEntry"></param>
+		/// <returns></returns>
+		public static SimpleLOC GetSimpleLOC(this TreeEntry treeEntry)
+		{
+			return new SimpleLOC(treeEntry.GetLines());
 		}
 
 		/// <summary>
