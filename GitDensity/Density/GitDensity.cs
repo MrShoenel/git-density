@@ -123,9 +123,10 @@ namespace GitDensity.Density
 			var developers = this.Repository.Commits.GroupByDeveloperAsSignatures();
 			var repoEntity = this.Repository.AsEntity(this.GitHoursSpan).AddDevelopers(
 				new HashSet<DeveloperEntity>(developers.Values));
-			var commits = this.GitHoursSpan.FilteredCommits.Select(commit => {
-				return commit.AsEntity(repoEntity, developers[commit.Author]);
-			}).ToDictionary(commit => commit.HashSHA1, commit => commit);
+			var commits = this.GitHoursSpan.FilteredCommits.Select(commit =>
+				commit.AsEntity(repoEntity, developers[commit.Author]))
+				.ToDictionary(commit => commit.HashSHA1, commit => commit);
+			var oldestCommit = this.GitHoursSpan.FilteredCommits.First.Value;
 			var pairs = this.GitHoursSpan.CommitPairs(this.SkipInitialCommit, this.SkipMergeCommits);
 
 			Parallel.ForEach(pairs,
@@ -136,6 +137,21 @@ namespace GitDensity.Density
 			{
 				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
+				var hoursSpan = new GitHoursSpan(
+					this.GitHoursSpan.Repository, oldestCommit, pair.Child);
+
+				#region GitHours
+				var gitHoursStats = new GitHours.Hours.GitHours(hoursSpan).AnalyzeForDeveloper(
+					developers[pair.Child.Author]);
+				var hoursEntity = new HoursEntity
+				{
+					CommitSince = commits.Where(kv => kv.Key == oldestCommit.Sha).Single().Value,
+					CommitUntil = pairEntity.ChildCommit,
+					Developer = developers[pair.Child.Author],
+					Hours = gitHoursStats.Hours
+				};
+				developers[pair.Child.Author].AddHour(hoursEntity);
+				#endregion
 
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
