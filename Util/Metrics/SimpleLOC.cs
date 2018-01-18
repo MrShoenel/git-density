@@ -1,7 +1,38 @@
-﻿using System;
+﻿/// ---------------------------------------------------------------------------------
+///
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+///
+/// https://github.com/MrShoenel/git-density
+///
+/// This file is part of the project Util. All files in this project,
+/// if not noted otherwise, are licensed under the MIT-license.
+///
+/// ---------------------------------------------------------------------------------
+///
+/// Permission is hereby granted, free of charge, to any person obtaining a
+/// copy of this software and associated documentation files (the "Software"),
+/// to deal in the Software without restriction, including without limitation
+/// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+/// and/or sell copies of the Software, and to permit persons to whom the
+/// Software is furnished to do so, subject to the following conditions:
+///
+/// The above copyright notice and this permission notice shall be included in all
+/// copies or substantial portions of the Software.
+///
+/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+/// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+/// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
+/// ---------------------------------------------------------------------------------
+///
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Util.Extensions;
 
 namespace Util.Metrics
 {
@@ -9,8 +40,17 @@ namespace Util.Metrics
 	/// A very simple lines of code metric that keeps track of the gross amount
 	/// and is able to remove simple single- and multi-line comments as well as
 	/// empty lines containing only whitespace.
+	/// Please note that matching comments with regular expressions is a very
+	/// unsophisticated method, but the results of it should rather good for most
+	/// of the code. Unlike a proper lexer, a regex cannot distinguish whether
+	/// the detected comment is an actual comment or appears within a string
+	/// literal.
+	/// http://csse.usc.edu/TECHRPTS/2007/usc-csse-2007-737/usc-csse-2007-737.pdf
+	/// 
+	/// In the future, we may use a lexer or at least an improved tool for counting
+	/// LOC, like sloccount: https://www.dwheeler.com/sloccount/
 	/// </summary>
-	public class SimpleLOC
+	public class SimpleLoc
 	{
 		#region Regexes
 		/// <summary>
@@ -18,7 +58,7 @@ namespace Util.Metrics
 		/// lines may contain whitespace before the slashes.
 		/// </summary>
 		public static readonly Regex MatchSingleLineComment =
-			new Regex(@"^\s*?\/{2,}.*", RegexOptions.Compiled);
+			new Regex(@"^(.*?)\/{2,}.*", RegexOptions.Compiled);
 
 		/// <summary>
 		/// Matches multi-line comments beginning with '/*' and ending with '*/'
@@ -28,16 +68,15 @@ namespace Util.Metrics
 			new Regex(@"\/\*(?:(.|[\r\n])*?)\*\/", RegexOptions.Compiled | RegexOptions.Multiline);
 		#endregion
 
-		protected IEnumerable<String> lines;
-
 		/// <summary>
 		/// The gross amount of lines of code. Counts every line (even empty lines)
-		/// within the string.
+		/// within the string. This measurement corresponds to the physical count.
 		/// </summary>
 		public UInt32 LocGross => this.lazyLocGross.Value;
 
 		/// <summary>
 		/// Lines of code without empty lines, single- and multi-line comments.
+		/// This measure corresponds more closely to the logical lines of code.
 		/// </summary>
 		public UInt32 LocNoComments => this.lazyLocNoComments.Value;
 
@@ -46,24 +85,35 @@ namespace Util.Metrics
 		private Lazy<UInt32> lazyLocNoComments;
 
 		/// <summary>
-		/// Construct <see cref="SimpleLOC"/> based on an enumerable of lines.
+		/// Construct <see cref="SimpleLoc"/> based on an enumerable of lines.
 		/// </summary>
 		/// <param name="lines"></param>
-		public SimpleLOC(IEnumerable<String> lines)
+		public SimpleLoc(IEnumerable<String> lines)
 		{
-			this.lines = lines;
-
 			this.lazyLocGross = new Lazy<uint>(() =>
 			{
-				return (UInt32)this.lines.Count();
+				return (UInt32)lines.Count();
 			});
 
 			this.lazyLocNoComments = new Lazy<uint>(() =>
 			{
-				return (UInt32)MatchMultiLineComment.Replace(String.Join("\n", this.lines), String.Empty)
+				return (UInt32)MatchMultiLineComment.Replace(String.Join("\n", lines), String.Empty)
 					.Split('\n')
-					.Where(line =>
-						!(String.IsNullOrWhiteSpace(line.Trim()) || MatchSingleLineComment.IsMatch(line)))
+					.Where(line => // should we keep the line?
+					{
+						if (line.IsEmptyOrWhiteSpace())
+						{
+							return false;
+						}
+
+						var match = MatchSingleLineComment.Match(line);
+						if (match.Success && match.Groups[1].Value.IsEmptyOrWhiteSpace())
+						{
+							return false;
+						}
+
+						return true; // keeps single-line comments with code in front of comment
+					})
 					.Count();
 			});
 		}
