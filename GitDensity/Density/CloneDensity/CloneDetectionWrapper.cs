@@ -117,7 +117,7 @@ namespace GitDensity.Density.CloneDensity
 						throw new InvalidOperationException(
 							"The process exited with a non-zero exitcode.");
 					}
-					logger.LogInformation("Clone detection output:\n\n{0}{1}", stdOut, stdErr);
+					logger.LogTrace("Clone detection output:\n\n{0}{1}", stdOut, stdErr);
 
 					if (!ClonesXml.TryDeserialize(tempFile, out ClonesXml clonesXml))
 					{
