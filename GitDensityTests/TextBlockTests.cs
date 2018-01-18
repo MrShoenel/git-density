@@ -36,7 +36,7 @@ namespace GitDensityTests
 		public void TestRemoveEmptyLinesAndSingleLineComments()
 		{
 			var tb = CreateFromString(EmptyLinesAndSingleLineCommentsBlock);
-			var newTb = tb.RemoveEmptyLinesAndComments();
+			tb.RemoveEmptyLinesAndComments(out TextBlock newTb);
 
 			Assert.AreEqual(3u, tb.LinesAdded);
 			Assert.AreEqual(4u, newTb.LinesAdded);
@@ -48,7 +48,7 @@ namespace GitDensityTests
 			var tb = CreateFromString(MixedTextBlock);
 
 			// Pulls out empties and comment-lines
-			var tbWithoutEmptyLinesAndComments = tb.RemoveEmptyLinesAndComments();
+			tb.RemoveEmptyLinesAndComments(out TextBlock tbWithoutEmptyLinesAndComments);
 
 			Assert.AreEqual(4u, tb.LinesAdded);
 			Assert.AreEqual(7u, tbWithoutEmptyLinesAndComments.LinesAdded);

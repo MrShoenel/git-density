@@ -34,6 +34,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Util.Extensions;
+using Util.Metrics;
 
 namespace GitDensity.Similarity
 {
@@ -206,6 +207,130 @@ namespace GitDensity.Similarity
 				tb.AddLine(this.RemoveLine(lineNumber));
 			}
 			return tb;
+		}
+
+		/// <summary>
+		/// A wrapper around <see cref="RemoveEmptyLinesAndComments(out TextBlock)"/>
+		/// that discards the <see cref="TextBlock"/> that only contains the removed
+		/// empty lines and comments. <see cref="RemoveEmptyLinesAndComments(out TextBlock)"/>
+		/// for a full documentation.
+		/// </summary>
+		/// <returns>This (<see cref="TextBlock"/>) for chaining.</returns>
+		public TextBlock RemoveEmptyLinesAndComments()
+		{
+			return this.RemoveEmptyLinesAndComments(out TextBlock dummy);
+		}
+
+		/// <summary>
+		/// Creates a new <see cref="TextBlock"/> by removing all empty lines and
+		/// lines containing single line comments (that begin with two or more
+		/// forward slashes). Also removes multi-line comments. Note that this
+		/// method keeps those lines that are partial comments. That means that
+		/// code that precedes a comment or is located behind the closing characters
+		/// of a multi-line comment is kept and that those lines remain in this
+		/// <see cref="TextBlock"/> (but with the comment removed from the lines)
+		/// and those lines are also part of the new, returned block, with the code
+		/// being removed. This method maintains line-numbers.
+		/// </summary>
+		/// <param name="blockWithEmptiesAndComments">A new <see cref="TextBlock"/>
+		/// containing those lines that are empty or contain (partial) comments.</param>
+		/// <returns>This (<see cref="TextBlock"/>) for chaining.</returns>
+		public TextBlock RemoveEmptyLinesAndComments(out TextBlock blockWithEmptiesAndComments)
+		{
+			blockWithEmptiesAndComments = new TextBlock();
+			var copy = (TextBlock)this.Clone();
+
+			var multiLineCommentStart = "/*";
+			var multiLineCommentEnd = "*/";
+			
+			var isWithinMultilineComment = false;
+			foreach (var line in this.linesWithLineNumber.Values)
+			{
+				var multiStartIdx = line.String.IndexOf(multiLineCommentStart);
+				var multiEndIdx = line.String.IndexOf(multiLineCommentEnd);
+
+				if (multiStartIdx >= 0)
+				{
+					isWithinMultilineComment = true;
+					if (multiStartIdx == 0 || line.String.Substring(multiStartIdx).IsEmptyOrWhiteSpace())
+					{
+						// move entire line
+						blockWithEmptiesAndComments.AddLine(copy.RemoveLine(line.Number));
+					}
+					else if (multiStartIdx > 0)
+					{
+						copy.RemoveLine(line.Number);
+						copy.AddLine(new Line(
+							line.Type, line.Number, line.String.Substring(0, multiStartIdx)));
+						blockWithEmptiesAndComments.AddLine(new Line(
+							line.Type, line.Number, line.String.Substring(multiStartIdx)));
+					}
+
+					continue;
+				}
+				else if (multiEndIdx >= 0)
+				{
+					isWithinMultilineComment = false;
+					// Check if there is code behind the end of the comment
+					if (line.String.Length > multiEndIdx + multiLineCommentEnd.Length)
+					{
+						copy.RemoveLine(line.Number);
+						copy.AddLine(new Line(
+							line.Type, line.Number, line.String.Substring(multiEndIdx + multiLineCommentEnd.Length)));
+						blockWithEmptiesAndComments.AddLine(new Line(
+							line.Type, line.Number, line.String.Substring(0, multiEndIdx + multiLineCommentEnd.Length)));
+					}
+					else
+					{
+						// No code afterwards, move entire line
+						blockWithEmptiesAndComments.AddLine(copy.RemoveLine(line.Number));
+					}
+
+					continue;
+				}
+
+
+				if (isWithinMultilineComment)
+				{
+					// move entire line
+					blockWithEmptiesAndComments.AddLine(copy.RemoveLine(line.Number));
+				}
+				else
+				{
+					if (line.String.IsEmptyOrWhiteSpace())
+					{
+						blockWithEmptiesAndComments.AddLine(copy.RemoveLine(line.Number));
+					}
+
+					var match = SimpleLoc.MatchSingleLineComment.Match(line.String);
+					if (match.Success)
+					{
+						// Check whether there is code in front of the comment
+						if (!match.Groups[1].Value.IsEmptyOrWhiteSpace())
+						{
+							var offset = match.Groups[1].Index + match.Groups[1].Length;
+							var oldLine = copy.RemoveLine(line.Number);
+
+							copy.AddLine(new Line(
+								oldLine.Type, oldLine.Number, oldLine.String.Substring(0, offset)));
+							blockWithEmptiesAndComments.AddLine(new Line(
+								oldLine.Type, oldLine.Number, oldLine.String.Substring(offset)));
+						}
+						else
+						{
+							blockWithEmptiesAndComments.AddLine(copy.RemoveLine(line.Number));
+						}
+					}
+				}
+			}
+
+			this.linesWithLineNumber.Clear();
+			foreach (var line in copy.linesWithLineNumber.Values)
+			{
+				this.AddLine(line);
+			}
+
+			return this;
 		}
 
 		/// <summary>
