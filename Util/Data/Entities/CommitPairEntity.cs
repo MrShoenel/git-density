@@ -64,7 +64,7 @@ namespace Util.Data.Entities
 			
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 			this.References<CommitEntity>(x => x.ChildCommit).Not.Nullable();
-			this.References<CommitEntity>(x => x.ParentCommit).Not.Nullable();
+			this.References<CommitEntity>(x => x.ParentCommit).Nullable(); // Can be nullable for real or virtual initial commits that have no parent
 		}
 	}
 }
