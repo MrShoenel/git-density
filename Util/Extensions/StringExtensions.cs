@@ -11,6 +11,16 @@ namespace Util.Extensions
 	public static class StringExtensions
 	{
 		/// <summary>
+		/// Returns true if this <see cref="String"/> is empty or only consists of whitespace.
+		/// </summary>
+		/// <param name="string"></param>
+		/// <returns></returns>
+		public static Boolean IsEmptyOrWhiteSpace(this string @string)
+		{
+			return @string.Length == 0 || @string.Trim().Length == 0;
+		}
+
+		/// <summary>
 		/// Splits a <see cref="string"/> into lines and returns them as string.
 		/// </summary>
 		/// <param name="str"></param>

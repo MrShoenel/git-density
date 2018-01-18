@@ -3,6 +3,7 @@ using LibGit2Sharp;
 using System;
 using System.Linq;
 using Util.Density;
+using System.Collections.Generic;
 
 namespace Util.Extensions
 {
@@ -57,6 +58,7 @@ namespace Util.Extensions
 		{
 			var entity = new CommitPairEntity
 			{
+				ID = pair.Id,
 				ChildCommit = childCommitEntity,
 				ParentCommit = parentCommitEntity,
 				Repository = repositoryEntity
@@ -70,8 +72,14 @@ namespace Util.Extensions
 				}
 				if (addCommitsToRepository)
 				{
-					repositoryEntity.AddCommit(entity.ChildCommit);
-					repositoryEntity.AddCommit(entity.ParentCommit);
+					if (entity.ChildCommit is CommitEntity)
+					{
+						repositoryEntity.AddCommit(entity.ChildCommit);
+					}
+					if (entity.ParentCommit is CommitEntity)
+					{
+						repositoryEntity.AddCommit(entity.ParentCommit);
+					}
 				}
 			}
 

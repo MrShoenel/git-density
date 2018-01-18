@@ -94,14 +94,14 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Returns a metric of type <see cref="SimpleLOC"/> for the file represented
+		/// Returns a metric of type <see cref="SimpleLoc"/> for the file represented
 		/// by this <see cref="TreeEntry"/>.
 		/// </summary>
 		/// <param name="treeEntry"></param>
 		/// <returns></returns>
-		public static SimpleLOC GetSimpleLOC(this TreeEntry treeEntry)
+		public static SimpleLoc GetSimpleLoc(this TreeEntry treeEntry)
 		{
-			return new SimpleLOC(treeEntry.GetLines());
+			return new SimpleLoc(treeEntry.GetLines());
 		}
 
 		/// <summary>
@@ -161,11 +161,11 @@ namespace Util.Extensions
 		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity
 		{
 			private ISet<String> altNames;
-			public IReadOnlyCollection<String> AlternativeNames {
+			public virtual IReadOnlyCollection<String> AlternativeNames {
 				get { return this.altNames.ToList().AsReadOnly(); } }
 
 			private ISet<String> altEmails;
-			public IReadOnlyCollection<String> AlternativeEmails {
+			public virtual IReadOnlyCollection<String> AlternativeEmails {
 				get { return this.altEmails.ToList().AsReadOnly(); } }
 
 			public DeveloperWithAlternativeNamesAndEmails() : base()
@@ -174,7 +174,7 @@ namespace Util.Extensions
 				this.altEmails = new HashSet<String>();
 			}
 
-			internal void AddName(String name)
+			public virtual void AddName(String name)
 			{
 				if (name != this.Name)
 				{
@@ -182,7 +182,7 @@ namespace Util.Extensions
 				}
 			}
 
-			internal void AddEmail(String email)
+			public virtual void AddEmail(String email)
 			{
 				if (email != this.Email)
 				{
@@ -202,12 +202,13 @@ namespace Util.Extensions
 		/// <param name="commits"></param>
 		/// <returns>Enumerables of groups, where the key is the developer and the enumerable
 		/// group itself represents their commits.</returns>
-		public static IEnumerable<IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>> GroupByDeveloper(this IEnumerable<Commit> commits)
+		public static IEnumerable<IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>> GroupByDeveloper(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
 		{
 			var byNameDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
 			var byMailDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
 
-			var emptyDev = new DeveloperWithAlternativeNamesAndEmails { Name = String.Empty, Email = String.Empty };
+			var emptyDev = new DeveloperWithAlternativeNamesAndEmails {
+				Name = String.Empty, Email = String.Empty, Repository = repository };
 			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ICollection<Signature>>();
 
 			foreach (var signature in commits.Select(c => c.Author).Where(sig => sig is Signature).OrderBy(c => c.When))
@@ -232,7 +233,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byMailDict[mail] = new DeveloperWithAlternativeNamesAndEmails
-						{ Name = String.Empty, Email = signature.Email };
+							{ Name = String.Empty, Email = signature.Email, Repository = repository };
 					}
 				}
 				else if (mail == String.Empty)
@@ -244,7 +245,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byNameDict[name] = new DeveloperWithAlternativeNamesAndEmails
-						{ Name = signature.Name, Email = String.Empty };
+							{ Name = signature.Name, Email = String.Empty, Repository = repository };
 					}
 				}
 				else
@@ -262,7 +263,7 @@ namespace Util.Extensions
 					{
 						// new entity, add to both dictionaries
 						devEntity = new DeveloperWithAlternativeNamesAndEmails
-						{ Name = signature.Name, Email = signature.Email };
+							{ Name = signature.Name, Email = signature.Email, Repository = repository };
 						byMailDict[mail] = devEntity;
 						byNameDict[name] = devEntity;
 					}
@@ -293,18 +294,20 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Similar to and based on <see cref="GroupByDeveloper(IEnumerable{Commit})"/>, this
-		/// method returns a collection of <see cref="Signatures"/> for each unified developer
+		/// Similar to and based on <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity)"/>, this
+		/// method returns a collection of <see cref="Signature"/>s for each unified developer
 		/// represented as <see cref="DeveloperWithAlternativeNamesAndEmails"/>.
 		/// </summary>
 		/// <param name="commits"></param>
+		/// <param name="repository"></param>
 		/// <returns>A dictionary where each developer has a set of signatures used.</returns>
-		public static IDictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>> GroupByDeveloperToSignatures(this IEnumerable<Commit> commits)
+		public static IDictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>> GroupByDeveloperToSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
 		{
 			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>>();
 
-			foreach (var group in commits.GroupByDeveloper())
+			foreach (var group in commits.GroupByDeveloper(repository))
 			{
+				group.Key.Repository = repository;
 				dict[group.Key] = new HashSet<Signature>(group.Select(commit => commit.Author));
 			}
 
@@ -312,20 +315,22 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Similar to <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit})"/>, this
+		/// Similar to <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit}, RepositoryEntity)"/>, this
 		/// method returns a mapping from each <see cref="LibGit2Sharp.Signature"/> to a
 		/// <see cref="DeveloperEntity"/>. More than one <see cref="LibGit2Sharp.Signature"/>
 		/// can point to the same <see cref="DeveloperEntity"/>.
 		/// </summary>
 		/// <param name="commits"></param>
+		/// <param name="repository"></param>
 		/// <returns></returns>
-		public static IDictionary<Signature, DeveloperEntity> GroupByDeveloperAsSignatures(this IEnumerable<Commit> commits)
+		public static IDictionary<Signature, DeveloperEntity> GroupByDeveloperAsSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
 		{
-			var fromDict = commits.GroupByDeveloperToSignatures();
+			var fromDict = commits.GroupByDeveloperToSignatures(repository);
 			var toDict = new Dictionary<Signature, DeveloperEntity>();
 
 			foreach (var fromKv in fromDict)
 			{
+				fromKv.Key.Repository = repository;
 				foreach (var signature in fromKv.Value)
 				{
 					toDict[signature] = fromKv.Key;
