@@ -167,7 +167,7 @@ namespace Util.Logging
 		{
 			get
 			{
-				return $"{ DateTime.UtcNow.ToString("HH:mm:ss") } ";
+				return $"{ DateTime.Now.ToString("HH:mm:ss") } ";
 			}
 		}
 
