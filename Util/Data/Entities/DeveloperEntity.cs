@@ -32,6 +32,7 @@ using FluentNHibernate.Mapping;
 using System;
 using System.Collections.Generic;
 using Util.Extensions;
+using static Util.Extensions.RepositoryExtensions;
 
 namespace Util.Data.Entities
 {
@@ -107,6 +108,20 @@ namespace Util.Data.Entities
 
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
 			this.HasMany<HoursEntity>(x => x.Hours).Cascade.Lock();
+
+			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
+		}
+	}
+
+	public class DeveloperWithAlternativeNamesAndEmailsMap : ClassMap<DeveloperWithAlternativeNamesAndEmails>
+	{
+		public DeveloperWithAlternativeNamesAndEmailsMap()
+		{
+			this.Table(nameof(DeveloperEntity).ToSimpleUnderscoreCase());
+
+			this.Id(x => x.ID).GeneratedBy.Identity();
+			this.Map(x => x.Name).Not.Nullable();
+			this.Map(x => x.Email).Not.Nullable();
 
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 		}
