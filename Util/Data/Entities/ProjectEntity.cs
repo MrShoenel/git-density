@@ -71,7 +71,7 @@ namespace Util.Data.Entities
 		{
 			using (var tempSess = DataFactory.Instance.OpenSession())
 			{
-				logger.LogInformation("Successfully probed the configured database.");
+				logger.LogDebug("Successfully probed the configured database.");
 
 
 				var ps = tempSess.QueryOver<Data.Entities.ProjectEntity>().Where(p => !p.WasCorrected).Future();
