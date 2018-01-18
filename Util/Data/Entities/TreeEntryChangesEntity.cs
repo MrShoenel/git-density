@@ -21,6 +21,8 @@ namespace Util.Data.Entities
 
 		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
 
+		public virtual TreeEntryChangesMetricsEntity TreeEntryChangesMetrics { get; set; }
+
 		private readonly Object padLock = new Object();
 
 		#region Methods
@@ -66,6 +68,7 @@ namespace Util.Data.Entities
 			this.Map(x => x.PathNew).Length(1000);
 
 			this.HasMany<FileBlockEntity>(x => x.FileBlocks).Cascade.Lock();
+			this.HasOne<TreeEntryChangesMetricsEntity>(x => x.TreeEntryChangesMetrics).Cascade.Lock();
 
 			this.References<CommitPairEntity>(x => x.CommitPair).Not.Nullable();
 		}

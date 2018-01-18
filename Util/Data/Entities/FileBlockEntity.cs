@@ -14,6 +14,7 @@ namespace Util.Data.Entities
 
 	public class FileBlockEntity
 	{
+		#region Columns and virtual entities
 		public virtual UInt32 ID { get; set; }
 
 		public virtual FileBlockType FileBlockType { get; set; }
@@ -26,19 +27,12 @@ namespace Util.Data.Entities
 
 		public virtual UInt32 NewAmount { get; set; }
 
-		public virtual UInt32 NumAdded { get; set; }
-
-		public virtual UInt32 NumDeleted { get; set; }
-
-		public virtual UInt32 NumAddedPostCloneDetection { get; set; }
-
-		public virtual UInt32 NumDeletedPostCloneDetection { get; set; }
-
 		public virtual CommitPairEntity CommitPair { get; set; }
 
 		public virtual TreeEntryChangesEntity TreeEntryChanges { get; set; }
 
 		public virtual ISet<SimilarityEntity> Similarities { get; set; } = new HashSet<SimilarityEntity>();
+		#endregion
 
 		private readonly Object padLock = new Object();
 
@@ -51,6 +45,7 @@ namespace Util.Data.Entities
 		{
 			lock (this.padLock)
 			{
+				similarity.FileBlock = this;
 				this.Similarities.Add(similarity);
 				return this;
 			}
@@ -84,10 +79,6 @@ namespace Util.Data.Entities
 			this.Map(x => x.OldAmount).Not.Nullable();
 			this.Map(x => x.NewStart).Not.Nullable();
 			this.Map(x => x.NewAmount).Not.Nullable();
-			this.Map(x => x.NumAdded).Not.Nullable();
-			this.Map(x => x.NumDeleted).Not.Nullable();
-			this.Map(x => x.NumAddedPostCloneDetection).Not.Nullable();
-			this.Map(x => x.NumDeletedPostCloneDetection).Not.Nullable();
 
 			this.References<CommitPairEntity>(x => x.CommitPair).Not.Nullable();
 			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Not.Nullable();
