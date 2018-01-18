@@ -12,13 +12,13 @@ namespace Util.Similarity
 		/// Describes the string similarity between two <see cref="ClonesXmlSetBlock"/>s
 		/// that have not been modified.
 		/// </summary>
-		BlockSimilarity,
+		BlockSimilarity = 1,
 
 		/// <summary>
 		/// Describes the similarity of two <see cref="ClonesXmlSetBlock"/>s after all
 		/// cloned lines have been eliminated in both of them.
 		/// </summary>
-		PostCloneBlockSimilarity,
+		PostCloneBlockSimilarity = 2,
 
 		/// <summary>
 		/// Describes the similarity between between two <see cref="ClonesXmlSetBlock"/>s
@@ -27,6 +27,24 @@ namespace Util.Similarity
 		/// there may be more than one set of two blocks, so this value will represent the
 		/// average similarity for all sets.
 		/// </summary>
-		ClonedBlockLinesSimilarity
+		ClonedBlockLinesSimilarity = 3,
+
+		/// <summary>
+		/// Like <see cref="BlockSimilarity"/>, but compares blocks without comments or
+		/// empty lines.
+		/// </summary>
+		BlockSimilarityNoComments = 4,
+
+		/// <summary>
+		/// Like <see cref="PostCloneBlockSimilarity"/>, but compares blocks without comments or
+		/// empty lines.
+		/// </summary>
+		PostCloneBlockSimilarityNoComments = 5,
+
+		/// <summary>
+		/// Like <see cref="ClonedBlockLinesSimilarity"/>, but compares blocks without comments or
+		/// empty lines.
+		/// </summary>
+		ClonedBlockLinesSimilarityNoComments = 6
 	}
 }
