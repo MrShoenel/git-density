@@ -31,6 +31,7 @@
 using System;
 using System.Linq;
 using Util;
+using Util.Data.Entities;
 using Util.Extensions;
 
 namespace GitHours.Hours
@@ -72,8 +73,9 @@ namespace GitHours.Hours
 		/// for the developer that was supplied.
 		/// </summary>
 		/// <param name="developer"></param>
+		/// <param name="repositoryEntity"></param>
 		/// <returns></returns>
-		public GitHoursAuthorStats AnalyzeForDeveloper(Util.Data.Entities.DeveloperEntity developer)
+		public GitHoursAuthorStats AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null)
 		{
 			var result = this.Analyze();
 
@@ -84,10 +86,11 @@ namespace GitHours.Hours
 		/// Analyzes the <see cref="LibGit2Sharp.Repository"/> and returns the computed hours
 		/// for each developer and in total as <see cref="GitHoursAnalysisResult"/>.
 		/// </summary>
+		/// <param name="repositoryEntity"></param>
 		/// <returns></returns>
-		public GitHoursAnalysisResult Analyze()
+		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null)
 		{
-			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper();
+			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper(repositoryEntity);
 			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown");
 			var authorWorks = commitsByDeveloper.Where(authorCommits => authorCommits.Any()).Select(authorCommits =>
 			{
