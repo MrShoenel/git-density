@@ -123,14 +123,29 @@ namespace Util.Data.Entities
 	/// </summary>
 	public interface IHasSimilarityComparisonType
 	{
+		/// <summary>
+		/// Each type inheriting from this interface and having computable similarity
+		/// properties annotated using the <see cref="SimilarityTypeAttribute"/>,
+		/// needs to implement the setter for a type of <see cref="SimilarityComparisonType"/>.
+		/// </summary>
 		SimilarityComparisonType ComparisonType { set; }
+
+		/// <summary>
+		/// Should reflect the value of the TextBlocks' lines added.
+		/// </summary>
+		UInt32 LinesAdded { set; }
+
+		/// <summary>
+		/// Should reflect the value of the TextBlocks' lines deleted.
+		/// </summary>
+		UInt32 LinesDeleted { set; }
 	}
 
 
 
 
 	/// <summary>
-	/// NormLeven, Jaro, MLCS, NGr(2-6), Cos(2-6), Jacc(2-6), Soren(2-6) = 23
+	/// NormLeven, Jaro, MLCS, NGr(2,4,6), Cos(2,4,6), Jacc(2,4,6), Soren(2,4,6) = 15
 	/// <see cref="http://www.scielo.br/pdf/gmb/v22n3/22n3a24.pdf"/>
 	/// </summary>
 	public class SimilarityEntity : IHasSimilarityComparisonType
@@ -140,6 +155,10 @@ namespace Util.Data.Entities
 		public virtual SimilarityComparisonType ComparisonType { get; set; }
 
 		public virtual FileBlockEntity FileBlock { get; set; }
+
+		public virtual UInt32 LinesAdded { get; set; }
+
+		public virtual UInt32 LinesDeleted { get; set; }
 
 		#region Similarity measures
 		[SimilarityType(typeof(NormalizedLevenshtein))]
@@ -165,12 +184,12 @@ namespace Util.Data.Entities
 		/// </summary>
 		[SimilarityType(typeof(NGram), 2)]
 		public virtual Double NGram2 { get; set; }
-		[SimilarityType(typeof(NGram), 3)]
-		public virtual Double NGram3 { get; set; }
+		//[SimilarityType(typeof(NGram), 3)]
+		//public virtual Double NGram3 { get; set; }
 		[SimilarityType(typeof(NGram), 4)]
 		public virtual Double NGram4 { get; set; }
-		[SimilarityType(typeof(NGram), 5)]
-		public virtual Double NGram5 { get; set; }
+		//[SimilarityType(typeof(NGram), 5)]
+		//public virtual Double NGram5 { get; set; }
 		[SimilarityType(typeof(NGram), 6)]
 		public virtual Double NGram6 { get; set; }
 
@@ -181,12 +200,12 @@ namespace Util.Data.Entities
 		/// </summary>
 		[SimilarityType(typeof(Cosine), 2)]
 		public virtual Double Cosine2 { get; set; }
-		[SimilarityType(typeof(Cosine), 3)]
-		public virtual Double Cosine3 { get; set; }
+		//[SimilarityType(typeof(Cosine), 3)]
+		//public virtual Double Cosine3 { get; set; }
 		[SimilarityType(typeof(Cosine), 4)]
 		public virtual Double Cosine4 { get; set; }
-		[SimilarityType(typeof(Cosine), 5)]
-		public virtual Double Cosine5 { get; set; }
+		//[SimilarityType(typeof(Cosine), 5)]
+		//public virtual Double Cosine5 { get; set; }
 		[SimilarityType(typeof(Cosine), 6)]
 		public virtual Double Cosine6 { get; set; }
 
@@ -197,12 +216,12 @@ namespace Util.Data.Entities
 		/// </summary>
 		[SimilarityType(typeof(Jaccard), 2)]
 		public virtual Double JaccardIdx2 { get; set; }
-		[SimilarityType(typeof(Jaccard), 3)]
-		public virtual Double JaccardIdx3 { get; set; }
+		//[SimilarityType(typeof(Jaccard), 3)]
+		//public virtual Double JaccardIdx3 { get; set; }
 		[SimilarityType(typeof(Jaccard), 4)]
 		public virtual Double JaccardIdx4 { get; set; }
-		[SimilarityType(typeof(Jaccard), 5)]
-		public virtual Double JaccardIdx5 { get; set; }
+		//[SimilarityType(typeof(Jaccard), 5)]
+		//public virtual Double JaccardIdx5 { get; set; }
 		[SimilarityType(typeof(Jaccard), 6)]
 		public virtual Double JaccardIdx6 { get; set; }
 
@@ -215,12 +234,12 @@ namespace Util.Data.Entities
 		/// </summary>
 		[SimilarityType(typeof(SorensenDice), 2)]
 		public virtual Double SorensenDice2 { get; set; }
-		[SimilarityType(typeof(SorensenDice), 3)]
-		public virtual Double SorensenDice3 { get; set; }
+		//[SimilarityType(typeof(SorensenDice), 3)]
+		//public virtual Double SorensenDice3 { get; set; }
 		[SimilarityType(typeof(SorensenDice), 4)]
 		public virtual Double SorensenDice4 { get; set; }
-		[SimilarityType(typeof(SorensenDice), 5)]
-		public virtual Double SorensenDice5 { get; set; }
+		//[SimilarityType(typeof(SorensenDice), 5)]
+		//public virtual Double SorensenDice5 { get; set; }
 		[SimilarityType(typeof(SorensenDice), 6)]
 		public virtual Double SorensenDice6 { get; set; }
 		#endregion
@@ -236,33 +255,35 @@ namespace Util.Data.Entities
 			this.Id(x => x.ID).GeneratedBy.Identity();
 
 			this.Map(x => x.ComparisonType).CustomType<SimilarityComparisonType>().Not.Nullable();
+			this.Map(x => x.LinesAdded).Not.Nullable();
+			this.Map(x => x.LinesDeleted).Not.Nullable();
 
 			this.Map(x => x.NormalizedLevenshtein).Not.Nullable();
 			this.Map(x => x.JaroWinkler).Not.Nullable();
 			this.Map(x => x.MetricLongestCommonSubSeq).Not.Nullable();
 
 			this.Map(x => x.NGram2).Not.Nullable();
-			this.Map(x => x.NGram3).Not.Nullable();
+			//this.Map(x => x.NGram3).Not.Nullable();
 			this.Map(x => x.NGram4).Not.Nullable();
-			this.Map(x => x.NGram5).Not.Nullable();
+			//this.Map(x => x.NGram5).Not.Nullable();
 			this.Map(x => x.NGram6).Not.Nullable();
 
 			this.Map(x => x.Cosine2).Not.Nullable();
-			this.Map(x => x.Cosine3).Not.Nullable();
+			//this.Map(x => x.Cosine3).Not.Nullable();
 			this.Map(x => x.Cosine4).Not.Nullable();
-			this.Map(x => x.Cosine5).Not.Nullable();
+			//this.Map(x => x.Cosine5).Not.Nullable();
 			this.Map(x => x.Cosine6).Not.Nullable();
 
 			this.Map(x => x.JaccardIdx2).Not.Nullable();
-			this.Map(x => x.JaccardIdx3).Not.Nullable();
+			//this.Map(x => x.JaccardIdx3).Not.Nullable();
 			this.Map(x => x.JaccardIdx4).Not.Nullable();
-			this.Map(x => x.JaccardIdx5).Not.Nullable();
+			//this.Map(x => x.JaccardIdx5).Not.Nullable();
 			this.Map(x => x.JaccardIdx6).Not.Nullable();
 
 			this.Map(x => x.SorensenDice2).Not.Nullable();
-			this.Map(x => x.SorensenDice3).Not.Nullable();
+			//this.Map(x => x.SorensenDice3).Not.Nullable();
 			this.Map(x => x.SorensenDice4).Not.Nullable();
-			this.Map(x => x.SorensenDice5).Not.Nullable();
+			//this.Map(x => x.SorensenDice5).Not.Nullable();
 			this.Map(x => x.SorensenDice6).Not.Nullable();
 
 			this.References<FileBlockEntity>(x => x.FileBlock).Not.Nullable();
