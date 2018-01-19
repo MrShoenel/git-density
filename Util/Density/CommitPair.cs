@@ -49,7 +49,7 @@ namespace Util.Density
 		/// The <see cref="Patch"/> that represents the difference between
 		/// parent- and child-commit. Computed using <see cref="Repository.Diff"/>.
 		/// </summary>
-		public Patch Patch { get { return this.lazyPatch.Value; } }
+		public Patch Patch => this.lazyPatch.Value;
 
 		private Lazy<TreeChanges> lazyTree;
 
@@ -58,7 +58,7 @@ namespace Util.Density
 		/// between the two file-system trees of both commits, computed
 		/// using <see cref="Repository.Diff"/>.
 		/// </summary>
-		public TreeChanges TreeChanges { get { return this.lazyTree.Value; } }
+		public TreeChanges TreeChanges => this.lazyTree.Value;
 
 		/// <summary>
 		/// C'tor; initializes the pair and its patch.
@@ -132,31 +132,32 @@ namespace Util.Density
 			var diNew = new DirectoryInfo(Path.Combine(targetDirectory.FullName, childDirectoryName));
 			if (!diNew.Exists) { diNew.Create(); }
 
-			Parallel.ForEach(changes,
-#if DEBUG
-				new ParallelOptions{ MaxDegreeOfParallelism = 1 },
-#endif
-				async change =>
+			if (!(this.Parent is Commit && this.Child is Commit))
 			{
 				// We can only write out changes where an old and a new version exists.
 				// That means that adds and deletes cannot be written out.
-
-				// Get old and new TreeEntry first
-				var oldTreeEntry = this.Parent?[change.OldPath];
-				var newTreeEntry = this.Child?[change.Path];
-
-				if (!(oldTreeEntry is TreeEntry) || !(newTreeEntry is TreeEntry))
+				return;
+			}
+			
+			Parallel.ForEach(changes.Select(change => new
+			{
+				OldTreeEntry = this.Parent[change.OldPath],
+				NewTreeEntry = this.Child[change.Path]
+			}).Where(anon =>
+				anon.OldTreeEntry is TreeEntry && anon.NewTreeEntry is TreeEntry
+			),
+#if DEBUG
+				new ParallelOptions{ MaxDegreeOfParallelism = 1 },
+#endif
+				anon =>
+			{
+				if (anon.OldTreeEntry.TargetType == TreeEntryTargetType.Blob
+					&& anon.NewTreeEntry.TargetType == TreeEntryTargetType.Blob)
 				{
-					return;
-				}
-
-
-				if (oldTreeEntry.TargetType == TreeEntryTargetType.Blob
-					&& newTreeEntry.TargetType == TreeEntryTargetType.Blob)
-				{
-					await Task.WhenAll(
-						oldTreeEntry.WriteOutTreeEntry(diOld),
-						newTreeEntry.WriteOutTreeEntry(diNew));
+					Task.WaitAll(
+						Task.Run(() => anon.OldTreeEntry.WriteOutTreeEntry(diOld)),
+						Task.Run(() => anon.NewTreeEntry.WriteOutTreeEntry(diNew))
+					);
 				}
 			});
 		}
@@ -182,12 +183,16 @@ namespace Util.Density
 			{
 				if (this.lazyPatch.IsValueCreated)
 				{
+					this.lazyPatch.Value.Clear();
 					this.lazyPatch.Value.Dispose();
 				}
 				if (this.lazyTree.IsValueCreated)
 				{
 					this.lazyTree.Value.Dispose();
 				}
+
+				this.lazyPatch = null;
+				this.lazyTree = null;
 			}
 		}
 		#endregion
