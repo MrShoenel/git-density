@@ -138,11 +138,14 @@ namespace GitDensity.Density
 			var commits = this.GitHoursSpan.FilteredCommits.Select(commit =>
 				commit.AsEntity(repoEntity, developers[commit.Author]))
 				.ToDictionary(commit => commit.HashSHA1, commit => commit);
-			var oldestCommit = this.GitHoursSpan.FilteredCommits.First.Value;
 			var pairs = this.GitHoursSpan.CommitPairs(
 				this.SkipInitialCommit, this.SkipMergeCommits).ToList();
-			var pairsDone = 0;
+			var gitHoursAnalysesPerDeveloper = new GitHours.Hours.GitHours(GitHoursSpan)
+				.Analyze(repoEntity, includeHourSpans: true)
+				.AuthorStats.ToDictionary(
+					@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans);
 
+			var pairsDone = 0;
 			var parallelOptions = new ParallelOptions();
 			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
@@ -159,20 +162,19 @@ namespace GitDensity.Density
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
 				#region GitHours
-				using (var hoursSpan = new GitHoursSpan(
-					this.GitHoursSpan.Repository, oldestCommit, pair.Child))
+				var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]];
+				var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
+				var hoursEntity = new HoursEntity
 				{
-					var gitHoursStats = new GitHours.Hours.GitHours(hoursSpan).AnalyzeForDeveloper(
-						developers[pair.Child.Author], repoEntity);
-					var hoursEntity = new HoursEntity
-					{
-						CommitSince = commits.Where(kv => kv.Key == oldestCommit.Sha).Single().Value,
-						CommitUntil = pairEntity.ChildCommit,
-						Developer = developers[pair.Child.Author],
-						Hours = gitHoursStats.HoursTotal
-					};
-					developers[pair.Child.Author].AddHour(hoursEntity);
-				}
+					InitialCommit = commits[hoursSpan.InitialCommit.Sha],
+					CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
+					CommitUntil = commits[hoursSpan.Until.Sha],
+					Developer = developers[pair.Child.Author],
+					Hours = hoursSpan.Hours,
+					HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
+						.Select(hs => hs.Hours).Sum()
+				};
+				developers[pair.Child.Author].AddHour(hoursEntity);
 				#endregion
 
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
