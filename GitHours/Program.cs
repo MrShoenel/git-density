@@ -112,6 +112,16 @@ namespace GitHours
 					Environment.Exit((int)ExitCodes.RepoInvalid);
 				}
 
+
+				var outputToConsole = String.IsNullOrEmpty(options.OutputFile);
+				if (!outputToConsole)
+				{
+					logger.LogWarning("Hello, this is GitHours.");
+				}
+				logger.LogDebug("You supplied the following arguments: {0}",
+					String.Join(", ", args.Select(a => $"'{a}'")));
+
+
 				try
 				{
 					using (repository)
@@ -119,8 +129,10 @@ namespace GitHours
 						var span = new GitHoursSpan(repository, options.Since, options.Until);
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
+						var start = DateTime.Now;
+						logger.LogDebug("Starting Analysis..");
 						var obj = JsonConvert.SerializeObject(gitHours.Analyze(), Formatting.Indented);
-						if (String.IsNullOrEmpty(options.OutputFile))
+						if (outputToConsole)
 						{
 							Console.Write(obj);
 						}
@@ -129,6 +141,7 @@ namespace GitHours
 							File.WriteAllText(options.OutputFile, obj);
 							logger.LogInformation("Wrote the result to file: {0}", options.OutputFile);
 						}
+						logger.LogDebug("Analysis took {0}", DateTime.Now - start);
 					}
 				}
 				catch (Exception ex)
@@ -168,13 +181,13 @@ namespace GitHours
 		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
-		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) acertain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]
 		public String TempDirectory { get; set; }
 
-		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest to lowest) Trace, Debug, Information, Warning, Error, Critical, None.")]
+		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
