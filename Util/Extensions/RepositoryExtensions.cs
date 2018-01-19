@@ -8,6 +8,8 @@ using System.Collections;
 using Util.Data.Entities;
 using Util.Density;
 using Util.Metrics;
+using System.Text;
+using System.Reflection;
 
 namespace Util.Extensions
 {
@@ -113,21 +115,23 @@ namespace Util.Extensions
 		/// <returns>An awaitable <see cref="Task"/></returns>
 		public static async Task WriteOutTreeEntry(this TreeEntry treeEntry, DirectoryInfo targetDirectory)
 		{
-			var contentStream = (treeEntry.Target as Blob).GetContentStream();
-			var targetPath = Path.Combine(targetDirectory.FullName, treeEntry.Path);
-			var targetDir = new DirectoryInfo(
-				Path.Combine(targetDirectory.FullName, Path.GetDirectoryName(treeEntry.Path)));
-
-			if (!targetDir.Exists) { targetDir.Create(); }
-
-			using (var fs = new FileStream(targetPath, FileMode.Create))
+			using (var contentStream = (treeEntry.Target as Blob).GetContentStream())
 			{
-				await contentStream.CopyToAsync(fs);
+				var targetPath = Path.Combine(targetDirectory.FullName, treeEntry.Path);
+				var targetDir = new DirectoryInfo(
+					Path.Combine(targetDirectory.FullName, Path.GetDirectoryName(treeEntry.Path)));
+
+				if (!targetDir.Exists) { targetDir.Create(); }
+
+				using (var fs = new FileStream(targetPath, FileMode.Create))
+				{
+					await contentStream.CopyToAsync(fs);
+				}
 			}
 		}
 
 		/// <summary>
-		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit})"/>.
+		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity)"/>.
 		/// </summary>
 		private class CommitGroupingByDeveloper : IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>
 		{
@@ -338,6 +342,47 @@ namespace Util.Extensions
 			}
 
 			return toDict;
+		}
+
+		private static readonly FieldInfo fieldPatchStringBuilder =
+			typeof(Patch).GetField("fullPatchBuilder", BindingFlags.Instance | BindingFlags.NonPublic);
+
+		/// <summary>
+		/// A <see cref="Patch"/> is currently not disposable, so we use this
+		/// little helper method to clear its internal <see cref="StringBuilder"/>.
+		/// </summary>
+		/// <param name="setStringBuilderNull">If true, sets the builder to null,
+		/// after having cleared it.</param>
+		/// <param name="patch"></param>
+		public static void Clear(this Patch patch, Boolean setStringBuilderNull = false)
+		{
+			var sb = (StringBuilder)fieldPatchStringBuilder.GetValue(patch);
+			sb.Clear();
+			if (setStringBuilderNull)
+			{
+				fieldPatchStringBuilder.SetValue(patch, null);
+			}
+		}
+
+		private static readonly FieldInfo fieldContentChangesStringBuilder =
+			typeof(PatchEntryChanges).BaseType.GetField(
+				"patchBuilder", BindingFlags.Instance | BindingFlags.NonPublic);
+
+		/// <summary>
+		/// Similar to <see cref="Clear(Patch, bool)"/>, but works on instances of
+		/// <see cref="PatchEntryChanges"/>, which derive from <see cref="ContentChanges"/>,
+		/// that have a <see cref="StringBuilder"/> inside.
+		/// </summary>
+		/// <param name="pec"></param>
+		/// <param name="setStringBuilderNull"></param>
+		public static void Clear(this PatchEntryChanges pec, Boolean setStringBuilderNull = false)
+		{
+			var sb = (StringBuilder)fieldContentChangesStringBuilder.GetValue(pec);
+			sb.Clear();
+			if (setStringBuilderNull)
+			{
+				fieldContentChangesStringBuilder.SetValue(pec, null);
+			}
 		}
 	}
 }
