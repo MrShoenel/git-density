@@ -172,7 +172,7 @@ namespace GitDensity.Density
 						CommitSince = commits.Where(kv => kv.Key == oldestCommit.Sha).Single().Value,
 						CommitUntil = pairEntity.ChildCommit,
 						Developer = developers[pair.Child.Author],
-						Hours = gitHoursStats.Hours
+						Hours = gitHoursStats.HoursTotal
 					};
 					developers[pair.Child.Author].AddHour(hoursEntity);
 				}
