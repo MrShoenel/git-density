@@ -125,13 +125,13 @@ namespace GitHours
 				try
 				{
 					using (repository)
+					using (var span = new GitHoursSpan(repository, options.Since, options.Until))
 					{
-						var span = new GitHoursSpan(repository, options.Since, options.Until);
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
-						var obj = JsonConvert.SerializeObject(gitHours.Analyze(), Formatting.Indented);
+						var obj = JsonConvert.SerializeObject(gitHours.Analyze(includeHourSpans: options.IncludeHoursSpans), Formatting.Indented);
 						if (outputToConsole)
 						{
 							Console.Write(obj);
@@ -177,6 +177,9 @@ namespace GitHours
 
 		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
 		public String OutputFile { get; set; }
+
+		[Option('i', "include-hours-spans", Required = false, DefaultValue = false, HelpText = "Whether or not to include Hours-Spans. If present, then the result will include the amount of hours spent between each pair of commits for each developer.")]
+		public Boolean IncludeHoursSpans { get; set; }
 
 		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
