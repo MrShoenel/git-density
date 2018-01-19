@@ -161,37 +161,37 @@ namespace Util.Data.Entities
 		public virtual UInt32 LinesDeleted { get; set; }
 
 		#region Similarity measures
-		[SimilarityType(typeof(NormalizedLevenshtein))]
-		public virtual Double NormalizedLevenshtein { get; set; }
+		//[SimilarityType(typeof(NormalizedLevenshtein))]
+		//public virtual Double NormalizedLevenshtein { get; set; }
 
-		/// <summary>
-		/// We use the Jaro-Winkler distance without any alterations to the default parameters.
-		/// </summary>
-		[SimilarityType(typeof(JaroWinkler))]
-		public virtual Double JaroWinkler { get; set; }
+		///// <summary>
+		///// We use the Jaro-Winkler distance without any alterations to the default parameters.
+		///// </summary>
+		//[SimilarityType(typeof(JaroWinkler))]
+		//public virtual Double JaroWinkler { get; set; }
 
-		/// <summary>
-		/// Metric Longest Common Subsequence as normalized metric
-		/// </summary>
-		[SimilarityType(typeof(MetricLCS))]
-		public virtual Double MetricLongestCommonSubSeq { get; set; }
+		///// <summary>
+		///// Metric Longest Common Subsequence as normalized metric
+		///// </summary>
+		//[SimilarityType(typeof(MetricLCS))]
+		//public virtual Double MetricLongestCommonSubSeq { get; set; }
 
 		#region Variated similiarity measures
-		/// <summary>
-		/// The normalized N-Gram distance with shingle-lengths 2 through 6.
-		/// 
-		/// <note>Kondrak, G., 2005. N-gram similarity and distance. In String processing and information retrieval (pp. 115-126). Springer Berlin/Heidelberg.</note>
-		/// </summary>
-		[SimilarityType(typeof(NGram), 2)]
-		public virtual Double NGram2 { get; set; }
-		//[SimilarityType(typeof(NGram), 3)]
-		//public virtual Double NGram3 { get; set; }
-		[SimilarityType(typeof(NGram), 4)]
-		public virtual Double NGram4 { get; set; }
-		//[SimilarityType(typeof(NGram), 5)]
-		//public virtual Double NGram5 { get; set; }
-		[SimilarityType(typeof(NGram), 6)]
-		public virtual Double NGram6 { get; set; }
+		///// <summary>
+		///// The normalized N-Gram distance with shingle-lengths 2 through 6.
+		///// 
+		///// <note>Kondrak, G., 2005. N-gram similarity and distance. In String processing and information retrieval (pp. 115-126). Springer Berlin/Heidelberg.</note>
+		///// </summary>
+		//[SimilarityType(typeof(NGram), 2)]
+		//public virtual Double NGram2 { get; set; }
+		////[SimilarityType(typeof(NGram), 3)]
+		////public virtual Double NGram3 { get; set; }
+		//[SimilarityType(typeof(NGram), 4)]
+		//public virtual Double NGram4 { get; set; }
+		////[SimilarityType(typeof(NGram), 5)]
+		////public virtual Double NGram5 { get; set; }
+		//[SimilarityType(typeof(NGram), 6)]
+		//public virtual Double NGram6 { get; set; }
 
 		/// <summary>
 		/// The Cosine simliarity with shingle-lengths 2 through 6.
@@ -258,15 +258,15 @@ namespace Util.Data.Entities
 			this.Map(x => x.LinesAdded).Not.Nullable();
 			this.Map(x => x.LinesDeleted).Not.Nullable();
 
-			this.Map(x => x.NormalizedLevenshtein).Not.Nullable();
-			this.Map(x => x.JaroWinkler).Not.Nullable();
-			this.Map(x => x.MetricLongestCommonSubSeq).Not.Nullable();
+			//this.Map(x => x.NormalizedLevenshtein).Not.Nullable();
+			//this.Map(x => x.JaroWinkler).Not.Nullable();
+			//this.Map(x => x.MetricLongestCommonSubSeq).Not.Nullable();
 
-			this.Map(x => x.NGram2).Not.Nullable();
-			//this.Map(x => x.NGram3).Not.Nullable();
-			this.Map(x => x.NGram4).Not.Nullable();
-			//this.Map(x => x.NGram5).Not.Nullable();
-			this.Map(x => x.NGram6).Not.Nullable();
+			//this.Map(x => x.NGram2).Not.Nullable();
+			////this.Map(x => x.NGram3).Not.Nullable();
+			//this.Map(x => x.NGram4).Not.Nullable();
+			////this.Map(x => x.NGram5).Not.Nullable();
+			//this.Map(x => x.NGram6).Not.Nullable();
 
 			this.Map(x => x.Cosine2).Not.Nullable();
 			//this.Map(x => x.Cosine3).Not.Nullable();
