@@ -23,6 +23,9 @@ namespace GitHoursTests
 			var analysis = new GitHours.Hours.GitHours(span);
 			var result = analysis.Analyze(includeHourSpans: true);
 
+			Assert.AreEqual(span.FilteredCommits.Count,
+				result.AuthorStats.Select(@as => @as.HourSpans.Count).Sum());
+
 			foreach (var stat in result.AuthorStats)
 			{
 				Assert.AreEqual(stat.HoursTotal, stat.HourSpans.Select(hs => hs.Hours).Sum(), 0.0000001d);
