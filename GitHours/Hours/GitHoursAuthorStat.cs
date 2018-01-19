@@ -38,9 +38,9 @@ namespace GitHours.Hours
 	/// <summary>
 	/// Data-class that holds, for each author, stats about hours spent and commits submitted.
 	/// </summary>
-	internal class GitHoursAuthorStats
+	internal class GitHoursAuthorStat
 	{
-		public GitHoursAuthorStats(DeveloperWithAlternativeNamesAndEmails developer)
+		public GitHoursAuthorStat(DeveloperWithAlternativeNamesAndEmails developer)
 		{
 			this.Developer = developer;
 		}
@@ -67,6 +67,6 @@ namespace GitHours.Hours
 		public UInt32 NumCommits { get; set; }
 
 		[JsonProperty(Order = 7, NullValueHandling = NullValueHandling.Ignore)]
-		public ICollection<GitHoursAuthorSpans> HourSpans { get; set; }
+		public ICollection<GitHoursAuthorSpan> HourSpans { get; set; }
 	}
 }

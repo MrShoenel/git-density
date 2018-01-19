@@ -69,14 +69,14 @@ namespace GitHours.Hours
 		}
 
 		/// <summary>
-		/// Conducts a full git-hours analysis and returns the <see cref="GitHoursAuthorStats"/>
+		/// Conducts a full git-hours analysis and returns the <see cref="GitHoursAuthorStat"/>
 		/// for the developer that was supplied.
 		/// </summary>
 		/// <param name="developer"></param>
 		/// <param name="repositoryEntity"></param>
 		/// <param name="includeHourSpans">If true, will compute and include the hour-spans.</param>
 		/// <returns></returns>
-		public GitHoursAuthorStats AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
+		public GitHoursAuthorStat AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
 		{
 			var result = this.Analyze(repositoryEntity, includeHourSpans);
 
@@ -96,7 +96,7 @@ namespace GitHours.Hours
 			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown"); // that's how it's done in the original script
 			var authorStats = commitsByDeveloper.Where(commitGroup => commitGroup.Any()).Select(commitGroup =>
 			{
-				var stats = new GitHoursAuthorStats(commitGroup.Key)
+				var stats = new GitHoursAuthorStat(commitGroup.Key)
 				{
 					HoursTotal = this.Estimate(commitGroup.Select(commit => commit.Committer.When.DateTime).ToArray()),
 					NumCommits = (UInt32)commitGroup.Count()
@@ -104,7 +104,7 @@ namespace GitHours.Hours
 
 				if (includeHourSpans)
 				{
-					stats.HourSpans = GitHoursAuthorSpans.GetHoursSpans(commitGroup, this.Estimate).ToList();
+					stats.HourSpans = GitHoursAuthorSpan.GetHoursSpans(commitGroup, this.Estimate).ToList();
 					var test = stats.HourSpans.Select(hs => hs.Hours).Sum();
 				}
 

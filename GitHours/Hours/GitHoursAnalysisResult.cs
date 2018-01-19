@@ -59,6 +59,6 @@ namespace GitHours.Hours
 
 		public String RepositoryPath { get; protected internal set; }
 
-		public IEnumerable<GitHoursAuthorStats> AuthorStats { get; protected internal set; }
+		public IEnumerable<GitHoursAuthorStat> AuthorStats { get; protected internal set; }
 	}
 }

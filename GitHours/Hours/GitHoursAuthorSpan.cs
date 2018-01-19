@@ -38,7 +38,7 @@ using System.Threading.Tasks;
 
 namespace GitHours.Hours
 {
-	internal class GitHoursAuthorSpans
+	internal class GitHoursAuthorSpan
 	{
 		[JsonIgnore]
 		public Commit Since { get; private set; }
@@ -52,14 +52,14 @@ namespace GitHours.Hours
 
 		public Double Hours { get; private set; }
 
-		private GitHoursAuthorSpans(Commit since, Commit until, double hours)
+		private GitHoursAuthorSpan(Commit since, Commit until, double hours)
 		{
 			this.Since = since;
 			this.Until = until;
 			this.Hours = hours;
 		}
 
-		public static IEnumerable<GitHoursAuthorSpans> GetHoursSpans(IEnumerable<Commit> commitsForDeveloper, Func<DateTime[], Double> estimator)
+		public static IEnumerable<GitHoursAuthorSpan> GetHoursSpans(IEnumerable<Commit> commitsForDeveloper, Func<DateTime[], Double> estimator)
 		{
 			var commitsSorted = commitsForDeveloper.OrderBy(commit => commit.Author.When).ToList();
 
@@ -78,7 +78,7 @@ namespace GitHours.Hours
 			foreach (var kv in hoursUntilCommit)
 			{
 				var hours = kv.Value.Item2 - (hoursUntilCommit.ContainsKey(kv.Key - 1) ?  hoursUntilCommit[kv.Key - 1].Item2 : 0);
-				yield return new GitHoursAuthorSpans(commitsSorted[kv.Key - 2], kv.Value.Item1, Math.Round(hours, 3));
+				yield return new GitHoursAuthorSpan(commitsSorted[kv.Key - 2], kv.Value.Item1, Math.Round(hours, 3));
 			}
 		}
 	}
