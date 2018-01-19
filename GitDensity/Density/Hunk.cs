@@ -83,6 +83,20 @@ namespace GitDensity.Density
 		}
 
 		/// <summary>
+		/// Sets all referenced objects to null and clears all lists.
+		/// </summary>
+		/// <returns>This <see cref="Hunk"/> for chaining.</returns>
+		public Hunk Clear()
+		{
+			this.SourceFilePath = null;
+			this.TargetFilePath = null;
+			this.lineNumbersAdded.Clear();
+			this.lineNumbersDeleted.Clear();
+			this.Patch = null;
+			return this;
+		}
+
+		/// <summary>
 		/// Computes the numbers (their index) of lines that have been added
 		/// or removed. Note that indexes start with 1, not 0.
 		/// It is essential to only call this method _after_ the properties
