@@ -183,6 +183,7 @@ namespace GitDensity
 								.SelectMany(kv => kv.Value),
 							options.TempDirectory))
 						{
+							density.ExecutionPolicy = options.ExecutionPolicy;
 							density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
 
 							var start = DateTime.Now;
@@ -252,6 +253,9 @@ namespace GitDensity
 
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
+
+		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
+		public ExecutionPolicy ExecutionPolicy { get; set; }
 
 		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
 		public Boolean NoWait { get; set; }

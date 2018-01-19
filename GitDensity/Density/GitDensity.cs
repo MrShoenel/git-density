@@ -20,15 +20,8 @@ namespace GitDensity.Density
 	/// <summary>
 	/// This class does the actual Git-Density analysis for a whole repository.
 	/// </summary>
-	internal class GitDensity : IDisposable
+	internal class GitDensity : IDisposable, ISupportsExecutionPolicy
 	{
-		internal const Boolean OverrideEnableParallelism = false;
-#if DEBUG
-		public const Boolean EnableParallelism = false || OverrideEnableParallelism;
-#else
-		public const Boolean EnableParallelism = true;
-#endif
-
 		private static BaseLogger<GitDensity> logger = Program.CreateLogger<GitDensity>();
 
 		public static readonly String[] DefaultFileTypeExtensions =
@@ -56,10 +49,10 @@ namespace GitDensity.Density
 			get => this.roSimMeasures;
 		}
 
+		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
+
 		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
-			logger.LogWarning("Parallel Analysis is: {0}ABLED!", EnableParallelism ? "EN" : "DIS");
-
 			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
 			this.roSimMeasures = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.similarityMeasures);
 			this.GitHoursSpan = gitHoursSpan;
@@ -132,6 +125,9 @@ namespace GitDensity.Density
 				logger.LogWarning($"No similarity-measures have been initialized. This can be done by calling {nameof(InitializeStringSimilarityMeasures)}(Type fromType).");
 			}
 
+			logger.LogWarning("Parallel Analysis is: {0}ABLED!",
+				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
+
 			this.TempDirectory.Clear();
 
 			var dirOld = "old";
@@ -148,7 +144,7 @@ namespace GitDensity.Density
 			var pairsDone = 0;
 
 			var parallelOptions = new ParallelOptions();
-			if (!EnableParallelism)
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
 				parallelOptions.MaxDegreeOfParallelism = 1;
 			}
@@ -158,6 +154,7 @@ namespace GitDensity.Density
 				logger.LogInformation("Analyzing commit-pair {0} of {1}, ID: {2}",
 					numDone, pairs.Count, pair.Id);
 
+				pair.ExecutionPolicy = this.ExecutionPolicy;
 				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
@@ -229,6 +226,7 @@ namespace GitDensity.Density
 					// the TreeEntryChangesMetrics-entity.
 					var similarity = new Similarity.Similarity<SimilarityEntity>(
 						hunk, Enumerable.Empty<CloneDensity.ClonesXmlSet>(), this.SimilarityMeasures);
+					similarity.ExecutionPolicy = this.ExecutionPolicy;
 					var simpleLoc = new SimpleLoc((added ?
 						pair.Child[change.Path] : pair.Parent[change.OldPath]).GetLines());
 
@@ -306,6 +304,7 @@ namespace GitDensity.Density
 					{
 						var similarity = new Similarity.Similarity<SimilarityEntity>(
 							hunk, relevantSets, this.SimilarityMeasures);
+						similarity.ExecutionPolicy = this.ExecutionPolicy;
 
 						var fileBlock = new FileBlockEntity
 						{

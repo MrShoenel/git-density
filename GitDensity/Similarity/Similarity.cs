@@ -8,13 +8,15 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Util;
 using Util.Data.Entities;
 using Util.Metrics;
 using Util.Similarity;
 
 namespace GitDensity.Similarity
 {
-	internal class Similarity<T> where T : IHasSimilarityComparisonType, new()
+	internal class Similarity<T> : ISupportsExecutionPolicy
+		where T : IHasSimilarityComparisonType, new()
 	{
 		private Lazy<TextBlock> lazyOldTextBlock;
 		public TextBlock OldTextBlock { get { return this.lazyOldTextBlock.Value; } }
@@ -70,6 +72,8 @@ namespace GitDensity.Similarity
 		public UInt32 NumberOfLinesDeletedPostCloneDetection
 			=> this.NewTextBlock.LinesDeleted - this.lazyClonesBlocks.Value.NewPostClone.LinesDeleted;
 
+		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
+
 		public Similarity(Hunk hunk, IEnumerable<ClonesXmlSet> cloneSets, IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures)
 		{
 			this.lazyOldTextBlock = new Lazy<TextBlock>(() =>
@@ -109,7 +113,7 @@ namespace GitDensity.Similarity
 			#endregion
 		}
 
-		private static void ComputeBlockSimilarity(TextBlock oldBlock, TextBlock newBlock, SimilarityComparisonType compType, IDictionary<SimilarityComparisonType, ICollection<T>> dictionary, IDictionary<PropertyInfo, INormalizedStringDistance> simMeasures)
+		private static void ComputeBlockSimilarity(TextBlock oldBlock, TextBlock newBlock, SimilarityComparisonType compType, IDictionary<SimilarityComparisonType, ICollection<T>> dictionary, IDictionary<PropertyInfo, INormalizedStringDistance> simMeasures, ExecutionPolicy execPolicy)
 		{
 			// populate a new instance of T
 			var simEntity = new T
@@ -118,12 +122,14 @@ namespace GitDensity.Similarity
 				LinesAdded = newBlock.LinesAdded,
 				LinesDeleted = newBlock.LinesDeleted
 			};
-			
-			Parallel.ForEach(simMeasures,
-#if DEBUG
-				new ParallelOptions { MaxDegreeOfParallelism = 1 },
-#endif
-				simMeasure =>
+
+			var parallelOptions = new ParallelOptions();
+			if (execPolicy == ExecutionPolicy.Linear)
+			{
+				parallelOptions.MaxDegreeOfParallelism = 1;
+			}
+
+			Parallel.ForEach(simMeasures, parallelOptions, simMeasure =>
 			{
 				Double similarity;
 				if (oldBlock.IsEmpty && newBlock.IsEmpty) // Empty & Same; similarity is 100%
@@ -164,19 +170,21 @@ namespace GitDensity.Similarity
 			foreach (var simMeasure in this.similarityMeasures)
 			{
 				#region BlockSimilarity
-				ComputeBlockSimilarity(this.OldTextBlockNoComments, this.NewTextBlockNoComments, SimilarityComparisonType.BlockSimilarityNoComments, dict, this.similarityMeasures);
+				ComputeBlockSimilarity(this.OldTextBlockNoComments, this.NewTextBlockNoComments, SimilarityComparisonType.BlockSimilarityNoComments, dict, this.similarityMeasures, this.ExecutionPolicy);
 				#endregion
 
 				#region Clone similarity
 				ComputeBlockSimilarity(
 					this.lazyClonesBlockNoComments.Value.OldPostClone,
 					this.lazyClonesBlockNoComments.Value.NewPostClone,
-					SimilarityComparisonType.PostCloneBlockSimilarityNoComments, dict, this.similarityMeasures);
+					SimilarityComparisonType.PostCloneBlockSimilarityNoComments,
+					dict, this.similarityMeasures, this.ExecutionPolicy);
 
 				ComputeBlockSimilarity(
 					this.lazyClonesBlockNoComments.Value.OldBlockClonedLines,
 					this.lazyClonesBlockNoComments.Value.NewBlockClonedLines,
-					SimilarityComparisonType.ClonedBlockLinesSimilarityNoComments, dict, this.similarityMeasures);
+					SimilarityComparisonType.ClonedBlockLinesSimilarityNoComments,
+					dict, this.similarityMeasures, this.ExecutionPolicy);
 				#endregion
 			}
 
@@ -196,19 +204,21 @@ namespace GitDensity.Similarity
 			foreach (var simMeasure in this.similarityMeasures)
 			{
 				#region BlockSimilarity
-				ComputeBlockSimilarity(this.OldTextBlock, this.NewTextBlock, SimilarityComparisonType.BlockSimilarity, dict, this.similarityMeasures);
+				ComputeBlockSimilarity(this.OldTextBlock, this.NewTextBlock, SimilarityComparisonType.BlockSimilarity, dict, this.similarityMeasures, this.ExecutionPolicy);
 				#endregion
 
 				#region Clone similarity
 				ComputeBlockSimilarity(
 					this.lazyClonesBlocks.Value.OldPostClone,
 					this.lazyClonesBlocks.Value.NewPostClone,
-					SimilarityComparisonType.PostCloneBlockSimilarity, dict, this.similarityMeasures);
+					SimilarityComparisonType.PostCloneBlockSimilarity,
+					dict, this.similarityMeasures, this.ExecutionPolicy);
 
 				ComputeBlockSimilarity(
 					this.lazyClonesBlocks.Value.OldBlockClonedLines,
 					this.lazyClonesBlocks.Value.NewBlockClonedLines,
-					SimilarityComparisonType.ClonedBlockLinesSimilarity, dict, this.similarityMeasures);
+					SimilarityComparisonType.ClonedBlockLinesSimilarity,
+					dict, this.similarityMeasures, this.ExecutionPolicy);
 				#endregion
 			}
 

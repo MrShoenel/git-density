@@ -15,7 +15,7 @@ namespace Util.Density
 	/// <remarks>If disposed and the <see cref="Patch"/> has been
 	/// accessed, will dispose the <see cref="Patch"/>.</remarks>
 	[DebuggerDisplay("CommitPair of {Parent}  and  {Child}")]
-	public class CommitPair : IDisposable, IEquatable<CommitPair>
+	public class CommitPair : IDisposable, IEquatable<CommitPair>, ISupportsExecutionPolicy
 	{
 		private Tuple<Commit, Commit> pair;
 
@@ -59,6 +59,12 @@ namespace Util.Density
 		/// using <see cref="Repository.Diff"/>.
 		/// </summary>
 		public TreeChanges TreeChanges => this.lazyTree.Value;
+
+		/// <summary>
+		/// Set the <see cref="ExecutionPolicy"/> for parallel operations. Currently
+		/// supported within <see cref="WriteOutTree(IEnumerable{TreeEntryChanges}, DirectoryInfo, bool, string, string)"/>.
+		/// </summary>
+		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
 		/// <summary>
 		/// C'tor; initializes the pair and its patch.
@@ -138,6 +144,12 @@ namespace Util.Density
 				// That means that adds and deletes cannot be written out.
 				return;
 			}
+
+			var parallelOptions = new ParallelOptions();
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
+			{
+				parallelOptions.MaxDegreeOfParallelism = 1;
+			}
 			
 			Parallel.ForEach(changes.Select(change => new
 			{
@@ -146,9 +158,7 @@ namespace Util.Density
 			}).Where(anon =>
 				anon.OldTreeEntry is TreeEntry && anon.NewTreeEntry is TreeEntry
 			),
-#if DEBUG
-				new ParallelOptions{ MaxDegreeOfParallelism = 1 },
-#endif
+				parallelOptions,
 				anon =>
 			{
 				if (anon.OldTreeEntry.TargetType == TreeEntryTargetType.Blob

@@ -67,7 +67,7 @@ namespace Util.Data.Entities
 		/// that do not have a clone-URL. This method was primarily made to fix broken
 		/// URLs. Entities without a repairable URL or any URL at all were considered
 		/// useless.</param>
-		public static void CleanUpDatabase(BaseLogger<ProjectEntity> logger, bool deleteUselessEntities = false)
+		public static void CleanUpDatabase(BaseLogger<ProjectEntity> logger, bool deleteUselessEntities = false, ExecutionPolicy execPolicy = ExecutionPolicy.Parallel)
 		{
 			using (var tempSess = DataFactory.Instance.OpenSession())
 			{
@@ -77,8 +77,13 @@ namespace Util.Data.Entities
 				var ps = tempSess.QueryOver<Data.Entities.ProjectEntity>().Where(p => !p.WasCorrected).Future();
 				var toSave = new ConcurrentBag<ProjectEntity>();
 				var toDelete = new ConcurrentBag<ProjectEntity>();
+				var parallelOptions = new ParallelOptions();
+				if (execPolicy == ExecutionPolicy.Linear)
+				{
+					parallelOptions.MaxDegreeOfParallelism = 1;
+				}
 
-				Parallel.ForEach(ps, proj =>
+				Parallel.ForEach(ps, parallelOptions, proj =>
 				{
 					if (String.IsNullOrEmpty(proj.CloneUrl))
 					{
