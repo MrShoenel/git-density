@@ -7,9 +7,9 @@ namespace Util.Data.Entities
 {
 	public enum FileBlockType
 	{
-		Added,
-		Deleted,
-		Modified
+		Added = 1,
+		Deleted = 2,
+		Modified = 3
 	}
 
 	public class FileBlockEntity
