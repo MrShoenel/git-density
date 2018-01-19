@@ -185,6 +185,7 @@
     <Compile Include="Extensions\RepositoryExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="GitHoursSpan.cs" />
+    <Compile Include="ISupportsExecutionPolicy.cs" />
     <Compile Include="Logging\BaseLogger.cs" />
     <Compile Include="Logging\ColoredConsoleLogger.cs" />
     <Compile Include="Metrics\SimpleLoc.cs" />
