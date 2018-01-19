@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.12
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitDensity", "GitDensity\GitDensity.csproj", "{A387FE6E-4A84-4971-A8A7-3E60FB08B569}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitDensityTests", "GitDensityTests\GitDensityTests.csproj", "{8FC24E9E-0ECF-45D6-A957-DCEDCEAA46E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilTests", "UtilTests\UtilTests.csproj", "{B1C99970-1287-481C-8295-EDF3688B2AB0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHoursTests", "GitHoursTests\GitHoursTests.csproj", "{06D963A7-2199-401B-A458-F74CD429EF3F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{B1C99970-1287-481C-8295-EDF3688B2AB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1C99970-1287-481C-8295-EDF3688B2AB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1C99970-1287-481C-8295-EDF3688B2AB0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06D963A7-2199-401B-A458-F74CD429EF3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06D963A7-2199-401B-A458-F74CD429EF3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06D963A7-2199-401B-A458-F74CD429EF3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06D963A7-2199-401B-A458-F74CD429EF3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
