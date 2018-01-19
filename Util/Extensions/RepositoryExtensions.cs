@@ -137,12 +137,12 @@ namespace Util.Extensions
 		{
 			public DeveloperWithAlternativeNamesAndEmails Key { get; private set; }
 
-			private IEnumerable<Commit> items;
+			private ICollection<Commit> items;
 
 			internal CommitGroupingByDeveloper(DeveloperWithAlternativeNamesAndEmails key, IEnumerable<Commit> ie)
 			{
 				this.Key = key;
-				this.items = ie;
+				this.items = new LinkedList<Commit>(ie);
 			}
 
 			public IEnumerator<Commit> GetEnumerator()
