@@ -61,9 +61,12 @@ namespace GitHours.Hours
 		public IReadOnlyCollection<String> AlternativeEmails { get { return this.Developer.AlternativeEmails; } }
 
 		[JsonProperty(Order = 3)]
-		public Double Hours { get; set; }
+		public Double HoursTotal { get; set; }
 
 		[JsonProperty(Order = 4)]
-		public UInt32 Commits { get; set; }
+		public UInt32 NumCommits { get; set; }
+
+		[JsonProperty(Order = 7, NullValueHandling = NullValueHandling.Ignore)]
+		public ICollection<GitHoursAuthorSpans> HourSpans { get; set; }
 	}
 }
