@@ -316,8 +316,10 @@ namespace GitDensity.Density
 							NewStart = hunk.NewLineStart,
 							OldAmount = hunk.OldNumberOfLines,
 							OldStart = hunk.OldNumberOfLines
-							// Regard the next line which adds all similarities to the FileBlock:
-						}.AddSimilarities(similarity.Similarities.SelectMany(kv => kv.Value));
+						};
+
+						fileBlock.AddSimilarities(similarity.Similarities.SelectMany(kv => kv.Value));
+						fileBlock.AddSimilarities(similarity.SimilaritiesNoComments.SelectMany(kv => kv.Value));
 
 						return Tuple.Create(fileBlock, similarity);
 					}).ToList();
