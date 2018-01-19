@@ -67,6 +67,6 @@ namespace GitHours.Hours
 		public UInt32 NumCommits { get; set; }
 
 		[JsonProperty(Order = 7, NullValueHandling = NullValueHandling.Ignore)]
-		public ICollection<GitHoursAuthorSpan> HourSpans { get; set; }
+		public IList<GitHoursAuthorSpan> HourSpans { get; set; }
 	}
 }
