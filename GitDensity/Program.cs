@@ -213,7 +213,8 @@ namespace GitDensity
 
 			if (!options.NoWait)
 			{
-				logger.LogInformation("Press a key to exit GitDensity.");
+				logger.LogInformation("Analysis finished, everything went well.");
+				logger.LogInformation("Press a key to exit GitDensity...");
 				Console.ReadKey();
 			}
 		}
