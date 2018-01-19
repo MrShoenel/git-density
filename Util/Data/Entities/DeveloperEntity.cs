@@ -93,6 +93,11 @@ namespace Util.Data.Entities
 		{
 			return other is DeveloperEntity && this.Name == other.Name && this.Email == other.Email;
 		}
+
+		public override int GetHashCode()
+		{
+			return 31 * (this.Name ?? String.Empty).GetHashCode() ^ (this.Email ?? String.Empty).GetHashCode();
+		}
 		#endregion
 	}
 
