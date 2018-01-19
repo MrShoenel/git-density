@@ -43,7 +43,7 @@ namespace Util
 	/// to another point in time or <see cref="Commit"/> and thus represents a range
 	/// of <see cref="Commit"/>s.
 	/// </summary>
-	public class GitHoursSpan
+	public class GitHoursSpan : IDisposable
 	{
 		/// <summary>
 		/// Used for parsing the date/time, if given as string. If such date/times are
@@ -180,5 +180,35 @@ namespace Util
 				return new LinkedList<Commit>(orderedOldToNew.Skip(idxSince).Take(1 + idxUntil - idxSince));
 			});
 		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // To detect redundant calls
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!disposedValue)
+			{
+				if (disposing)
+				{
+					this.lazyFilteredCommits.Value.Clear();
+					this.lazyFilteredCommits = null;
+					this.Repository = null;
+					this.SinceCommitSha = null;
+					this.SinceDateTime = null;
+					this.UntilCommitSha = null;
+					this.UntilDateTime = null;
+				}
+
+				disposedValue = true;
+			}
+		}
+
+		// This code added to correctly implement the disposable pattern.
+		public void Dispose()
+		{
+			Dispose(true);
+
+		}
+		#endregion
 	}
 }
