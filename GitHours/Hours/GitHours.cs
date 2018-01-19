@@ -77,7 +77,7 @@ namespace GitHours.Hours
 		/// <returns></returns>
 		public GitHoursAuthorStats AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null)
 		{
-			var result = this.Analyze();
+			var result = this.Analyze(repositoryEntity);
 
 			return result.AuthorStats.Where(stats => stats.Developer.Equals(developer)).First();
 		}
