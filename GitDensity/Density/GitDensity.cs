@@ -7,16 +7,28 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
+using Util.Metrics;
 
 namespace GitDensity.Density
 {
+	/// <summary>
+	/// This class does the actual Git-Density analysis for a whole repository.
+	/// </summary>
 	internal class GitDensity : IDisposable
 	{
+		internal const Boolean OverrideEnableParallelism = false;
+#if DEBUG
+		public const Boolean EnableParallelism = false || OverrideEnableParallelism;
+#else
+		public const Boolean EnableParallelism = true;
+#endif
+
 		private static BaseLogger<GitDensity> logger = Program.CreateLogger<GitDensity>();
 
 		public static readonly String[] DefaultFileTypeExtensions =
@@ -46,6 +58,8 @@ namespace GitDensity.Density
 
 		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
+			logger.LogWarning("Parallel Analysis is: {0}ABLED!", EnableParallelism ? "EN" : "DIS");
+
 			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
 			this.roSimMeasures = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.similarityMeasures);
 			this.GitHoursSpan = gitHoursSpan;
@@ -120,37 +134,48 @@ namespace GitDensity.Density
 
 			this.TempDirectory.Clear();
 
-			var developers = this.Repository.Commits.GroupByDeveloperAsSignatures();
-			var repoEntity = this.Repository.AsEntity(this.GitHoursSpan).AddDevelopers(
-				new HashSet<DeveloperEntity>(developers.Values));
+			var dirOld = "old";
+			var dirNew = "new";
+			var repoEntity = this.Repository.AsEntity(this.GitHoursSpan);
+			var developers = this.GitHoursSpan.FilteredCommits.GroupByDeveloperAsSignatures(repoEntity);
+			repoEntity.AddDevelopers(new HashSet<DeveloperEntity>(developers.Values));
 			var commits = this.GitHoursSpan.FilteredCommits.Select(commit =>
 				commit.AsEntity(repoEntity, developers[commit.Author]))
 				.ToDictionary(commit => commit.HashSHA1, commit => commit);
 			var oldestCommit = this.GitHoursSpan.FilteredCommits.First.Value;
-			var pairs = this.GitHoursSpan.CommitPairs(this.SkipInitialCommit, this.SkipMergeCommits);
+			var pairs = this.GitHoursSpan.CommitPairs(
+				this.SkipInitialCommit, this.SkipMergeCommits).ToList();
+			var pairsDone = 0;
 
-			Parallel.ForEach(pairs,
-#if DEBUG
-				new ParallelOptions { MaxDegreeOfParallelism = 1 },
-#endif
-				pair =>
+			var parallelOptions = new ParallelOptions();
+			if (!EnableParallelism)
 			{
+				parallelOptions.MaxDegreeOfParallelism = 1;
+			}
+			Parallel.ForEach(pairs, parallelOptions, pair =>
+			{
+				var numDone = Interlocked.Increment(ref pairsDone);
+				logger.LogInformation("Analyzing commit-pair {0} of {1}, ID: {2}",
+					numDone, pairs.Count, pair.Id);
+
 				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
-				var hoursSpan = new GitHoursSpan(
-					this.GitHoursSpan.Repository, oldestCommit, pair.Child);
 
 				#region GitHours
-				var gitHoursStats = new GitHours.Hours.GitHours(hoursSpan).AnalyzeForDeveloper(
-					developers[pair.Child.Author]);
-				var hoursEntity = new HoursEntity
+				using (var hoursSpan = new GitHoursSpan(
+					this.GitHoursSpan.Repository, oldestCommit, pair.Child))
 				{
-					CommitSince = commits.Where(kv => kv.Key == oldestCommit.Sha).Single().Value,
-					CommitUntil = pairEntity.ChildCommit,
-					Developer = developers[pair.Child.Author],
-					Hours = gitHoursStats.Hours
-				};
-				developers[pair.Child.Author].AddHour(hoursEntity);
+					var gitHoursStats = new GitHours.Hours.GitHours(hoursSpan).AnalyzeForDeveloper(
+						developers[pair.Child.Author], repoEntity);
+					var hoursEntity = new HoursEntity
+					{
+						CommitSince = commits.Where(kv => kv.Key == oldestCommit.Sha).Single().Value,
+						CommitUntil = pairEntity.ChildCommit,
+						Developer = developers[pair.Child.Author],
+						Hours = gitHoursStats.Hours
+					};
+					developers[pair.Child.Author].AddHour(hoursEntity);
+				}
 				#endregion
 
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
@@ -167,9 +192,9 @@ namespace GitDensity.Density
 					|| this.FileTypeExtensions.Any(extension => rtc.OldPath.EndsWith(extension));
 				});
 
-				var dirOld = "old";
-				var dirNew = "new";
 				var pairDirectory = new DirectoryInfo(Path.Combine(this.TempDirectory.FullName, pair.Id));
+				var oldDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirOld));
+				var newDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirNew));
 				pairDirectory.Create();
 				pair.WriteOutTree(
 					relevantTreeChanges, pairDirectory, wipeTargetDirectoryBefore: true, parentDirectoryName: dirOld, childDirectoryName: dirNew);
@@ -193,31 +218,51 @@ namespace GitDensity.Density
 				// patch). That means, for each such file, exactly one FileBlock exists.
 				foreach (var change in relevantTreeChanges.Where(change => change.Status == ChangeKind.Added || change.Status == ChangeKind.Deleted))
 				{
-					var treeChangeEntity = change.AsEntity(pairEntity);
-
+					var added = change.Status == ChangeKind.Added;
 					var patchNew = pair.Patch[change.Path];
+					var patchOld = pair.Patch[change.OldPath];
+					var treeChangeEntity = change.AsEntity(pairEntity);
+					var hunk = Hunk.HunksForPatch(added ? patchNew : patchOld,
+						oldDirectory, newDirectory).Single();
+					// We explicitly pass an empty enumerable for the clone-sets, as there possibly
+					// cannot be any for new or deleted files. The Similarity is needed for computing
+					// the TreeEntryChangesMetrics-entity.
+					var similarity = new Similarity.Similarity<SimilarityEntity>(
+						hunk, Enumerable.Empty<CloneDensity.ClonesXmlSet>(), this.SimilarityMeasures);
+					var simpleLoc = new SimpleLoc((added ?
+						pair.Child[change.Path] : pair.Parent[change.OldPath]).GetLines());
 
 					var fileBlock = new FileBlockEntity
 					{
 						CommitPair = pairEntity,
-						FileBlockType = change.Status == ChangeKind.Added ? FileBlockType.Added : FileBlockType.Deleted,
+						FileBlockType = added ? FileBlockType.Added : FileBlockType.Deleted,
 						TreeEntryChanges = treeChangeEntity,
 
-						NewAmount = change.Status == ChangeKind.Added ? (uint)patchNew.LinesAdded : 0u,
-						NewStart = change.Status == ChangeKind.Added ? 1u : 0u,
-						OldAmount = change.Status == ChangeKind.Added ? 0u : (uint)patchNew.LinesDeleted,
-						OldStart = change.Status == ChangeKind.Added ? 0u : 1u,
+						NewAmount = added ? (uint)patchNew.LinesAdded : 0u,
+						NewStart = added ? 1u : 0u,
+						OldAmount = added ? 0u : (uint)patchNew.LinesDeleted,
+						OldStart = added ? 0u : 1u
+					}; // Note that we do not add any similarities here (no sense for pure adds/deletes)
 
-						NumAdded = change.Status == ChangeKind.Added ? (uint)patchNew.LinesAdded : 0u,
-						NumDeleted = change.Status == ChangeKind.Added ? 0u : (uint)patchNew.LinesDeleted,
+					var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
+						fileBlock, similarity, simpleLoc, treeChangeEntity);
 
-						NumAddedPostCloneDetection = 0u,
-						NumDeletedPostCloneDetection = 0u
-					};
-
+					treeChangeEntity.TreeEntryChangesMetrics = metricsEntity;
 					treeChangeEntity.AddFileBlock(fileBlock);
 					pairEntity.AddFileBlock(fileBlock);
-					pairEntity.AddTreeEntryChanges(treeChangeEntity);
+
+					logger.LogTrace("Analyzed {0} file {1} and its metrics ({2} LOC-gross)",
+						change.Status.ToString().ToLower(), change.Path, metricsEntity.LocFileGross);
+
+					hunk.Clear();
+					patchNew.Clear();
+					patchOld.Clear();
+
+					patchNew = null;
+					patchOld = null;
+					hunk = null;
+					similarity = null;
+					simpleLoc = null;
 				}
 
 
@@ -251,17 +296,18 @@ namespace GitDensity.Density
 					});
 
 					var patchNew = pair.Patch[change.Path];
-					var oldDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirOld));
-					var newDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirNew));
-					var hunks = Hunk.HunksForPatch(patchNew, oldDirectory, newDirectory);
+					var hunks = Hunk.HunksForPatch(patchNew, oldDirectory, newDirectory).ToList();
+					// We are only interested in LOC regarding the new file, because the LOC
+					// of its previous version are covered in the previous CommitPair.
+					var simpleLoc = new SimpleLoc(pair.Child[change.Path].GetLines());
 
-
-					var fileBlocks = hunks.Select(hunk =>
+					
+					var fileBlockTuples = hunks.Select(hunk =>
 					{
 						var similarity = new Similarity.Similarity<SimilarityEntity>(
 							hunk, relevantSets, this.SimilarityMeasures);
 
-						return new FileBlockEntity
+						var fileBlock = new FileBlockEntity
 						{
 							CommitPair = pairEntity,
 							FileBlockType = FileBlockType.Modified,
@@ -270,21 +316,41 @@ namespace GitDensity.Density
 							NewAmount = hunk.NewNumberOfLines,
 							NewStart = hunk.NewLineStart,
 							OldAmount = hunk.OldNumberOfLines,
-							OldStart = hunk.OldNumberOfLines,
-
-							NumAdded = hunk.NumberOfLinesAdded,
-							NumDeleted = hunk.NumberOfLinesDeleted,
-
-							NumAddedPostCloneDetection = similarity.NumberOfLinesAddedPostCloneDetection,
-							NumDeletedPostCloneDetection = similarity.NumberOfLinesDeletedPostCloneDetection
+							OldStart = hunk.OldNumberOfLines
 							// Regard the next line which adds all similarities to the FileBlock:
 						}.AddSimilarities(similarity.Similarities.SelectMany(kv => kv.Value));
-					});
 
-					treeChangeEntity.AddFileBlocks(fileBlocks);
-					pairEntity.AddFileBlocks(fileBlocks);
-					pairEntity.AddTreeEntryChanges(treeChangeEntity);
+						return Tuple.Create(fileBlock, similarity);
+					}).ToList();
+
+					var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
+						fileBlockTuples, simpleLoc, treeChangeEntity);
+
+					treeChangeEntity.TreeEntryChangesMetrics = metricsEntity;
+					treeChangeEntity.AddFileBlocks(fileBlockTuples.Select(tuple => tuple.Item1));
+					pairEntity.AddFileBlocks(fileBlockTuples.Select(tuple => tuple.Item1));
+
+					logger.LogTrace("Analyzed {0} file {1} and its metrics ({2} LOC-gross)",
+						change.Status.ToString().ToLower(), change.Path, metricsEntity.LocFileGross);
+
+					patchNew.Clear();
+					patchNew = null;
+					hunks.ForEach(hunk => hunk.Clear());
+					hunks.Clear();
+					hunks = null;
+					simpleLoc = null;
+					fileBlockTuples.Clear();
+					fileBlockTuples = null;
 				}
+
+				cloneSets.Clear();
+				cloneSets = null;
+				oldDirectory = null;
+				newDirectory = null;
+				pairDirectory = null;
+				relevantTreeChanges = null;
+				
+				pair.Dispose(); // also releases the expensive patches.
 			});
 
 			return new GitDensityAnalysisResult(repoEntity);
@@ -304,6 +370,7 @@ namespace GitDensity.Density
 				if (disposing)
 				{
 					this.TempDirectory.Clear();
+					this.GitHoursSpan.Dispose();
 				}
 
 				this.disposedValue = true;
