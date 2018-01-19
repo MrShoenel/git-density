@@ -74,10 +74,11 @@ namespace GitHours.Hours
 		/// </summary>
 		/// <param name="developer"></param>
 		/// <param name="repositoryEntity"></param>
+		/// <param name="includeHourSpans">If true, will compute and include the hour-spans.</param>
 		/// <returns></returns>
-		public GitHoursAuthorStats AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null)
+		public GitHoursAuthorStats AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
 		{
-			var result = this.Analyze(repositoryEntity);
+			var result = this.Analyze(repositoryEntity, includeHourSpans);
 
 			return result.AuthorStats.Where(stats => stats.Developer.Equals(developer)).First();
 		}
@@ -87,25 +88,34 @@ namespace GitHours.Hours
 		/// for each developer and in total as <see cref="GitHoursAnalysisResult"/>.
 		/// </summary>
 		/// <param name="repositoryEntity"></param>
+		/// <param name="includeHourSpans">If true, will compute and include the hour-spans.</param>
 		/// <returns></returns>
-		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null)
+		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
 		{
 			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper(repositoryEntity);
-			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown");
-			var authorWorks = commitsByDeveloper.Where(authorCommits => authorCommits.Any()).Select(authorCommits =>
+			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown"); // that's how it's done in the original script
+			var authorStats = commitsByDeveloper.Where(commitGroup => commitGroup.Any()).Select(commitGroup =>
 			{
-				return new GitHoursAuthorStats(authorCommits.Key)
+				var stats = new GitHoursAuthorStats(commitGroup.Key)
 				{
-					Hours = this.Estimate(authorCommits.Select(commit => commit.Committer.When.DateTime).ToArray()),
-					Commits = (UInt32)authorCommits.Count()
+					HoursTotal = this.Estimate(commitGroup.Select(commit => commit.Committer.When.DateTime).ToArray()),
+					NumCommits = (UInt32)commitGroup.Count()
 				};
+
+				if (includeHourSpans)
+				{
+					stats.HourSpans = GitHoursAuthorSpans.GetHoursSpans(commitGroup, this.Estimate).ToList();
+					var test = stats.HourSpans.Select(hs => hs.Hours).Sum();
+				}
+
+				return stats;
 			});
 
 			return new GitHoursAnalysisResult
 			{
-				TotalHours = Math.Round(authorWorks.Aggregate(0d, (sum, authorWork) => sum + authorWork.Hours), 2),
+				TotalHours = Math.Round(authorStats.Aggregate(0d, (sum, authorStat) => sum + authorStat.HoursTotal), 2),
 				TotalCommits = (UInt32)this.GitHoursSpan.FilteredCommits.Count,
-				AuthorStats = authorWorks.OrderBy(aw => aw.Hours),
+				AuthorStats = authorStats.OrderBy(aw => aw.HoursTotal),
 
 				FirstCommitAdditionInMinutes = this.FirstCommitAdditionInMinutes,
 				Sha1FirstCommit = this.GitHoursSpan.FilteredCommits.FirstOrDefault()?.Sha,
