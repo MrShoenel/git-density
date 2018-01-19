@@ -120,7 +120,7 @@ namespace GitDensity.Similarity
 			{
 				ComparisonType = compType,
 				LinesAdded = newBlock.LinesAdded,
-				LinesDeleted = newBlock.LinesDeleted
+				LinesDeleted = oldBlock.LinesDeleted
 			};
 
 			var parallelOptions = new ParallelOptions();
