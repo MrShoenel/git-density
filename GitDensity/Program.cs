@@ -122,26 +122,40 @@ namespace GitDensity
 				}
 
 
+				logger.LogWarning("Hello, this is GitDensity.");
+				logger.LogDebug("You supplied the following arguments: {0}",
+					String.Join(", ", args.Select(a => $"'{a}'")));
+				logger.LogWarning("Initializing..");
+
+
 				// Now let's read the configuration and probe the configured DB:
 				try
 				{
+					// First let's create an actual temp-directory in the folder specified:
+					var tempDirectory = new DirectoryInfo(Path.Combine(
+						options.TempDirectory ?? Path.GetTempPath(), nameof(GitDensity)));
+					if (tempDirectory.Exists) { tempDirectory.Delete(true); }
+					tempDirectory.Create();
+					options.TempDirectory = tempDirectory.FullName;
+					logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
+
 					try
 					{
 						Program.Configuration = JsonConvert.DeserializeObject<Configuration>(
 							File.ReadAllText(configFilePath));
+						logger.LogDebug("Read the following configuration:\n{0}",
+							JsonConvert.SerializeObject(Program.Configuration, Formatting.Indented));
 					}
 					catch (Exception ex)
 					{
 						throw new IOException("Error reading the configuration. Perhaps try to generate and derive an example configuration (use '--help')", ex);
 					}
 
-					logger.LogInformation("Successfully read the configuration.");
-
 					DataFactory.Configure(Program.Configuration,
 						Program.CreateLogger<DataFactory>(), options.TempDirectory);
 					using (var tempSess = DataFactory.Instance.OpenSession())
 					{
-						logger.LogInformation("Successfully probed the configured database.");
+						logger.LogDebug("Successfully probed the configured database.");
 					}
 				}
 				catch (Exception ex)
@@ -161,56 +175,23 @@ namespace GitDensity
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
-						var density = new Density.GitDensity(
+						using (var density = new Density.GitDensity(
 							span, options.ProgrammingLanguages,
 							options.SkipInitialCommit, options.SkipMergeCommits,
 							Configuration.LanguagesAndFileExtensions
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
-							options.TempDirectory);
+							options.TempDirectory))
+						{
+							density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
 
-						density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
+							var start = DateTime.Now;
+							logger.LogWarning("Starting Analysis..");
+							var result = density.Analyze();
+							logger.LogWarning("Analysis took {0}", DateTime.Now - start);
 
-						//var simm = new Similarity.Similarity<Data.Entities.SimilarityEntity>(hunks.Last(), Enumerable.Empty<GitDensity.Density.CloneDensity.ClonesXmlSet>(), density.SimilarityMeasures);
-						//var foo = simm.Similarities;
-
-						var result = density.Analyze();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-						////var rStatus = repo.RetrieveStatus();
-						////var foo = rStatus.ToList();
-						////var cmp = repo.Diff.Compare<TreeChanges>(new String[] { "./" });
-
-						////var pair = repo.CommitPairs().Skip(7).First();
-						//var pair = repo.CommitPairs(sortOrder: SortOrder.LatestFirst).Skip(1).First();
-						//pair.WriteOutTree(pair.TreeChanges, new DirectoryInfo(@"C:\users\admin\desktop\x"), true);
-						//var cdw = new CloneDetectionWrapper(new DirectoryInfo(@"C:\users\admin\desktop\x"), ProgrammingLanguage.Java, new DirectoryInfo(options.TempDirectory));
-						//var ll = cdw.PerformCloneDetection().ToList();
-
-						//var patch = pair.Patch.Reverse().First();
-						//var treec = pair.TreeChanges;
-
-						//var hList = Density.Hunk.HunksForPatch(pair.Patch.Reverse().First()).ToList();
-						//var h = new Density.Hunk(patch.Patch);
-
-						//var m = treec.Modified.First();
-
-						//Console.WriteLine(patch);
-						//Console.WriteLine(treec);
+							result.PersistToDatabase();
+						}
 					}
 				}
 				catch (Exception ex)
@@ -227,6 +208,12 @@ namespace GitDensity
 				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
 				logger.LogInformation(options.GetUsage(ExitCodes.UsageInvalid));
 				Environment.Exit((int)ExitCodes.UsageInvalid);
+			}
+
+			if (!options.NoWait)
+			{
+				logger.LogInformation("Press a key to exit GitDensity.");
+				Console.ReadKey();
 			}
 		}
 	}
@@ -248,13 +235,13 @@ namespace GitDensity
 		[OptionList('p', "prog-langs", ',', Required = true, HelpText = "A comma-separated list of programming languages to examine in the given repository. Other files will be ignored.")]
 		public IList<String> LanguagesRaw { get; set; }
 
-		[Option('i', "skip-initial-commit", Required = false, DefaultValue = false, HelpText = "If true, does not analyze the pair that consists of the 2nd and the initial commit to a repository.")]
+		[Option('i', "skip-initial-commit", Required = false, DefaultValue = false, HelpText = "If present, does not analyze the pair that consists of the 2nd and the initial commit to a repository.")]
 		public Boolean SkipInitialCommit { get; set; }
 
-		[Option('m', "skip-merge-commits", Required = false, DefaultValue = true, HelpText = "If true, does not analyze pairs where the younger commit is a merge commit.")]
+		[Option('m', "skip-merge-commits", Required = false, DefaultValue = true, HelpText = "If present, does not analyze pairs where the younger commit is a merge commit.")]
 		public Boolean SkipMergeCommits { get; set; }
 
-		[Option('c', "write-config", Required = false, DefaultValue = false, HelpText = "Optional. If specified, writes an examplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
+		[Option('c', "write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an examplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
 		public Boolean WriteExampeConfig { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
@@ -263,10 +250,13 @@ namespace GitDensity
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
-		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) acertain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
 
-		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest to lowest) Trace, Debug, Information, Warning, Error, Critical, None.")]
+		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
+		public Boolean NoWait { get; set; }
+
+		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
