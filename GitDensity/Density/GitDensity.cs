@@ -320,8 +320,8 @@ namespace GitDensity.Density
 							OldStart = hunk.OldNumberOfLines
 						};
 
-						fileBlock.AddSimilarities(similarity.Similarities.SelectMany(kv => kv.Value));
-						fileBlock.AddSimilarities(similarity.SimilaritiesNoComments.SelectMany(kv => kv.Value));
+						fileBlock.AddSimilarities(similarity.Similarities.Select(kv => kv.Value));
+						fileBlock.AddSimilarities(similarity.SimilaritiesNoComments.Select(kv => kv.Value));
 
 						return Tuple.Create(fileBlock, similarity);
 					}).ToList();
