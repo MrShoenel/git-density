@@ -47,10 +47,10 @@ namespace GitDensity.Similarity
 			=> this.NewTextBlockNoComments.LinesDeleted - this.lazyClonesBlockNoComments.Value.NewPostClone.LinesDeleted;
 		#endregion
 
-		private Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>> lazySimsNoComments;
+		private Lazy<IDictionary<SimilarityComparisonType, T>> lazySimsNoComments;
 
-		public ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>> SimilaritiesNoComments
-			=> new ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>>(this.lazySimsNoComments.Value);
+		public ReadOnlyDictionary<SimilarityComparisonType, T> SimilaritiesNoComments
+			=> new ReadOnlyDictionary<SimilarityComparisonType, T>(this.lazySimsNoComments.Value);
 		#endregion
 
 		private Hunk hunk;
@@ -59,10 +59,10 @@ namespace GitDensity.Similarity
 
 		private IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures;
 
-		private Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>> lazySims;
+		private Lazy<IDictionary<SimilarityComparisonType, T>> lazySims;
 
-		public ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>> Similarities
-			=> new ReadOnlyDictionary<SimilarityComparisonType, ICollection<T>>(this.lazySims.Value);
+		public ReadOnlyDictionary<SimilarityComparisonType, T> Similarities
+			=> new ReadOnlyDictionary<SimilarityComparisonType, T>(this.lazySims.Value);
 
 		private Lazy<TextBlockHelper> lazyClonesBlocks;
 
@@ -84,7 +84,7 @@ namespace GitDensity.Similarity
 			this.hunk = hunk;
 			this.cloneSets = cloneSets;
 			this.similarityMeasures = similarityMeasures;
-			this.lazySims = new Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>>(() =>
+			this.lazySims = new Lazy<IDictionary<SimilarityComparisonType, T>>(() =>
 			{
 				return this.ComputeSimilarities();
 			});
@@ -100,7 +100,7 @@ namespace GitDensity.Similarity
 			this.lazyNewTextBlockNoComments = new Lazy<TextBlock>(() =>
 				(this.NewTextBlock.Clone() as TextBlock).RemoveEmptyLinesAndComments());
 
-			this.lazySimsNoComments = new Lazy<IDictionary<SimilarityComparisonType, ICollection<T>>>(() =>
+			this.lazySimsNoComments = new Lazy<IDictionary<SimilarityComparisonType, T>>(() =>
 			{
 				return this.ComputeSimilaritiesNoComments();
 			});
@@ -113,7 +113,7 @@ namespace GitDensity.Similarity
 			#endregion
 		}
 
-		private static void ComputeBlockSimilarity(TextBlock oldBlock, TextBlock newBlock, SimilarityComparisonType compType, IDictionary<SimilarityComparisonType, ICollection<T>> dictionary, IDictionary<PropertyInfo, INormalizedStringDistance> simMeasures, ExecutionPolicy execPolicy)
+		private static T ComputeBlockSimilarity(TextBlock oldBlock, TextBlock newBlock, SimilarityComparisonType compType, IDictionary<PropertyInfo, INormalizedStringDistance> simMeasures, ExecutionPolicy execPolicy)
 		{
 			// populate a new instance of T
 			var simEntity = new T
@@ -154,73 +154,63 @@ namespace GitDensity.Similarity
 				simMeasure.Key.SetValue(simEntity, Double.IsNaN(similarity) ? 0d : similarity);
 			});
 
-			dictionary[compType].Add(simEntity);
+			return simEntity;
 		}
 
-		private IDictionary<SimilarityComparisonType, ICollection<T>> ComputeSimilaritiesNoComments()
+		private IDictionary<SimilarityComparisonType, T> ComputeSimilaritiesNoComments()
 		{
-			var dict = new Dictionary<SimilarityComparisonType, ICollection<T>>
-			{
-				[SimilarityComparisonType.BlockSimilarityNoComments] = new List<T>(),
-				[SimilarityComparisonType.ClonedBlockLinesSimilarityNoComments] = new List<T>(),
-				[SimilarityComparisonType.PostCloneBlockSimilarityNoComments] = new List<T>()
-			};
+			var dict = new Dictionary<SimilarityComparisonType, T>();
 
 			// Compute the TextBlocks related to cloned lines
-			foreach (var simMeasure in this.similarityMeasures)
-			{
-				#region BlockSimilarity
-				ComputeBlockSimilarity(this.OldTextBlockNoComments, this.NewTextBlockNoComments, SimilarityComparisonType.BlockSimilarityNoComments, dict, this.similarityMeasures, this.ExecutionPolicy);
-				#endregion
+			#region BlockSimilarity
+			dict[SimilarityComparisonType.BlockSimilarityNoComments] =
+				ComputeBlockSimilarity(this.OldTextBlockNoComments, this.NewTextBlockNoComments, SimilarityComparisonType.BlockSimilarityNoComments, this.similarityMeasures, this.ExecutionPolicy);
+			#endregion
 
-				#region Clone similarity
+			#region Clone similarity
+			dict[SimilarityComparisonType.PostCloneBlockSimilarityNoComments] =
 				ComputeBlockSimilarity(
 					this.lazyClonesBlockNoComments.Value.OldPostClone,
 					this.lazyClonesBlockNoComments.Value.NewPostClone,
 					SimilarityComparisonType.PostCloneBlockSimilarityNoComments,
-					dict, this.similarityMeasures, this.ExecutionPolicy);
+					this.similarityMeasures, this.ExecutionPolicy);
 
+			dict[SimilarityComparisonType.ClonedBlockLinesSimilarityNoComments] =
 				ComputeBlockSimilarity(
 					this.lazyClonesBlockNoComments.Value.OldBlockClonedLines,
 					this.lazyClonesBlockNoComments.Value.NewBlockClonedLines,
 					SimilarityComparisonType.ClonedBlockLinesSimilarityNoComments,
-					dict, this.similarityMeasures, this.ExecutionPolicy);
-				#endregion
-			}
+					this.similarityMeasures, this.ExecutionPolicy);
+			#endregion
 
 			return dict;
 		}
 
-		private IDictionary<SimilarityComparisonType, ICollection<T>> ComputeSimilarities()
+		private IDictionary<SimilarityComparisonType, T> ComputeSimilarities()
 		{
-			var dict = new Dictionary<SimilarityComparisonType, ICollection<T>>
-			{
-				[SimilarityComparisonType.BlockSimilarity] = new List<T>(),
-				[SimilarityComparisonType.ClonedBlockLinesSimilarity] = new List<T>(),
-				[SimilarityComparisonType.PostCloneBlockSimilarity] = new List<T>()
-			};
+			var dict = new Dictionary<SimilarityComparisonType, T>();
 
 			// Compute the TextBlocks related to cloned lines
-			foreach (var simMeasure in this.similarityMeasures)
-			{
-				#region BlockSimilarity
-				ComputeBlockSimilarity(this.OldTextBlock, this.NewTextBlock, SimilarityComparisonType.BlockSimilarity, dict, this.similarityMeasures, this.ExecutionPolicy);
-				#endregion
+			#region BlockSimilarity
+			dict[SimilarityComparisonType.BlockSimilarity] =
+				ComputeBlockSimilarity(this.OldTextBlock, this.NewTextBlock, SimilarityComparisonType.BlockSimilarity, this.similarityMeasures, this.ExecutionPolicy);
+			#endregion
 
-				#region Clone similarity
+			#region Clone similarity
+			dict[SimilarityComparisonType.PostCloneBlockSimilarity] =
 				ComputeBlockSimilarity(
 					this.lazyClonesBlocks.Value.OldPostClone,
 					this.lazyClonesBlocks.Value.NewPostClone,
 					SimilarityComparisonType.PostCloneBlockSimilarity,
-					dict, this.similarityMeasures, this.ExecutionPolicy);
+					this.similarityMeasures, this.ExecutionPolicy);
 
+			dict[SimilarityComparisonType.ClonedBlockLinesSimilarity] =
 				ComputeBlockSimilarity(
 					this.lazyClonesBlocks.Value.OldBlockClonedLines,
 					this.lazyClonesBlocks.Value.NewBlockClonedLines,
 					SimilarityComparisonType.ClonedBlockLinesSimilarity,
-					dict, this.similarityMeasures, this.ExecutionPolicy);
-				#endregion
-			}
+					this.similarityMeasures, this.ExecutionPolicy);
+			#endregion
 
 			return dict;
 		}
