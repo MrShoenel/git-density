@@ -78,34 +78,36 @@ namespace GitDensity.Density
 				logger.LogInformation("Success! Storing the result took {0}", (DateTime.Now - start));
 				logger.LogInformation("The ID of the analyzed Repository has become {0}", this.Repository.ID);
 
-				logger.LogDebug("Stored {0} instances totally, thereof:", numEntities);
-				if (logger.IsEnabled(LogLevel.Debug))
-				{
-					logger.LogDebug(
-						"\n`- Repositories:\t\t1\n" +
-						"`- Developers:\t\t\t{0}\n" +
-						"`- Commits:\t\t\t{1}\n" +
-						"`- Git-Hours:\t\t\t{2}\n" +
-						"`- CommitPairs:\t\t\t{3}\n" +
-						"`- TreeEntryChanges:\t\t{4}\n" +
-						"`- TreeEntryChangesMetrics:\t{5}\n" +
-						"`- FileBlocks:\t\t\t{6}\n" +
-						"`- Similarities:\t\t{7}\n",
-						this.Repository.Developers.Count,
-						this.Repository.Commits.Count,
-						this.Repository.Developers.SelectMany(dev => dev.Hours).Count(),
-						this.Repository.CommitPairs.Count,
-						this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
-						// same:
-						this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
-						this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
-							.SelectMany(tec => tec.FileBlocks).Count(),
-						this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
-							.SelectMany(tec => tec.FileBlocks.SelectMany(fb => fb.Similarities)).Count()
-					);
-				}
+				var fullLine = new String('-', Console.WindowWidth);
+				logger.LogInformation(
+					"Stored {0} instances totally, thereof:\n" +
+					$"{fullLine}`- Repositories:\t\t1\n" +
+					"`- Developers:\t\t\t{1}\n" +
+					"`- Commits:\t\t\t{2}\n" +
+					"`- Git-Hours:\t\t\t{3}\n" +
+					"`- CommitPairs:\t\t\t{4}\n" +
+					"`- TreeEntryChanges:\t\t{5}\n" +
+					"`- TreeEntryChangesMetrics:\t{6}\n" +
+					"`- FileBlocks:\t\t\t{7} ({8} modified)\n" +
+					"`- Similarities:\t\t{9}\n" + fullLine +
+					"\t\t\t\t{10} total\n" + fullLine,
+					numEntities,
+					this.Repository.Developers.Count,
+					this.Repository.Commits.Count,
+					this.Repository.Developers.SelectMany(dev => dev.Hours).Count(),
+					this.Repository.CommitPairs.Count,
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
+					// same:
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
+						.SelectMany(tec => tec.FileBlocks).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
+						.SelectMany(tec => tec.FileBlocks).Where(fb => fb.FileBlockType == FileBlockType.Modified).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
+						.SelectMany(tec => tec.FileBlocks.SelectMany(fb => fb.Similarities)).Count(),
+					numEntities
+				);
 			}
-
 		}
 	}
 }
