@@ -3,6 +3,7 @@ using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using Util.Extensions;
+using Util.Similarity;
 
 namespace Util.Data.Entities
 {
@@ -21,7 +22,13 @@ namespace Util.Data.Entities
 
 		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
 
-		public virtual TreeEntryChangesMetricsEntity TreeEntryChangesMetrics { get; set; }
+		///// <summary>
+		///// For each <see cref="SimilarityMeasurementType"/>, this entity references a
+		///// different <see cref="TreeEntryChangesMetricsEntity"/>.
+		///// </summary>
+		//public virtual IDictionary<SimilarityMeasurementType, TreeEntryChangesMetricsEntity> TreeEntryChangesMetrics { get; set; } = new Dictionary<SimilarityMeasurementType, TreeEntryChangesMetricsEntity>();
+
+		public virtual ISet<TreeEntryChangesMetricsEntity> TreeEntryChangesMetrics { get; set; } = new HashSet<TreeEntryChangesMetricsEntity>();
 
 		private readonly Object padLock = new Object();
 
@@ -67,8 +74,8 @@ namespace Util.Data.Entities
 			this.Map(x => x.PathOld).Length(1000);
 			this.Map(x => x.PathNew).Length(1000);
 
+			this.HasMany<TreeEntryChangesMetricsEntity>(x => x.TreeEntryChangesMetrics).Cascade.Lock();
 			this.HasMany<FileBlockEntity>(x => x.FileBlocks).Cascade.Lock();
-			this.HasOne<TreeEntryChangesMetricsEntity>(x => x.TreeEntryChangesMetrics).Cascade.Lock();
 
 			this.References<CommitPairEntity>(x => x.CommitPair).Not.Nullable();
 		}

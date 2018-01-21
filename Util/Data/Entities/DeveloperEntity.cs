@@ -50,6 +50,8 @@ namespace Util.Data.Entities
 
 		public virtual ISet<HoursEntity> Hours { get; set; } = new HashSet<HoursEntity>();
 
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+
 		private readonly Object padLock = new Object();
 
 		#region Methods
@@ -89,6 +91,24 @@ namespace Util.Data.Entities
 			return this;
 		}
 
+		public virtual DeveloperEntity AddContribution(TreeEntryContributionEntity contribution)
+		{
+			lock (padLock)
+			{
+				this.TreeEntryContributions.Add(contribution);
+				return this;
+			}
+		}
+
+		public virtual DeveloperEntity AddContributions(IEnumerable<TreeEntryContributionEntity> contributions)
+		{
+			foreach (var contribution in contributions)
+			{
+				this.AddContribution(contribution);
+			}
+			return this;
+		}
+
 		public virtual bool Equals(DeveloperEntity other)
 		{
 			return other is DeveloperEntity && this.Name == other.Name && this.Email == other.Email;
@@ -113,6 +133,7 @@ namespace Util.Data.Entities
 
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
 			this.HasMany<HoursEntity>(x => x.Hours).Cascade.Lock();
+			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
 
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 		}

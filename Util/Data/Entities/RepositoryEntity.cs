@@ -58,6 +58,8 @@ namespace Util.Data.Entities
 
 		public virtual ISet<CommitPairEntity> CommitPairs { get; set; } = new HashSet<CommitPairEntity>();
 
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+
 		public virtual ProjectEntity Project { get; set; }
 
 		private readonly Object padLock = new Object();
@@ -116,6 +118,24 @@ namespace Util.Data.Entities
 			}
 			return this;
 		}
+
+		public virtual RepositoryEntity AddContribution(TreeEntryContributionEntity contribution)
+		{
+			lock (padLock)
+			{
+				this.TreeEntryContributions.Add(contribution);
+				return this;
+			}
+		}
+
+		public virtual RepositoryEntity AddContributions(IEnumerable<TreeEntryContributionEntity> contributions)
+		{
+			foreach (var contribution in contributions)
+			{
+				this.AddContribution(contribution);
+			}
+			return this;
+		}
 		#endregion
 	}
 
@@ -132,6 +152,7 @@ namespace Util.Data.Entities
 
 			this.HasMany<DeveloperEntity>(x => x.Developers).Cascade.Lock();
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
+			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
 
 			this.References<ProjectEntity>(x => x.Project).Unique();
 		}

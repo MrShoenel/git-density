@@ -17,6 +17,7 @@ namespace Util.Data.Entities
 		#region Columns and virtual entities
 		public virtual UInt32 ID { get; set; }
 
+		[Indexed]
 		public virtual FileBlockType FileBlockType { get; set; }
 
 		public virtual UInt32 OldStart { get; set; }
