@@ -38,8 +38,10 @@ using System.Linq;
 using System.Threading;
 using Util;
 using Util.Data;
+using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
+using Util.Similarity;
 using Configuration = Util.Configuration;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
@@ -152,7 +154,7 @@ namespace GitDensity
 					}
 
 					DataFactory.Configure(Program.Configuration,
-						Program.CreateLogger<DataFactory>(), options.TempDirectory);
+						Program.CreateLogger<DataFactory>(), new DirectoryInfo(options.TempDirectory).Parent.FullName);
 					using (var tempSess = DataFactory.Instance.OpenSession())
 					{
 						logger.LogDebug("Successfully probed the configured database.");
@@ -184,7 +186,12 @@ namespace GitDensity
 							options.TempDirectory))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
-							density.InitializeStringSimilarityMeasures(typeof(Util.Data.Entities.SimilarityEntity));
+							density.InitializeStringSimilarityMeasures(
+								typeof(Util.Data.Entities.SimilarityEntity),
+								new HashSet<SimilarityMeasurementType>(
+									SimilarityMeasurementType.None.AsEnumerable().Concat(
+									Configuration.EnabledSimilarityMeasurements
+									.Where(kv => kv.Value).Select(kv => kv.Key))));
 
 							var start = DateTime.Now;
 							logger.LogWarning("Starting Analysis..");
