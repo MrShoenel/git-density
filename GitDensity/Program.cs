@@ -251,7 +251,7 @@ namespace GitDensity
 		[Option('m', "skip-merge-commits", Required = false, DefaultValue = true, HelpText = "If present, does not analyze pairs where the younger commit is a merge commit.")]
 		public Boolean SkipMergeCommits { get; set; }
 
-		[Option('c', "write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an examplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
+		[Option('c', "write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
 		public Boolean WriteExampeConfig { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
@@ -322,7 +322,10 @@ namespace GitDensity
 			var exitCodes = !wasHelpRequested ? String.Empty : "\n\n> Possible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
 				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
 			var supportedLanguages = !wasHelpRequested ? String.Empty : "\n\n> Supported programming languages: " + String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
-			var implementedSimilarities = !wasHelpRequested ? String.Empty : "\n\n> Implemented similarity measurements: " + String.Join(", ", SimilarityEntity.SmtToPropertyInfo.Keys.Where(key => key != SimilarityMeasurementType.None));
+			var implementedSimilarities = !wasHelpRequested ? String.Empty : "\n\n> Implemented similarity measurements: " + String.Join(", ", SimilarityEntity.SmtToPropertyInfo.Keys
+				.OrderBy(smt => (int)smt)
+				.Select(smt => $"{smt.ToString()} ({(int)smt})")
+			);
 			var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
 				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
 
