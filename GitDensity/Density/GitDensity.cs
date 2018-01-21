@@ -14,6 +14,7 @@ using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using Util.Metrics;
+using Util.Similarity;
 
 namespace GitDensity.Density
 {
@@ -51,6 +52,17 @@ namespace GitDensity.Density
 
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
+		/// <summary>
+		/// Constructs a new Analysis.
+		/// </summary>
+		/// <param name="gitHoursSpan">Represents the span of commits to be analyzed.</param>
+		/// <param name="languages">Programming-languages to analyze.</param>
+		/// <param name="skipInitialCommit">Skip the initial commit (the one with no parent)
+		/// when conducting the analysis.</param>
+		/// <param name="skipMergeCommits">Skip merge-commits during analysis.</param>
+		/// <param name="fileTypeExtensions">This list represents files that shall be analyzed.
+		/// If null, defaults to <see cref="DefaultFileTypeExtensions"/>.</param>
+		/// <param name="tempPath">A temporary path to store intermediate results in.</param>
 		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
 			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
@@ -79,10 +91,12 @@ namespace GitDensity.Density
 		/// uses, annotated by the <see cref="SimilarityTypeAttribute"/>.
 		/// </summary>
 		/// <param name="fromType"></param>
+		/// <param name="similarityMeasurementTypes">If null, will use the keys from <see cref="SimilarityEntity.SmtToPropertyInfo"/>, which is just all implemented measurements by the <see cref="SimilarityEntity"/>.</param>
 		/// <returns>This (<see cref="GitDensity"/>) for chaining.</returns>
-		public GitDensity InitializeStringSimilarityMeasures(Type fromType)
+		public GitDensity InitializeStringSimilarityMeasures(Type fromType, ISet<SimilarityMeasurementType> similarityMeasurementTypes = null)
 		{
 			this.similarityMeasures.Clear();
+			similarityMeasurementTypes = similarityMeasurementTypes == null || similarityMeasurementTypes.Count == 0 ? null : similarityMeasurementTypes;
 
 			var properties = fromType.GetProperties(BindingFlags.Public | BindingFlags.SetProperty | BindingFlags.Instance)
 				.Select(prop => new
@@ -90,7 +104,9 @@ namespace GitDensity.Density
 					Prop = prop,
 					Attr = prop.GetCustomAttributes(typeof(SimilarityTypeAttribute), true).Cast<SimilarityTypeAttribute>().FirstOrDefault()
 				})
-				.Where(prop => prop.Attr is SimilarityTypeAttribute);
+				.Where(prop => prop.Attr is SimilarityTypeAttribute)
+				.Where(anon =>
+					similarityMeasurementTypes == null || similarityMeasurementTypes.Contains(anon.Attr.TypeEnum));
 			
 			var emptyArgs = new Object[0];
 			var shingleArg = new Object[1];
@@ -118,6 +134,12 @@ namespace GitDensity.Density
 			return this;
 		}
 
+		/// <summary>
+		/// Run the entire analysis and return the result, that can be persisted or futher
+		/// analyzed.
+		/// </summary>
+		/// <returns><see cref="GitDensityAnalysisResult"/> that holds the analyzed
+		/// <see cref="LibGit2Sharp.Repository"/> as <see cref="RepositoryEntity"/>.</returns>
 		public GitDensityAnalysisResult Analyze()
 		{
 			if (this.similarityMeasures.Count == 0)
