@@ -58,8 +58,14 @@ namespace GitDensity.Density
 				{
 					session.Insert(tree);
 					numEntities++;
-					session.Insert(tree.TreeEntryChangesMetrics);
-					numEntities++;
+					//session.Insert(tree.TreeEntryChangesMetrics);
+					//numEntities++;
+
+					foreach (var metricsEntity in tree.TreeEntryChangesMetrics)
+					{
+						session.Insert(metricsEntity);
+						numEntities++;
+					}
 
 					foreach (var fb in tree.FileBlocks)
 					{
@@ -71,6 +77,12 @@ namespace GitDensity.Density
 							numEntities++;
 						}
 					}
+				}
+
+				foreach (var contribution in this.Repository.TreeEntryContributions)
+				{
+					session.Insert(contribution);
+					numEntities++;
 				}
 
 				logger.LogInformation("Trying to commit transaction..");
@@ -88,6 +100,7 @@ namespace GitDensity.Density
 					"`- CommitPairs:\t\t\t{4}\n" +
 					"`- TreeEntryChanges:\t\t{5}\n" +
 					"`- TreeEntryChangesMetrics:\t{6}\n" +
+					"`- TreeEntryContributions:\t{}\n" +
 					"`- FileBlocks:\t\t\t{7} ({8} modified)\n" +
 					"`- Similarities:\t\t{9}\n" + fullLine +
 					"\t\t\t\t{10} total\n" + fullLine,
@@ -97,8 +110,9 @@ namespace GitDensity.Density
 					this.Repository.Developers.SelectMany(dev => dev.Hours).Count(),
 					this.Repository.CommitPairs.Count,
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
-					// same:
-					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges.SelectMany(tec
+						=> tec.TreeEntryChangesMetrics)).Count(),
+					this.Repository.TreeEntryContributions.Count,
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
 						.SelectMany(tec => tec.FileBlocks).Count(),
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
