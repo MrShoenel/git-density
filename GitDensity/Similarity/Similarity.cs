@@ -12,6 +12,8 @@ using Util;
 using Util.Data.Entities;
 using Util.Metrics;
 using Util.Similarity;
+using SCT = Util.Similarity.SimilarityComparisonType;
+using SMT = Util.Similarity.SimilarityMeasurementType;
 
 namespace GitDensity.Similarity
 {
@@ -276,48 +278,120 @@ namespace GitDensity.Similarity
 		}
 
 		#region Aggregate Similarities to Metrics
-		public static TreeEntryChangesMetricsEntity AggregateToMetrics(FileBlockEntity fileBlock, Similarity<T> similarity, SimpleLoc simpleLoc, TreeEntryChangesEntity treeEntryChanges, Boolean addToTreeEntryChanges = true)
+		public static TreeEntryChangesMetricsEntity AggregateToMetrics(FileBlockEntity fileBlock, Similarity<T> similarity, SimpleLoc simpleLoc, TreeEntryChangesEntity treeEntryChanges, SMT smt = SMT.None, Boolean addToTreeEntryChanges = true)
 		{
-			return AggregateToMetrics(new[] { Tuple.Create(fileBlock, similarity) }, simpleLoc, treeEntryChanges, addToTreeEntryChanges);
+			return AggregateToMetrics(new[] { Tuple.Create(fileBlock, similarity) }, simpleLoc, treeEntryChanges, smt, addToTreeEntryChanges);
 		}
 
-		public static TreeEntryChangesMetricsEntity AggregateToMetrics(IEnumerable<Tuple<FileBlockEntity, Similarity<T>>> fileBlocks, SimpleLoc simpleLoc, TreeEntryChangesEntity treeEntryChanges, Boolean addToTreeEntryChanges = true)
+		/// <summary>
+		/// Aggregates a collection of <see cref="FileBlockEntity"/> objects and their <see cref="Similarity{T}"/>
+		/// to a <see cref="TreeEntryChangesMetricsEntity"/>, that represents the change that was made to a file
+		/// (represented by a <see cref="TreeEntry"/>) as a whole, by aggregating the hunks/file-blocks. This method
+		/// supports the notion of a <see cref="SMT"/>, to return metrics based on a specific similarity measurement.
+		/// </summary>
+		/// <param name="fileBlocks"></param>
+		/// <param name="simpleLoc"></param>
+		/// <param name="treeEntryChanges"></param>
+		/// <param name="smt"></param>
+		/// <param name="addToTreeEntryChanges"></param>
+		/// <returns></returns>
+		public static TreeEntryChangesMetricsEntity AggregateToMetrics(IEnumerable<Tuple<FileBlockEntity, Similarity<T>>> fileBlocks, SimpleLoc simpleLoc, TreeEntryChangesEntity treeEntryChanges, SMT smt = SMT.None, Boolean addToTreeEntryChanges = true)
 		{
+			var dontUseSMT = smt == SMT.None;
+
 			var metrics = new TreeEntryChangesMetricsEntity
 			{
+				SimilarityMeasurement = smt,
 				TreeEntryChanges = addToTreeEntryChanges ? treeEntryChanges : null,
+
 				LocFileGross = (treeEntryChanges.Status == ChangeKind.Deleted ? -1 : 1)
 					* (Int32)simpleLoc.LocGross,
 				LocFileNoComments = (treeEntryChanges.Status == ChangeKind.Deleted ? -1 : 1)
 					* (Int32)simpleLoc.LocNoComments,
 
-				NumAdded = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.NewTextBlock.LinesAdded).Sum(),
-				NumDeleted = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.OldTextBlock.LinesDeleted).Sum(),
-				NumAddedNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.NewTextBlockNoComments.LinesAdded).Sum(),
-				NumDeletedNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.OldTextBlockNoComments.LinesDeleted).Sum(),
+				#region Block Similarity
+				NumAdded = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.BlockSimilarity][smt])
+						* fb.Item2.NewTextBlock.LinesAdded).Sum(),
+				//NumAdded = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.NewTextBlock.LinesAdded).Sum(),
+				NumDeleted = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.BlockSimilarity][smt])
+						* fb.Item2.OldTextBlock.LinesDeleted).Sum(),
+				//NumDeleted = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.OldTextBlock.LinesDeleted).Sum(),
+				#endregion
 
-				NumAddedPostCloneDetection = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlocks.Value.NewPostClone.LinesAdded).Sum(),
-				NumDeletedPostCloneDetection = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlocks.Value.OldPostClone.LinesDeleted).Sum(),
-				NumAddedPostCloneDetectionNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlockNoComments.Value.NewPostClone.LinesAdded).Sum(),
-				NumDeletedPostCloneDetectionNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlockNoComments.Value.OldPostClone.LinesDeleted).Sum(),
+				#region BlockNoComments Similarity
+				NumAddedNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.BlockSimilarityNoComments][smt])
+						* fb.Item2.NewTextBlockNoComments.LinesAdded).Sum(),
+				//NumAddedNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.NewTextBlockNoComments.LinesAdded).Sum(),
+				NumDeletedNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.BlockSimilarityNoComments][smt])
+						* fb.Item2.OldTextBlockNoComments.LinesDeleted).Sum(),
+				//NumDeletedNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.OldTextBlockNoComments.LinesDeleted).Sum(),
+				#endregion
 
-				NumAddedClonedBlockLines = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlocks.Value.NewBlockClonedLines.LinesAdded).Sum(),
-				NumDeletedClonedBlockLines = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlocks.Value.OldBlockClonedLines.LinesDeleted).Sum(),
-				NumAddedClonedBlockLinesNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlockNoComments.Value.NewBlockClonedLines.LinesAdded).Sum(),
-				NumDeletedClonedBlockLinesNoComments = (UInt32)fileBlocks.Select(fb =>
-					(Int32)fb.Item2.lazyClonesBlockNoComments.Value.OldBlockClonedLines.LinesDeleted).Sum()
+				#region PostCloneBlock Similarity
+				NumAddedPostCloneDetection = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.PostCloneBlockSimilarity][smt])
+						* fb.Item2.lazyClonesBlocks.Value.NewPostClone.LinesAdded).Sum(),
+				//NumAddedPostCloneDetection = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlocks.Value.NewPostClone.LinesAdded).Sum(),
+				NumDeletedPostCloneDetection = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.PostCloneBlockSimilarity][smt])
+						* fb.Item2.lazyClonesBlocks.Value.OldPostClone.LinesDeleted).Sum(),
+				//NumDeletedPostCloneDetection = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlocks.Value.OldPostClone.LinesDeleted).Sum(),
+				#endregion
+
+				#region PostCloneBlockNoComments Similarity
+				NumAddedPostCloneDetectionNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.PostCloneBlockSimilarityNoComments][smt])
+						* fb.Item2.lazyClonesBlockNoComments.Value.NewPostClone.LinesAdded).Sum(),
+				//NumAddedPostCloneDetectionNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlockNoComments.Value.NewPostClone.LinesAdded).Sum(),
+				NumDeletedPostCloneDetectionNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.PostCloneBlockSimilarityNoComments][smt])
+						* fb.Item2.lazyClonesBlockNoComments.Value.OldPostClone.LinesDeleted).Sum(),
+				//NumDeletedPostCloneDetectionNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlockNoComments.Value.OldPostClone.LinesDeleted).Sum(),
+				#endregion
+
+				#region ClonedBlockLines Similarity
+				NumAddedClonedBlockLines = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.ClonedBlockLinesSimilarity][smt])
+						* fb.Item2.lazyClonesBlocks.Value.NewBlockClonedLines.LinesAdded).Sum(),
+				//NumAddedClonedBlockLines = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlocks.Value.NewBlockClonedLines.LinesAdded).Sum(),
+				NumDeletedClonedBlockLines = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.Similarities[SCT.ClonedBlockLinesSimilarity][smt])
+						* fb.Item2.lazyClonesBlocks.Value.OldBlockClonedLines.LinesDeleted).Sum(),
+				//NumDeletedClonedBlockLines = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlocks.Value.OldBlockClonedLines.LinesDeleted).Sum(),
+				#endregion
+
+				#region ClonedBlockLinesNoComments Similarity
+				NumAddedClonedBlockLinesNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.ClonedBlockLinesSimilarityNoComments][smt])
+						* fb.Item2.lazyClonesBlockNoComments.Value.NewBlockClonedLines.LinesAdded).Sum(),
+				//NumAddedClonedBlockLinesNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlockNoComments.Value.NewBlockClonedLines.LinesAdded).Sum(),
+				NumDeletedClonedBlockLinesNoComments = fileBlocks.Select(fb
+					=> (dontUseSMT ? 1d : 1d - fb.Item2.SimilaritiesNoComments[SCT.ClonedBlockLinesSimilarityNoComments][smt])
+						* fb.Item2.lazyClonesBlockNoComments.Value.OldBlockClonedLines.LinesDeleted).Sum()
+				//NumDeletedClonedBlockLinesNoComments = (Double)fileBlocks.Select(fb =>
+				//	(Int32)fb.Item2.lazyClonesBlockNoComments.Value.OldBlockClonedLines.LinesDeleted).Sum()
+				#endregion
 			};
+
+			if (addToTreeEntryChanges)
+			{
+				treeEntryChanges.TreeEntryChangesMetrics.Add(metrics);
+			}
 
 			return metrics;
 		}
