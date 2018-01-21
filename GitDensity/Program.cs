@@ -109,7 +109,7 @@ namespace GitDensity
 				if (options.ShowHelp)
 				{
 					logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-					logger.LogInformation(options.GetUsage());
+					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
 					Environment.Exit((int)ExitCodes.OK);
 				}
 				else if (options.WriteExampeConfig || !File.Exists(configFilePath))
@@ -207,7 +207,8 @@ namespace GitDensity
 			else
 			{
 				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-				logger.LogInformation(options.GetUsage(ExitCodes.UsageInvalid));
+				logger.LogInformation(options.GetUsage(
+					ExitCodes.UsageInvalid, wasHelpRequested: options.ShowHelp));
 				Environment.Exit((int)ExitCodes.UsageInvalid);
 			}
 
@@ -290,7 +291,7 @@ namespace GitDensity
 		/// Returns a help-text generated using the options of this class.
 		/// </summary>
 		/// <returns></returns>
-		public String GetUsage(ExitCodes exitCode = ExitCodes.OK)
+		public String GetUsage(ExitCodes exitCode = ExitCodes.OK, Boolean wasHelpRequested = false)
 		{
 			var fullLine = new String('-', Console.WindowWidth);
 			var ht = new HelpText
@@ -302,15 +303,23 @@ namespace GitDensity
 				MaximumDisplayWidth = Console.WindowWidth
 			};
 
-			HelpText.DefaultParsingErrorsHandler(this, ht);
-			ht.AddOptions(this);
-			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
+			if (wasHelpRequested)
+			{
+				ht.AddOptions(this);
+			}
+			else
+			{
+				HelpText.DefaultParsingErrorsHandler(this, ht);
+			}
+			
+			var exitCodes = !wasHelpRequested ? String.Empty : "\n\n> Possible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
 				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
-			var supportedLanguages = String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
-			var exitReason = exitCode == ExitCodes.UsageInvalid ?
-				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Please check the usage below.\n\n" : String.Empty;
+			var supportedLanguages = !wasHelpRequested ? String.Empty : "\n\n> Supported programming languages: " + String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
+			var implementedSimilarities = !wasHelpRequested ? String.Empty : "\n\n> Implemented similarity measurements: " + String.Join(", ", SimilarityEntity.SmtToPropertyInfo.Keys.Where(key => key != SimilarityMeasurementType.None));
+			var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
+				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
 
-			return $"{fullLine}\n{exitReason}{ht}\n\n> Supported programming languages: {supportedLanguages}\n\n> Possible Exit-Codes: {exitCodes}\n\n{fullLine}";
+			return $"{fullLine}\n{exitReason}{ht}{supportedLanguages}{implementedSimilarities}{exitCodes}\n\n{fullLine}";
 		}
 
 		/// <summary>

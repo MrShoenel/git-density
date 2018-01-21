@@ -34,7 +34,6 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using Util;
@@ -97,7 +96,7 @@ namespace GitHours
 				if (options.ShowHelp)
 				{
 					logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-					logger.LogInformation(options.GetUsage());
+					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
@@ -153,7 +152,8 @@ namespace GitHours
 			else
 			{
 				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-				logger.LogInformation(options.GetUsage(ExitCodes.UsageInvalid));
+				logger.LogInformation(options.GetUsage(
+					ExitCodes.UsageInvalid, wasHelpRequested: options.ShowHelp));
 				Environment.Exit((int)ExitCodes.UsageInvalid);
 			}
 		}
@@ -203,7 +203,7 @@ namespace GitHours
 		/// Returns a help-text generated using the options of this class.
 		/// </summary>
 		/// <returns></returns>
-		public String GetUsage(ExitCodes exitCode = ExitCodes.OK)
+		public String GetUsage(ExitCodes exitCode = ExitCodes.OK, Boolean wasHelpRequested = false)
 		{
 			var fullLine = new String('-', Console.WindowWidth);
 			var ht = new HelpText
@@ -215,15 +215,21 @@ namespace GitHours
 				MaximumDisplayWidth = Console.WindowWidth
 			};
 
-			HelpText.DefaultParsingErrorsHandler(this, ht);
-			ht.AddOptions(this);
+			if (wasHelpRequested)
+			{
+				ht.AddOptions(this);
+			}
+			else
+			{
+				HelpText.DefaultParsingErrorsHandler(this, ht);
+			}
 
-			var exitCodes = String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
+			var exitCodes = !wasHelpRequested ? String.Empty : "\n\nPossible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
 				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
-			var exitReason = exitCode == ExitCodes.UsageInvalid ?
-				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Please check the usage below.\n\n" : String.Empty;
+			var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
+				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
 
-			return $"{fullLine}\n{exitReason}{ht}\n\nPossible Exit-Codes: {exitCodes}\n\n{fullLine}";
+			return $"{fullLine}\n{exitReason}{ht}{exitCodes}\n\n{fullLine}";
 		}
 	}
 }
