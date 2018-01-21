@@ -266,25 +266,24 @@ namespace GitDensity.Density
 						OldStart = added ? 0u : 1u
 					}; // Note that we do not add any similarities here (no sense for pure adds/deletes)
 
-					var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
-						fileBlock, similarity, simpleLoc, treeChangeEntity);
+					#region Metrics entity
+					foreach (var smt in SimilarityEntity.SmtToPropertyInfo.Keys)
+					{
+						var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
+							fileBlock, similarity, simpleLoc, treeChangeEntity, smt, addToTreeEntryChanges: true);
 
-					treeChangeEntity.TreeEntryChangesMetrics = metricsEntity;
+						// No need to save; entity is added to all other entities.
+						TreeEntryContributionEntity.Create(
+							repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, smt);
+					}
+					#endregion
+
 					treeChangeEntity.AddFileBlock(fileBlock);
 					pairEntity.AddFileBlock(fileBlock);
-
-					logger.LogTrace("Analyzed {0} file {1} and its metrics ({2} LOC-gross)",
-						change.Status.ToString().ToLower(), change.Path, metricsEntity.LocFileGross);
 
 					hunk.Clear();
 					patchNew.Clear();
 					patchOld.Clear();
-
-					patchNew = null;
-					patchOld = null;
-					hunk = null;
-					similarity = null;
-					simpleLoc = null;
 				}
 
 
@@ -348,32 +347,29 @@ namespace GitDensity.Density
 						return Tuple.Create(fileBlock, similarity);
 					}).ToList();
 
-					var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
-						fileBlockTuples, simpleLoc, treeChangeEntity);
 
-					treeChangeEntity.TreeEntryChangesMetrics = metricsEntity;
+					#region Metrics entity
+					foreach (var smt in SimilarityEntity.SmtToPropertyInfo.Keys)
+					{
+						var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
+							fileBlockTuples, simpleLoc, treeChangeEntity, smt, addToTreeEntryChanges: true);
+
+						// No need to save; entity is added to all other entities.
+						TreeEntryContributionEntity.Create(
+							repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, smt);
+					}
+					#endregion
+
 					treeChangeEntity.AddFileBlocks(fileBlockTuples.Select(tuple => tuple.Item1));
 					pairEntity.AddFileBlocks(fileBlockTuples.Select(tuple => tuple.Item1));
 
-					logger.LogTrace("Analyzed {0} file {1} and its metrics ({2} LOC-gross)",
-						change.Status.ToString().ToLower(), change.Path, metricsEntity.LocFileGross);
-
 					patchNew.Clear();
-					patchNew = null;
 					hunks.ForEach(hunk => hunk.Clear());
 					hunks.Clear();
-					hunks = null;
-					simpleLoc = null;
 					fileBlockTuples.Clear();
-					fileBlockTuples = null;
 				}
 
 				cloneSets.Clear();
-				cloneSets = null;
-				oldDirectory = null;
-				newDirectory = null;
-				pairDirectory = null;
-				relevantTreeChanges = null;
 				
 				pair.Dispose(); // also releases the expensive patches.
 			});
