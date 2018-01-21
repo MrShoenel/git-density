@@ -6,6 +6,17 @@ namespace Util.Extensions
 	public static class IEnumerableExtensions
 	{
 		/// <summary>
+		/// Transforms any struct or object into an <see cref="IEnumerable{T}"/> of it.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="anyObject"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> AsEnumerable<T>(this T anyObject)
+		{
+			yield return anyObject;
+		}
+
+		/// <summary>
 		/// Partitions an <see cref="IEnumerable{T}"/> into chunks of same length.
 		/// If not enough elements are available for the last chunk (i.e. th number
 		/// of available elements is lower than the available amount of elements),
