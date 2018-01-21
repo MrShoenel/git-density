@@ -109,6 +109,15 @@ namespace Util
 		public String DatabaseConnectionString { get; set; } = null;
 
 		/// <summary>
+		/// A dictionary that holds all <see cref="Similarity.SimilarityMeasurementType"/>s that
+		/// shall be enabled (and used) during analysis. Note that may not all are implemented by
+		/// the entity currently in use. Such entities must implement <see cref="Data.Entities.IHasSimilarityComparisonType"/>. Use the main application's help-screen
+		/// to get those measurements that are currently implemented.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "enabledSimilarityMeasurements")]
+		public Dictionary<Similarity.SimilarityMeasurementType, Boolean> EnabledSimilarityMeasurements { get; set; }
+
+		/// <summary>
 		/// An example that is used to create an initial configuration, if
 		/// none exists.
 		/// </summary>
@@ -125,7 +134,12 @@ namespace Util
 			// ignore numeric and string literals
 			CloneDetectionArgs = "-min 1 -Id -self -Num -Str",
 			DatabaseType = DatabaseType.SQLiteTemp,
-			DatabaseConnectionString = null
+			DatabaseConnectionString = null,
+			EnabledSimilarityMeasurements = Enum.GetValues(typeof(Similarity.SimilarityMeasurementType))
+				.Cast<Similarity.SimilarityMeasurementType>()
+				// The following is always implicitly available and enabled, so we exclude it:
+				.Where(smt => smt != Similarity.SimilarityMeasurementType.None)
+				.ToDictionary(smt => smt, foo => true)
 		};
 	}
 }
