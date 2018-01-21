@@ -19,6 +19,8 @@ namespace Util.Data.Entities
 
 		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
 
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+
 		private readonly Object padLock = new Object();
 
 		#region Methods
@@ -48,6 +50,24 @@ namespace Util.Data.Entities
 			}
 			return this;
 		}
+
+		public virtual CommitPairEntity AddContribution(TreeEntryContributionEntity contribution)
+		{
+			lock (padLock)
+			{
+				this.TreeEntryContributions.Add(contribution);
+				return this;
+			}
+		}
+
+		public virtual CommitPairEntity AddContributions(IEnumerable<TreeEntryContributionEntity> contributions)
+		{
+			foreach (var contribution in contributions)
+			{
+				this.AddContribution(contribution);
+			}
+			return this;
+		}
 		#endregion
 	}
 
@@ -61,7 +81,8 @@ namespace Util.Data.Entities
 
 			this.HasMany<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Cascade.Lock();
 			this.HasMany<FileBlockEntity>(x => x.FileBlocks).Cascade.Lock();
-			
+			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
+
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 			this.References<CommitEntity>(x => x.ChildCommit).Not.Nullable();
 			this.References<CommitEntity>(x => x.ParentCommit).Nullable(); // Can be nullable for real or virtual initial commits that have no parent

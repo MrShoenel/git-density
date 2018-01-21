@@ -1,5 +1,6 @@
 ﻿using FluentNHibernate.Mapping;
 using System;
+using System.Collections.Generic;
 using Util.Extensions;
 
 namespace Util.Data.Entities
@@ -23,6 +24,28 @@ namespace Util.Data.Entities
 		public virtual DeveloperEntity Developer { get; set; }
 
 		public virtual RepositoryEntity Repository { get; set; }
+
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+
+		private readonly Object padLock = new Object();
+
+		public virtual CommitEntity AddContribution(TreeEntryContributionEntity contribution)
+		{
+			lock (padLock)
+			{
+				this.TreeEntryContributions.Add(contribution);
+				return this;
+			}
+		}
+
+		public virtual CommitEntity AddContributions(IEnumerable<TreeEntryContributionEntity> contributions)
+		{
+			foreach (var contribution in contributions)
+			{
+				this.AddContribution(contribution);
+			}
+			return this;
+		}
 	}
 
 
@@ -36,6 +59,8 @@ namespace Util.Data.Entities
 			this.Map(x => x.HashSHA1).Not.Nullable().Length(40);
 			this.Map(x => x.CommitDate).Not.Nullable();
 			this.Map(x => x.IsMergeCommit).Not.Nullable();
+
+			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
 
 			this.References<DeveloperEntity>(x => x.Developer).Not.Nullable();
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();

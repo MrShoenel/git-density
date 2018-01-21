@@ -43,6 +43,16 @@ namespace Util.Data.Entities
 	{
 		public virtual UInt32 ID { get; set; }
 
+		/// <summary>
+		/// The amount of hours worked during the two consecutive <see cref="Commit"/>s.
+		/// </summary>
+		public virtual Double Hours { get; set; }
+
+		/// <summary>
+		/// The amount of hours worked since the developer's initial commit.
+		/// </summary>
+		public virtual Double HoursTotal { get; set; }
+
 		public virtual DeveloperEntity Developer { get; set; }
 
 		/// <summary>
@@ -59,16 +69,6 @@ namespace Util.Data.Entities
 		/// commits of the current developer).
 		/// </summary>
 		public virtual CommitEntity CommitUntil { get; set; }
-
-		/// <summary>
-		/// The amount of hours worked during the two consecutive <see cref="Commit"/>s.
-		/// </summary>
-		public virtual Double Hours { get; set; }
-
-		/// <summary>
-		/// The amount of hours worked since the developer's initial commit.
-		/// </summary>
-		public virtual Double HoursTotal { get; set; }
 
 		/// <summary>
 		/// Points to the initial <see cref="CommitEntity"/> for the current developer.

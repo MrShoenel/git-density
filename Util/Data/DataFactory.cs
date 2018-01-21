@@ -149,13 +149,15 @@ namespace Util.Data
 		/// database-type.
 		/// </summary>
 		/// <param name="configuration"></param>
+		/// <param name="tempDirectory"></param>
 		/// <returns></returns>
 		private static IPersistenceConfigurer DatabaseTypeWithConnectionStringToConfigurer(Util.Configuration configuration, String tempDirectory = null)
 		{
 			if (configuration.DatabaseType == DatabaseType.SQLiteTemp)
 			{
-				return SQLiteConfiguration.Standard.UsingFile(
-					$"{Path.Combine(tempDirectory ?? Path.GetTempPath(), Path.GetRandomFileName())}.sqlite");
+				var pathToFile = $"{Path.Combine(tempDirectory ?? Path.GetTempPath(), Path.GetRandomFileName())}.sqlite";
+				logger.LogWarning("Using temporary SQLite file: {0}", pathToFile);
+				return SQLiteConfiguration.Standard.UsingFile(pathToFile);
 			}
 
 			var connString = configuration.DatabaseConnectionString;

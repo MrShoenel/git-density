@@ -1,10 +1,7 @@
 ﻿using FluentNHibernate.Mapping;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Util.Extensions;
+using Util.Similarity;
 
 namespace Util.Data.Entities
 {
@@ -16,7 +13,15 @@ namespace Util.Data.Entities
 	{
 		public virtual UInt32 ID { get; set; }
 
-		public virtual TreeEntryChangesEntity TreeEntryChanges { get; set; }
+		/// <summary>
+		/// Designates which <see cref="SimilarityMeasurementType"/> has been applied
+		/// to this entity.
+		/// This property is the reason why, since commit #e9a49, all UInt32 metrics
+		/// of numbers of lines have been changed to double. If multiplied by a similarity,
+		/// we want to keep the exact amount, instead of rounding.
+		/// </summary>
+		[Indexed]
+		public virtual SimilarityMeasurementType SimilarityMeasurement { get; set; }
 
 		#region LOC
 		/// <summary>
@@ -29,38 +34,39 @@ namespace Util.Data.Entities
 		/// Like <see cref="LocFileGross"/>, this property may be negative, too.
 		/// </summary>
 		public virtual Int32 LocFileNoComments { get; set; }
-
-
-
-
-		public virtual UInt32 NumAdded { get; set; }
-
-		public virtual UInt32 NumDeleted { get; set; }
-
-		public virtual UInt32 NumAddedNoComments { get; set; }
-
-		public virtual UInt32 NumDeletedNoComments { get; set; }
-
-
-
-		public virtual UInt32 NumAddedPostCloneDetection { get; set; }
-
-		public virtual UInt32 NumDeletedPostCloneDetection { get; set; }
-
-		public virtual UInt32 NumAddedPostCloneDetectionNoComments { get; set; }
-
-		public virtual UInt32 NumDeletedPostCloneDetectionNoComments { get; set; }
-
-
-
-		public virtual UInt32 NumAddedClonedBlockLines { get; set; }
-
-		public virtual UInt32 NumDeletedClonedBlockLines { get; set; }
-
-		public virtual UInt32 NumAddedClonedBlockLinesNoComments { get; set; }
-
-		public virtual UInt32 NumDeletedClonedBlockLinesNoComments { get; set; }
 		#endregion
+
+		#region Aggregated file-blocks' numbers
+		public virtual Double NumAdded { get; set; }
+
+		public virtual Double NumDeleted { get; set; }
+
+		public virtual Double NumAddedNoComments { get; set; }
+
+		public virtual Double NumDeletedNoComments { get; set; }
+
+
+
+		public virtual Double NumAddedPostCloneDetection { get; set; }
+
+		public virtual Double NumDeletedPostCloneDetection { get; set; }
+
+		public virtual Double NumAddedPostCloneDetectionNoComments { get; set; }
+
+		public virtual Double NumDeletedPostCloneDetectionNoComments { get; set; }
+
+
+
+		public virtual Double NumAddedClonedBlockLines { get; set; }
+
+		public virtual Double NumDeletedClonedBlockLines { get; set; }
+
+		public virtual Double NumAddedClonedBlockLinesNoComments { get; set; }
+
+		public virtual Double NumDeletedClonedBlockLinesNoComments { get; set; }
+		#endregion
+		
+		public virtual TreeEntryChangesEntity TreeEntryChanges { get; set; }
 	}
 
 	public class TreeEntryChangesMetricsEntityMap : ClassMap<TreeEntryChangesMetricsEntity>
@@ -89,7 +95,11 @@ namespace Util.Data.Entities
 			this.Map(x => x.NumAddedClonedBlockLinesNoComments).Not.Nullable();
 			this.Map(x => x.NumDeletedClonedBlockLinesNoComments).Not.Nullable();
 
-			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Unique();
+			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChanges)
+				.Not.Nullable().UniqueKey("UNQ_METRICS");
+			this.Map(x => x.SimilarityMeasurement)
+				.CustomType<SimilarityMeasurementType>()
+				.Not.Nullable().UniqueKey("UNQ_METRICS");
 		}
 	}
 }

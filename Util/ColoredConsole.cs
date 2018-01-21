@@ -59,8 +59,10 @@ namespace Util
 
 			public void Dispose()
 			{
+				semaphore.Wait();
 				ColoredConsole.BackgroundColor = this.Background;
 				ColoredConsole.ForegroundColor = this.Foreground;
+				semaphore.Release();
 			}
 		}
 
