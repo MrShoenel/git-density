@@ -74,6 +74,22 @@ namespace Util
 			set { Console.Title = value; }
 		}
 
+		public static Int32 WindowWidthSafe
+		{
+			get
+			{
+				try
+				{
+					return Console.WindowWidth;
+				}
+				catch
+				{
+					return 80;
+				}
+			}
+		}
+
+
 		public static ConsoleColor BackgroundColor
 		{
 			get { return Console.BackgroundColor; }
