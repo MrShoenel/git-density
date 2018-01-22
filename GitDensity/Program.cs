@@ -246,6 +246,14 @@ namespace GitDensity
 						"Cannot open the repository specified by path or URL '{0}'.", options.RepoPath);
 					logger.LogError("Exception caught: {0}", ex.Message);
 					logger.LogTrace("Exception trace: {0}", ex.StackTrace);
+					if (ex is AggregateException)
+					{
+						foreach (var innerEx in (ex as AggregateException).InnerExceptions)
+						{
+							logger.LogError("Message: {0}", innerEx.Message);
+							logger.LogError("Trace: {0}", innerEx.StackTrace);
+						}
+					}
 					Environment.Exit((int)ExitCodes.RepoInvalid);
 				}
 			}
