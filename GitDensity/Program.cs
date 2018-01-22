@@ -171,7 +171,37 @@ namespace GitDensity
 				// Now let's try to open the specified repository:
 				try
 				{
-					using (var repo = options.RepoPath.OpenRepository(options.TempDirectory))
+					ProjectEntity project = null;
+					// Check if open from Projects first:
+					if (UInt64.TryParse(options.RepoPath, out UInt64 projectId))
+					{
+						using (var sess = DataFactory.Instance.OpenSession())
+						{
+							project = sess.QueryOver<ProjectEntity>()
+								.Where(p => p.InternalId == projectId).SingleOrDefault();
+							if (!(project is ProjectEntity))
+							{
+								throw new InvalidDataException(
+									$"Attempted to fetch non-existing Project by internal ID {projectId}.");
+							}
+
+							logger.LogInformation("Analyzing repository from internal project with internal ID {0} and clone-URL {1}", projectId, project.CloneUrl);
+							if (!project.WasCorrected)
+							{
+								logger.LogWarning("The project with internal ID {0} was not previously corrected and may not be working.", projectId);
+							}
+
+							options.RepoPath = project.CloneUrl;
+						}
+					}
+
+					var repoTempPath = Path.Combine(
+						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"{nameof(GitDensity)}_repos");
+					if (!Directory.Exists(repoTempPath))
+					{
+						Directory.CreateDirectory(repoTempPath);
+					}
+					using (var repo = options.RepoPath.OpenRepository(repoTempPath))
 					{
 						var span = new GitHoursSpan(repo, options.Since, options.Until);
 
@@ -198,6 +228,7 @@ namespace GitDensity
 							var result = density.Analyze();
 							logger.LogWarning("Analysis took {0}", DateTime.Now - start);
 
+							result.Repository.Project = project;
 							result.PersistToDatabase();
 						}
 					}
@@ -225,6 +256,8 @@ namespace GitDensity
 				logger.LogInformation("Press a key to exit GitDensity...");
 				Console.ReadKey();
 			}
+
+			Environment.Exit((int)ExitCodes.OK);
 		}
 	}
 
