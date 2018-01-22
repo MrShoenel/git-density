@@ -116,14 +116,15 @@ namespace Util.Data
 							{
 								logger.LogError(ex, $"{ex.Message}\nStacktrace:\n{ex.StackTrace}");
 							}
-							throw new InvalidOperationException("Cannot create/update the DB schema.");
+							throw new AggregateException("Cannot create/update the DB schema.", update.Exceptions);
 						}
 					})
 					.Mappings(mappings =>
 					{
 						mappings.FluentMappings
 						.AddFromAssemblyOf<DataFactory>()
-						.Conventions.Add(typeof(IndexedConvention));
+						.Conventions.Add(typeof(IndexedConvention))
+						.Conventions.Add(typeof(ForeignKeyConvention));
 					})
 					.BuildSessionFactory();
 

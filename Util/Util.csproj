@@ -193,6 +193,7 @@
     <Compile Include="Data\Entities\SimilarityEntity.cs" />
     <Compile Include="Data\Entities\TreeEntryChangesEntity.cs" />
     <Compile Include="Data\Entities\TreeEntryChangesMetricsEntity.cs" />
+    <Compile Include="Data\ForeignKeyConvention.cs" />
     <Compile Include="Data\Indexed.cs" />
     <Compile Include="Data\StringEnumMapper.cs" />
     <Compile Include="Density\CommitPair.cs" />
