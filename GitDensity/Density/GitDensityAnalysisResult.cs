@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using Util;
 using Util.Data;
 using Util.Data.Entities;
 using Util.Logging;
@@ -27,6 +28,14 @@ namespace GitDensity.Density
 			using (var session = DataFactory.Instance.OpenStatelessSession())
 			using (var trans = session.BeginTransaction())
 			{
+				if (this.Repository.Project is ProjectEntity)
+				{
+					if (this.Repository.Project.AiId == 0uL)
+					{
+						session.Insert(this.Repository.Project);
+					}
+				}
+
 				session.Insert(this.Repository);
 				numEntities++;
 
@@ -90,7 +99,7 @@ namespace GitDensity.Density
 				logger.LogInformation("Success! Storing the result took {0}", (DateTime.Now - start));
 				logger.LogInformation("The ID of the analyzed Repository has become {0}", this.Repository.ID);
 
-				var fullLine = new String('-', Console.WindowWidth);
+				var fullLine = new String('-', ColoredConsole.WindowWidthSafe);
 				logger.LogInformation(
 					"Stored {0} instances totally, thereof:\n" +
 					$"{fullLine}`- Repositories:\t\t1\n" +
