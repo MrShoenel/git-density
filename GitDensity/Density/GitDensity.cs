@@ -42,13 +42,10 @@ namespace GitDensity.Density
 
 		public DirectoryInfo TempDirectory { get; protected internal set; }
 
-		protected IDictionary<PropertyInfo, INormalizedStringDistance> similarityMeasures;
+		protected IDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>> similarityMeasures;
 
-		private ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance> roSimMeasures;
-		public ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance> SimilarityMeasures
-		{
-			get => this.roSimMeasures;
-		}
+		private ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>> roSimMeasures;
+		public ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>> SimilarityMeasures => this.roSimMeasures;
 
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
@@ -65,8 +62,8 @@ namespace GitDensity.Density
 		/// <param name="tempPath">A temporary path to store intermediate results in.</param>
 		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
-			this.similarityMeasures = new Dictionary<PropertyInfo, INormalizedStringDistance>();
-			this.roSimMeasures = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.similarityMeasures);
+			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
+			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
 			this.GitHoursSpan = gitHoursSpan;
 			this.Repository = gitHoursSpan.Repository;
 			this.ProgrammingLanguages = languages.ToArray();
@@ -84,6 +81,9 @@ namespace GitDensity.Density
 			{
 				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
 			}
+
+			logger.LogInformation("Analyzing {0} commits, from {1} to {2} (inclusive)",
+				gitHoursSpan.FilteredCommits.Count, gitHoursSpan.SinceAsString, gitHoursSpan.UntilAsString);
 		}
 
 		/// <summary>
@@ -124,8 +124,9 @@ namespace GitDensity.Density
 					args = emptyArgs;
 				}
 
-				this.similarityMeasures[property.Prop] = (INormalizedStringDistance)
-					Activator.CreateInstance(property.Attr.Type, args);
+				this.similarityMeasures[property.Attr.TypeEnum] =
+					Tuple.Create(property.Prop, (INormalizedStringDistance)
+					Activator.CreateInstance(property.Attr.Type, args));
 			}
 
 			logger.LogInformation("Initialized {0} normalized string similarity/distance measures: {1}",
@@ -162,6 +163,8 @@ namespace GitDensity.Density
 				.ToDictionary(commit => commit.HashSHA1, commit => commit);
 			var pairs = this.GitHoursSpan.CommitPairs(
 				this.SkipInitialCommit, this.SkipMergeCommits).ToList();
+			var similarities = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.SimilarityMeasures.Select(kv => kv.Value).ToDictionary(tuple => tuple.Item1, tuple => tuple.Item2));
+			var similaritiesEmpty = new Dictionary<PropertyInfo, INormalizedStringDistance>();
 			var gitHoursAnalysesPerDeveloper = new GitHours.Hours.GitHours(GitHoursSpan)
 				.Analyze(repoEntity, includeHourSpans: true)
 				.AuthorStats.ToDictionary(
@@ -249,7 +252,7 @@ namespace GitDensity.Density
 					// cannot be any for new or deleted files. The Similarity is needed for computing
 					// the TreeEntryChangesMetrics-entity.
 					var similarity = new Similarity.Similarity<SimilarityEntity>(
-						hunk, Enumerable.Empty<CloneDensity.ClonesXmlSet>(), this.SimilarityMeasures);
+						hunk, Enumerable.Empty<CloneDensity.ClonesXmlSet>(), similaritiesEmpty);
 					similarity.ExecutionPolicy = this.ExecutionPolicy;
 					var simpleLoc = new SimpleLoc((added ?
 						pair.Child[change.Path] : pair.Parent[change.OldPath]).GetLines());
@@ -267,15 +270,12 @@ namespace GitDensity.Density
 					}; // Note that we do not add any similarities here (no sense for pure adds/deletes)
 
 					#region Metrics entity
-					foreach (var smt in SimilarityEntity.SmtToPropertyInfo.Keys)
-					{
-						var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
-							fileBlock, similarity, simpleLoc, treeChangeEntity, smt, addToTreeEntryChanges: true);
+					var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
+						fileBlock, similarity, simpleLoc, treeChangeEntity, SimilarityMeasurementType.None, true);
 
-						// No need to save; entity is added to all other entities.
-						TreeEntryContributionEntity.Create(
-							repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, smt);
-					}
+					// No need to save; entity is added to all other entities.
+					TreeEntryContributionEntity.Create(
+						repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, SimilarityMeasurementType.None);
 					#endregion
 
 					treeChangeEntity.AddFileBlock(fileBlock);
@@ -326,7 +326,7 @@ namespace GitDensity.Density
 					var fileBlockTuples = hunks.Select(hunk =>
 					{
 						var similarity = new Similarity.Similarity<SimilarityEntity>(
-							hunk, relevantSets, this.SimilarityMeasures);
+							hunk, relevantSets, similarities);
 						similarity.ExecutionPolicy = this.ExecutionPolicy;
 
 						var fileBlock = new FileBlockEntity
@@ -349,7 +349,7 @@ namespace GitDensity.Density
 
 
 					#region Metrics entity
-					foreach (var smt in SimilarityEntity.SmtToPropertyInfo.Keys)
+					foreach (var smt in this.SimilarityMeasures.Keys)
 					{
 						var metricsEntity = Similarity.Similarity<SimilarityEntity>.AggregateToMetrics(
 							fileBlockTuples, simpleLoc, treeChangeEntity, smt, addToTreeEntryChanges: true);

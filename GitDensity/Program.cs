@@ -187,7 +187,7 @@ namespace GitDensity
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
 							density.InitializeStringSimilarityMeasures(
-								typeof(Util.Data.Entities.SimilarityEntity),
+								typeof(SimilarityEntity),
 								new HashSet<SimilarityMeasurementType>(
 									SimilarityMeasurementType.None.AsEnumerable().Concat(
 									Configuration.EnabledSimilarityMeasurements
