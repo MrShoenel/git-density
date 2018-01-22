@@ -300,14 +300,14 @@ namespace GitDensity
 		/// <returns></returns>
 		public String GetUsage(ExitCodes exitCode = ExitCodes.OK, Boolean wasHelpRequested = false)
 		{
-			var fullLine = new String('-', Console.WindowWidth);
+			var fullLine = new String('-', ColoredConsole.WindowWidthSafe);
 			var ht = new HelpText
 			{
 				Heading = HeadingInfo.Default,
 				Copyright = CopyrightInfo.Default,
 				AdditionalNewLineAfterOption = true,
 				AddDashesToOption = true,
-				MaximumDisplayWidth = Console.WindowWidth
+				MaximumDisplayWidth = ColoredConsole.WindowWidthSafe
 			};
 
 			if (wasHelpRequested)
