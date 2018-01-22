@@ -191,6 +191,13 @@ namespace GitDensity
 								logger.LogWarning("The project with internal ID {0} was not previously corrected and may not be working.", projectId);
 							}
 
+							if (sess.QueryOver<RepositoryEntity>().Where(r => r.Project == project).List().Any())
+							{
+								logger.LogWarning("Project with ID {0} already analyzed. Quitting.", project.InternalId);
+								Environment.Exit((int)ExitCodes.OK);
+								return;
+							}
+
 							options.RepoPath = project.CloneUrl;
 						}
 					}
