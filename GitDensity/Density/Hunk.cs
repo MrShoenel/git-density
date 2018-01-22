@@ -140,6 +140,13 @@ namespace GitDensity.Density
 		}
 
 		/// <summary>
+		/// Returns true if this <see cref="Hunk"/> was created as a result of adding a
+		/// new, empty file. This can happen by using <see cref="HunksForPatch(PatchEntryChanges, DirectoryInfo, DirectoryInfo)"/>.
+		/// </summary>
+		public Boolean RepresentsNewEmptyFile =>
+			this.OldLineStart == 0u && this.OldNumberOfLines == 0u && this.NewLineStart == 0u && this.NewNumberOfLines == 0u && this.Patch == String.Empty;
+
+		/// <summary>
 		/// Returns an <see cref="IEnumerable{Hunk}"/> containing all hunks
 		/// for the given <see cref="PatchEntryChanges"/>.
 		/// </summary>
@@ -147,6 +154,23 @@ namespace GitDensity.Density
 		/// <returns></returns>
 		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec, DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory)
 		{
+			if (pec.Mode == Mode.NonExecutableFile && pec.OldMode == Mode.Nonexistent && pec.LinesAdded == 0)
+			{
+				// This is an empty patch that is usually the result from adding a new, empty file.
+				// We will only return one empty Hunk for this case.
+				/// <see cref="RepresentsNewEmptyFile"/>
+				yield return new Hunk(String.Empty)
+				{
+					OldLineStart = 0u,
+					OldNumberOfLines = 0u,
+					NewLineStart = 0u,
+					NewNumberOfLines = 0u,
+					SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath),
+					TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path)
+				};
+				yield break;
+			}
+
 			var parts = HunkSplitRegex.Split(pec.Patch);
 
 			foreach (var part in parts.Skip(1).Partition(5))
