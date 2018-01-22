@@ -81,6 +81,16 @@ namespace Util
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public String UntilCommitSha { get; private set; }
 
+		[JsonIgnore]
+		public String SinceAsString =>
+			this.SinceDateTime.HasValue ? this.SinceDateTime.ToString() :
+				"#" + this.SinceCommitSha.Substring(0, Math.Min(this.SinceCommitSha.Length, 8));
+
+		[JsonIgnore]
+		public String UntilAsString =>
+			this.UntilDateTime.HasValue ? this.UntilDateTime.ToString() :
+				"#" + this.UntilCommitSha.Substring(0, Math.Min(this.UntilCommitSha.Length, 8));
+
 		/// <summary>
 		/// Constructs a new <see cref="GitHoursSpan"/> using two <see cref="Commit"/>s
 		/// to delimit the range. Both <see cref="Commit"/>s will be included in the span.
