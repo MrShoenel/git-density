@@ -50,7 +50,7 @@ namespace GitDensity.Density
 		/// Used to split and analyze a git-diff hunk.
 		/// </summary>
 		protected internal static readonly Regex HunkSplitRegex =
-			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+([0-9]+),([0-9]+)\s+@@.*$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
+			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+(?:([0-9]+),)?([0-9]+)\s+@@.*$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
 
 		public UInt32 OldLineStart { get; protected internal set; }
 
@@ -151,6 +151,8 @@ namespace GitDensity.Density
 		/// for the given <see cref="PatchEntryChanges"/>.
 		/// </summary>
 		/// <param name="pec"></param>
+		/// <param name="pairSourceDirectory"></param>
+		/// <param name="pairTargetDirectory"></param>
 		/// <returns></returns>
 		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec, DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory)
 		{
@@ -173,20 +175,82 @@ namespace GitDensity.Density
 
 			var parts = HunkSplitRegex.Split(pec.Patch);
 
-			foreach (var part in parts.Skip(1).Partition(5))
+			foreach (var partArr in Hunk.GetParts(parts.Skip(1).ToArray()))
 			{
-				// The item 0 is just the diff-header.
-				// The structure is 4 variables followed by text (the hunk).
-
-				yield return new Hunk(part[4].TrimStart('\n'))
+				var isShortPart = partArr.Length < 5; // then the offset for the position in the new file is missing
+				
+				yield return new Hunk((isShortPart ? partArr[3] : partArr[4]).TrimStart('\n'))
 				{
-					OldLineStart = UInt32.Parse(part[0]),
-					OldNumberOfLines = UInt32.Parse(part[1]),
-					NewLineStart = UInt32.Parse(part[2]),
-					NewNumberOfLines = UInt32.Parse(part[3]),
+					OldLineStart = UInt32.Parse(partArr[0]),
+					OldNumberOfLines = UInt32.Parse(partArr[1]),
+					NewLineStart = isShortPart ? 0u : UInt32.Parse(partArr[2]),
+					NewNumberOfLines = UInt32.Parse(isShortPart ? partArr[2] : partArr[3]),
 					SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath),
 					TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path)
 				}.ComputeLinesAddedAndDeleted(); // Important to call having set the props
+			}
+		}
+
+		/// <summary>
+		/// The <see cref="HunkSplitRegex"/> sometimes only splits into 3 numerical parts, not 4.
+		/// This is the case, if no new line number is included. This function takes a list of
+		/// splits and returns 4- or 5-element long arrays.
+		/// </summary>
+		/// <param name="rawParts"></param>
+		/// <returns></returns>
+		public static IEnumerable<String[]> GetParts(String[] rawParts)
+		{
+			if (rawParts.Length <= 5)
+			{
+				yield return rawParts;
+				yield break;
+			}
+
+			var list = new List<String>();
+
+			for (int i = 0; i < rawParts.Length; i++)
+			{
+				if (list.Count < 3)
+				{
+					list.Add(rawParts[i]);
+				}
+				else
+				{
+					// check if we need to take the 4th part or not
+					var numLeft = rawParts.Length - i;
+					if (numLeft == 1)
+					{
+						list.Add(rawParts[i]); // Short part
+					}
+					else if (numLeft == 2) // Ordinary part
+					{
+						list.Add(rawParts[i++]);
+						list.Add(rawParts[i]);
+					}
+					else if (numLeft > 2)
+					{
+						var aIsNumber = Int32.TryParse(rawParts[i + 0], out Int32 dummyA);
+						var bIsNumber = Int32.TryParse(rawParts[i + 1], out Int32 dummyB);
+						var cIsNumber = Int32.TryParse(rawParts[i + 2], out Int32 dummyC);
+
+						if (!aIsNumber && bIsNumber && cIsNumber)
+						{
+							list.Add(rawParts[i]);
+						}
+						else if (aIsNumber && !bIsNumber && cIsNumber)
+						{
+							list.Add(rawParts[i++]);
+							list.Add(rawParts[i]);
+						}
+						else
+						{
+							throw new Exception("Cannot parse parts.");
+						}
+					}
+
+					yield return list.ToArray();
+					list.Clear();
+				}
 			}
 		}
 	}
