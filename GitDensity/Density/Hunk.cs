@@ -50,7 +50,9 @@ namespace GitDensity.Density
 		/// Used to split and analyze a git-diff hunk.
 		/// </summary>
 		protected internal static readonly Regex HunkSplitRegex =
-			new Regex(@"^@@\s+\-([0-9]+),([0-9]+)\s+\+(?:([0-9]+),)?([0-9]+)\s+@@.*$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.ECMAScript);
+			new Regex(
+				@"^@@\s+\-((?<oldStart>[0-9]+),)?(?<oldNum>[0-9]+)\s+\+((?<newStart>[0-9]+),)?(?<newNum>[0-9]+)\s+@@.*$",
+				RegexOptions.ExplicitCapture | RegexOptions.Compiled | RegexOptions.Multiline);
 
 		public UInt32 OldLineStart { get; protected internal set; }
 
@@ -156,7 +158,13 @@ namespace GitDensity.Density
 		/// <returns></returns>
 		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec, DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory)
 		{
-			if (pec.Mode == Mode.NonExecutableFile && pec.OldMode == Mode.Nonexistent && pec.LinesAdded == 0)
+			// First condition is an empty patch that is usually the result from adding a new, empty file.
+			// We will only return one empty Hunk for this case.
+			// Second condition is a pure Move/Rename (then there's no real diff).
+			// Third condition is a deletion of a whole file.
+			if ((pec.Mode == Mode.NonExecutableFile && pec.OldMode == Mode.Nonexistent && pec.LinesAdded == 0)
+				|| (pec.Status == ChangeKind.Renamed && pec.LinesAdded == 0 && pec.LinesDeleted == 0)
+				|| (pec.Status == ChangeKind.Deleted && pec.Mode == Mode.Nonexistent))
 			{
 				// This is an empty patch that is usually the result from adding a new, empty file.
 				// We will only return one empty Hunk for this case.
@@ -173,84 +181,38 @@ namespace GitDensity.Density
 				yield break;
 			}
 
-			var parts = HunkSplitRegex.Split(pec.Patch);
-
-			foreach (var partArr in Hunk.GetParts(parts.Skip(1).ToArray()))
+			foreach (var hunk in Hunk.SplitPatch(pec.Patch))
 			{
-				var isShortPart = partArr.Length < 5; // then the offset for the position in the new file is missing
-				
-				yield return new Hunk((isShortPart ? partArr[3] : partArr[4]).TrimStart('\n'))
-				{
-					OldLineStart = UInt32.Parse(partArr[0]),
-					OldNumberOfLines = UInt32.Parse(partArr[1]),
-					NewLineStart = isShortPart ? 0u : UInt32.Parse(partArr[2]),
-					NewNumberOfLines = UInt32.Parse(isShortPart ? partArr[2] : partArr[3]),
-					SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath),
-					TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path)
-				}.ComputeLinesAddedAndDeleted(); // Important to call having set the props
+				hunk.SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath);
+				hunk.TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path);
+
+				yield return hunk.ComputeLinesAddedAndDeleted(); // Important to call having set the props;
 			}
 		}
 
 		/// <summary>
-		/// The <see cref="HunkSplitRegex"/> sometimes only splits into 3 numerical parts, not 4.
-		/// This is the case, if no new line number is included. This function takes a list of
-		/// splits and returns 4- or 5-element long arrays.
+		/// Uses <see cref="HunkSplitRegex"/> to properly split the diff-output into line-numbers
 		/// </summary>
-		/// <param name="rawParts"></param>
+		/// <param name="patchFromDiff"></param>
 		/// <returns></returns>
-		public static IEnumerable<String[]> GetParts(String[] rawParts)
+		protected internal static IEnumerable<Hunk> SplitPatch(String patchFromDiff)
 		{
-			if (rawParts.Length <= 5)
+			var matches = HunkSplitRegex.Matches(patchFromDiff).Cast<Match>().ToList();
+			
+			for (int i = 0; i < matches.Count; i++)
 			{
-				yield return rawParts;
-				yield break;
-			}
+				var contentIdx = matches[i].Index + matches[i].Length;
+				var content = i + 1 == matches.Count ? patchFromDiff.Substring(contentIdx) :
+					patchFromDiff.Substring(contentIdx, matches[i + 1].Index - contentIdx);
 
-			var list = new List<String>();
-
-			for (int i = 0; i < rawParts.Length; i++)
-			{
-				if (list.Count < 3)
+				var g = matches[i].Groups;
+				yield return new Hunk(content.TrimStart('\n'))
 				{
-					list.Add(rawParts[i]);
-				}
-				else
-				{
-					// check if we need to take the 4th part or not
-					var numLeft = rawParts.Length - i;
-					if (numLeft == 1)
-					{
-						list.Add(rawParts[i]); // Short part
-					}
-					else if (numLeft == 2) // Ordinary part
-					{
-						list.Add(rawParts[i++]);
-						list.Add(rawParts[i]);
-					}
-					else if (numLeft > 2)
-					{
-						var aIsNumber = Int32.TryParse(rawParts[i + 0], out Int32 dummyA);
-						var bIsNumber = Int32.TryParse(rawParts[i + 1], out Int32 dummyB);
-						var cIsNumber = Int32.TryParse(rawParts[i + 2], out Int32 dummyC);
-
-						if (!aIsNumber && bIsNumber && cIsNumber)
-						{
-							list.Add(rawParts[i]);
-						}
-						else if (aIsNumber && !bIsNumber && cIsNumber)
-						{
-							list.Add(rawParts[i++]);
-							list.Add(rawParts[i]);
-						}
-						else
-						{
-							throw new Exception("Cannot parse parts.");
-						}
-					}
-
-					yield return list.ToArray();
-					list.Clear();
-				}
+					OldLineStart = g["oldStart"].Success ? UInt32.Parse(g["oldStart"].Value) : 0u,
+					OldNumberOfLines = g["oldNum"].Success ? UInt32.Parse(g["oldNum"].Value) : 0u,
+					NewLineStart = g["newStart"].Success ? UInt32.Parse(g["newStart"].Value) : 0u,
+					NewNumberOfLines = g["newNum"].Success ? UInt32.Parse(g["newNum"].Value) : 0u
+				};
 			}
 		}
 	}
