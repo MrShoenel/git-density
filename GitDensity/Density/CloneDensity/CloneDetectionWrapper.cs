@@ -119,7 +119,7 @@ namespace GitDensity.Density.CloneDensity
 					}
 					logger.LogTrace("Clone detection output:\n\n{0}{1}", stdOut, stdErr);
 
-					if (!ClonesXml.TryDeserialize(tempFile, out ClonesXml clonesXml))
+					if (!File.Exists(tempFile) || !ClonesXml.TryDeserialize(tempFile, out ClonesXml clonesXml))
 					{
 						// It might be the case that there had been no relevant/matching files,
 						// in which our used clone detection does not write an output. We can

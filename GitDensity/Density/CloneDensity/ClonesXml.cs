@@ -46,22 +46,49 @@ namespace GitDensity.Density.CloneDensity
 		/// </summary>
 		/// <param name="pathToXml"></param>
 		/// <param name="clonesXml"></param>
+		/// <param name="skipValidation">If true, will skip validation. That
+		/// leads to this method not performing any null-checks. If you obtain
+		/// a serialized instance in order to read data from it, it's always
+		/// recommended to perform validation, as then no (nested) element is
+		/// allowed to be null.</param>
 		/// <returns></returns>
-		public static bool TryDeserialize(String pathToXml, out ClonesXml clonesXml)
+		public static bool TryDeserialize(String pathToXml, out ClonesXml clonesXml, bool skipValidation = false)
 		{
 			try
 			{
 				XmlSerializer serializer = new XmlSerializer(typeof(ClonesXml));
-				using (var reader = new StreamReader(pathToXml)) {
+				using (var reader = new StreamReader(pathToXml))
+				{
 					clonesXml = (ClonesXml)serializer.Deserialize(reader);
-					return true;
 				}
 			}
 			catch
 			{
 				clonesXml = default(ClonesXml);
-				return false;
 			}
+
+			if (clonesXml is ClonesXml)
+			{
+				if (skipValidation)
+				{
+					return true;
+				}
+
+				return clonesXml.Checks is ClonesXmlCheck[] &&
+					clonesXml.Checks.All(check =>
+					{
+						return check is ClonesXmlCheck &&
+							check.Sets is ClonesXmlSet[] &&
+							check.Sets.All(set =>
+							{
+								return set is ClonesXmlSet &&
+									set.Blocks is ClonesXmlSetBlock[] &&
+									set.Blocks.All(block => block is ClonesXmlSetBlock);
+							});
+					});
+			}
+
+			return false;
 		}
 	}
 
