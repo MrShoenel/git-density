@@ -205,8 +205,9 @@ namespace GitDensity.Density
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
 				{
-					return tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
-					|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed;
+					return tc.Mode != Mode.GitLink &&
+					(tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
+						|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
 				});
 
 				// Now for each of the desired file types, get the Hunks and Diffs
