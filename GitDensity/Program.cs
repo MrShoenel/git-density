@@ -27,15 +27,18 @@
 /// ---------------------------------------------------------------------------------
 using CommandLine;
 using CommandLine.Text;
+using GitHours.Hours;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Util;
 using Util.Data;
 using Util.Data.Entities;
@@ -52,7 +55,8 @@ namespace GitDensity
 		OK = 0,
 		ConfigError = -1,
 		RepoInvalid = -2,
-		UsageInvalid = -3
+		UsageInvalid = -3,
+		CmdError = -4
 	}
 
 	internal class Program
@@ -105,6 +109,7 @@ namespace GitDensity
 
 			if (Parser.Default.ParseArguments(args, options) && options.TryValidate())
 			{
+				#region Initialize, DataFactory, temp-dir etc.
 				Program.LogLevel = options.LogLevel;
 				logger.LogLevel = options.LogLevel;
 
@@ -166,14 +171,48 @@ namespace GitDensity
 					logger.LogTrace("Exception trace: {0}", ex.StackTrace);
 					Environment.Exit((int)ExitCodes.ConfigError);
 				}
+				#endregion
+
+				#region check for Commands
+				if (options.DeleteRepoId != default(UInt32))
+				{
+					logger.LogWarning("Attempting to delete Repository with ID {0}", options.DeleteRepoId);
+
+					try
+					{
+						RepositoryEntity.Delete(options.DeleteRepoId);
+						Environment.Exit((int)ExitCodes.OK);
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, ex.Message);
+						Environment.Exit((int)ExitCodes.RepoInvalid);
+					}
+				}
+
+				if (options.CmdRecomputeGitHours)
+				{
+					try
+					{
+						Program.RecomputeGitHours(options);
+						Environment.Exit((int)ExitCodes.OK);
+					}
+					catch (Exception ex)
+					{
+						logger.LogError(ex, ex.Message);
+						Environment.Exit((int)ExitCodes.CmdError);
+					}
+				}
+				#endregion
 
 
 				// Now let's try to open the specified repository:
 				try
 				{
+					String useRepoName = null;
 					ProjectEntity project = null;
 					// Check if open from Projects first:
-					if (UInt64.TryParse(options.RepoPath, out UInt64 projectId))
+					if (UInt32.TryParse(options.RepoPath, out UInt32 projectId))
 					{
 						using (var sess = DataFactory.Instance.OpenSession())
 						{
@@ -199,36 +238,41 @@ namespace GitDensity
 							}
 
 							options.RepoPath = project.CloneUrl;
+							useRepoName = $"{project.Name}_{project.Owner ?? project.InternalId.ToString()}";
 						}
 					}
 
 					var repoTempPath = Path.Combine(
-						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"{nameof(GitDensity)}_repos");
+						new DirectoryInfo(options.TempDirectory).Parent.FullName,
+						$"{nameof(GitDensity)}_repos");
 					if (!Directory.Exists(repoTempPath))
 					{
 						Directory.CreateDirectory(repoTempPath);
 					}
-					using (var repo = options.RepoPath.OpenRepository(repoTempPath))
+					using (var repo = options.RepoPath.OpenRepository(
+						repoTempPath, useRepoName: useRepoName, pullIfAlreadyExists: true))
 					{
 						var span = new GitHoursSpan(repo, options.Since, options.Until);
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
-						using (var density = new Density.GitDensity(
-							span, options.ProgrammingLanguages,
-							options.SkipInitialCommit, options.SkipMergeCommits,
+						using (var density = new Density.GitDensity(span,
+							options.ProgrammingLanguages, options.SkipInitialCommit, options.SkipMergeCommits,
 							Configuration.LanguagesAndFileExtensions
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
 							options.TempDirectory))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
+
 							density.InitializeStringSimilarityMeasures(
 								typeof(SimilarityEntity),
 								new HashSet<SimilarityMeasurementType>(
 									SimilarityMeasurementType.None.AsEnumerable().Concat(
 									Configuration.EnabledSimilarityMeasurements
 									.Where(kv => kv.Value).Select(kv => kv.Key))));
+
+							density.InitializeHoursTypeEntities(Configuration.HoursTypes);
 
 							var start = DateTime.Now;
 							logger.LogWarning("Starting Analysis..");
@@ -446,7 +490,7 @@ namespace GitDensity
 	/// </summary>
 	internal class CommandLineOptions
 	{
-		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
+		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
 
 		/// <summary>
@@ -461,9 +505,6 @@ namespace GitDensity
 
 		[Option('m', "skip-merge-commits", Required = false, DefaultValue = true, HelpText = "If present, does not analyze pairs where the younger commit is a merge commit.")]
 		public Boolean SkipMergeCommits { get; set; }
-
-		[Option('c', "write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
-		public Boolean WriteExampeConfig { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
 		public String TempDirectory { get; set; }
@@ -482,6 +523,17 @@ namespace GitDensity
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
+
+		#region Command-Options
+		[Option("delete-repo-id", Required = false, HelpText = "Removes analysis results for an entire RepositoryEntity and all of its associated entities.")]
+		public UInt32 DeleteRepoId { get; set; }
+
+		[Option("write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
+		public Boolean WriteExampeConfig { get; set; }
+
+		[Option("cmd-recompute-githours", Required = false, DefaultValue = false, HelpText = "Command. Run the method " + nameof(Program.RecomputeGitHours) + "(). If called, the application will only run this and ignore/do nothing else.")]
+		public Boolean CmdRecomputeGitHours { get; set; }
+		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
 		public Boolean ShowHelp { get; set; }
