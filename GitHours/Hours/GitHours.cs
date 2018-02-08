@@ -36,6 +36,25 @@ using Util.Extensions;
 
 namespace GitHours.Hours
 {
+	public enum HoursSpansDetailLevel : Int32
+	{
+		/// <summary>
+		/// Choose this if you wish not to include hours-spans in the analysis.
+		/// </summary>
+		None = 1,
+		/// <summary>
+		/// Choose this to get information about hours-spans, such as the commit-
+		/// pair and the amount of hours in between them.
+		/// </summary>
+		Standard = 2,
+		/// <summary>
+		/// Choose this option, to return <see cref="GitHoursAuthorSpanDetailed"/>
+		/// entities, rather than <see cref="GitHoursAuthorSpan"/> entities. The
+		/// former contain more details w.r.t. initial span states.
+		/// </summary>
+		Detailed = 3
+	}
+
 	/// <summary>
 	/// Implements the main functionality from this script:
 	/// <see cref="https://github.com/kimmobrunfeldt/git-hours/blob/master/src/index.js"/>
