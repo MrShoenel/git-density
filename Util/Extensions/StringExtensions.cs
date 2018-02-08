@@ -21,6 +21,17 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
+		/// Returns true if this <see cref="String"/> is either null or matches the criteria of
+		/// the method <see cref="IsEmptyOrWhiteSpace(string)"/>.
+		/// </summary>
+		/// <param name="string"></param>
+		/// <returns></returns>
+		public static Boolean IsNullOrEmptyOrWhiteSpace(this string @string)
+		{
+			return @string == null || @string.IsEmptyOrWhiteSpace();
+		}
+
+		/// <summary>
 		/// Splits a <see cref="string"/> into lines and returns them as string.
 		/// </summary>
 		/// <param name="str"></param>
@@ -51,6 +62,24 @@ namespace Util.Extensions
 		{
 			return Uri.TryCreate(@string, UriKind.Absolute, out Uri temp) &&
 				(temp.Scheme == Uri.UriSchemeHttp || temp.Scheme == Uri.UriSchemeHttps);
+		}
+
+		/// <summary>
+		/// Removes all invalid characters from a <see cref="String"/> so that it becomes
+		/// a valid file- or directory-name. Spaces are replaced with hyphens.
+		/// </summary>
+		/// <param name="string"></param>
+		/// <returns></returns>
+		public static String ToValidFileName(this String @string)
+		{
+			@string = @string.Trim();
+			// Also replace spaces with hyphens
+			foreach (char c in Path.GetInvalidFileNameChars().Concat(' '.AsEnumerable()))
+			{
+				@string = @string.Replace(c, c == ' ' ? '-' : '_');
+			}
+
+			return @string;
 		}
 
 		/// <summary>
