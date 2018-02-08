@@ -32,6 +32,7 @@ using FluentNHibernate.Mapping;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Util.Extensions;
@@ -49,14 +50,48 @@ namespace Util.Data.Entities
 	/// </summary>
 	public class ProjectEntity
 	{
-		public virtual UInt64 AiId { get; set; }
-		public virtual UInt64 InternalId { get; set; }
+		public virtual UInt32 AiId { get; set; }
+		public virtual UInt32 InternalId { get; set; }
 		public virtual String Name { get; set; }
 		public virtual ProjectEntityLanguage Language { get; set; }
 		public virtual String CloneUrl { get; set; }
 		public virtual Boolean WasCorrected { get; set; }
 
 		public virtual RepositoryEntity Repository { get; set; }
+
+		private Lazy<NameAndOwner> lazyProjectNameAndOwner;
+		/// <summary>
+		/// Returns the name of the Project's owner. This should work if the project's
+		/// <see cref="CloneUrl"/> points to a URL that that has the name of the owner
+		/// as 2nd to last part in it (where parts are separated by forward slashes).
+		/// This is true for e.g. Github-style clone-Urls. You may check the property
+		/// <see cref="HasProjectOwner"/> before accessing this property.
+		/// </summary>
+		public virtual String Owner => this.lazyProjectNameAndOwner.Value.Owner;
+
+		/// <summary>
+		/// Returns true if it was supposedly possible to extract a name of the project's
+		/// owner from its clone-URL.
+		/// </summary>
+		public virtual Boolean HasProjectOwner => Owner != null;
+
+		public ProjectEntity()
+		{
+			this.lazyProjectNameAndOwner = new Lazy<NameAndOwner>(() =>
+			{
+				var nao = new NameAndOwner();
+				try
+				{
+					// For e.g. Github: https://github.com/EXL/AstroSmash.git
+					var sp = this.CloneUrl.Split('/').Reverse().ToArray();
+
+					nao.Name = sp.Length > 1 ? (sp[0].Contains(".git") ? sp[0].Substring(0, sp[0].IndexOf(".git")) : sp[0]) : null;
+					nao.Owner = sp.Length > 1 ? sp[1] : null;
+				} catch { }
+
+				return nao;
+			});
+		}
 
 		/// <summary>
 		/// Cleans up <see cref="ProjectEntity"/>s in the database and attempts to probe
@@ -164,6 +199,29 @@ namespace Util.Data.Entities
 				}
 			}
 		}
+
+		/// <summary>
+		/// Create a new <see cref="ProjectEntity"/> from a clone-URL. Tries to determine
+		/// the project's owner and name from the clone-URL.
+		/// </summary>
+		/// <param name="cloneUrl"></param>
+		/// <returns></returns>
+		public static ProjectEntity FromCloneUrl(string cloneUrl)
+		{
+			var pe = new ProjectEntity { CloneUrl = cloneUrl };
+
+			return new ProjectEntity
+			{
+				CloneUrl = cloneUrl,
+				Name = pe.lazyProjectNameAndOwner.Value.Name
+			};
+		}
+
+		private class NameAndOwner
+		{
+			public String Name { get; set; }
+			public String Owner { get; set; }
+		}
 	}
 
 	/// <summary>
@@ -186,6 +244,4 @@ namespace Util.Data.Entities
 			this.HasOne<RepositoryEntity>(x => x.Repository).Cascade.Lock();
 		}
 	}
-
-	
 }
