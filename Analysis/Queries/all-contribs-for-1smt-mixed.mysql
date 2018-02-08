@@ -5,13 +5,21 @@
  * similarity measurement type to the changed/moved files.
  *
  * Parameters:
- * __smt__				: The type of Similarity Measure, see Util.Similarity.SimilarityMeasurementType
- * __min_hours__	:	The minimum amount of hours to consider (commits with less time will be cut off)
- * __max_hours__	: The maximum amount of hours to consider (note that this usually does not exceed 2.02)
- * en_ad_start		: If pure adds/deletes should be included, this will be subsituted with nothing; if not,
- *									then it will be substituted with the start of a multi-line comment.
- * en_ad_end			: Like __en_ad_start__, this will be substituted with nothing; if not, then it will be
- *									substituted with the end of a multi-line comment
+ * __smt__				    : The type of Similarity Measure, see Util.Similarity.SimilarityMeasurementType
+ * __min_hours__	    :	The minimum amount of hours to consider (commits with less time will be cut off). This
+ *                      value is to be specified in decimally in hours; e.g. 1.5 means 90 minutes.
+ * __max_hours__	    : The maximum amount of hours to consider (note that this usually does not exceed the
+ *                      value specified by __max_diff__ by more than ~0.01 due to rounding errors)
+ * __en_add_start__		: If pure adds should be included, this will be subsituted with nothing; if not,
+ *  		  							then it will be substituted with the start of a multi-line comment.
+ * __en_add_end__			: Like __en_add_start__, this will be substituted with nothing; if not, then it will be
+ *	    								substituted with the end of a multi-line comment
+ * __max_diff__       : The amount of minutes that hours-loggings should be apart from each other to start
+ *                      start a new session. Using the other variable __first_add__, this will select a
+ *                      specific instance of HoursType. You may obtain all computed HoursTypes using another
+ *                      query. If no such HoursType was computed/exists, the result will be empty.
+ * __first_add__  :     [Disabled] The amount of minutes to accredit for initial commits. This is the
+ *                      counterpart to __max_diff__ that will select a specific instance of an HoursType.
  */
 
 SELECT * FROM
@@ -31,9 +39,12 @@ SELECT
   GROUP_CONCAT(_tree.ID SEPARATOR ', ') as TreeIds,
   GROUP_CONCAT(distinct(_tree.Status) SEPARATOR ', ') as TreeStatuses,
   GROUP_CONCAT(_metrics.ID SEPARATOR ', ') as MetricsIds,*/
+	/* End ignore */
+
 	COUNT(distinct(_tree.Status)) as NumTreeStatuses,
 	SUM(IF(_tree.Status=1, 1, 0)) AS TreeStat_1,
-	SUM(IF(_tree.Status=2, 1, 0)) AS TreeStat_2,
+  /* Currently disabled, see comment below in WHERE-clause */
+	/*SUM(IF(_tree.Status=2, 1, 0)) AS TreeStat_2,*/
 	SUM(IF(_tree.Status=3, 1, 0)) AS TreeStat_3,
 	SUM(IF(_tree.Status=4, 1, 0)) AS TreeStat_4,
   COUNT(_metrics.ID) as AggregatedMetrics,
@@ -69,19 +80,22 @@ SELECT
       FROM  repository_entity AS _repo
 INNER JOIN  projects as _project ON _repo.Project_id = _project.AI_ID
 INNER JOIN  commit_entity AS _commit ON _repo.ID = _commit.Repository_id
+INNER JOIN  hours_entity AS _hours ON _commit.ID = _hours.CommitUntil_id
+INNER JOIN  hours_type_entity AS _hours_type ON (_hours.HoursType_id = _hours_type.ID AND _hours_type.MaxCommitDiffMinutes = __max_diff__ /*AND _hours_type.FirstCommitAddMinutes = __first_add__*/)
 INNER JOIN  tree_entry_contribution_entity AS _contrib ON _commit.ID = _contrib.Commit_id
 INNER JOIN  tree_entry_changes_entity _tree ON _tree.ID = _contrib.TreeEntryChanges_id
-INNER JOIN  hours_entity as _hours ON _hours.ID = _contrib.Hours_id
 INNER JOIN  tree_entry_changes_metrics_entity AS _metrics ON _contrib.TreeEntryChangesMetrics_id = _metrics.ID
 
 
 WHERE
   (
 	 /* With statuses {1,2}, the SMT can only be 0 */
-   __en_ad_start__(_tree.Status = 1 OR _tree.Status = 2)
-   OR__en_ad_end__
-   (_contrib.SimilarityMeasurementType = __smt__ AND (_tree.Status = 3 OR _tree.Status = 4))
+	 /* Also, as discussed, include only pure ADDs for now (i.e. no tree-status with ID=2) */
+   __en_add_start__ _tree.Status = 1 OR __en_add_end__
+   ((_tree.Status = 3 OR _tree.Status = 4) AND _contrib.SimilarityMeasurementType = __smt__)
   )
+  /* That will exclude session-initial and global-initial hour loggings that have a contant offset */
+  AND _hours.IsSessionInitial <> 1
 
 GROUP BY _commit.ID
 ) foo
