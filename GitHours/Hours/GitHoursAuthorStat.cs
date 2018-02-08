@@ -60,8 +60,26 @@ namespace GitHours.Hours
 		[JsonProperty(Order = 6)]
 		public IReadOnlyCollection<String> AlternativeEmails { get { return this.Developer.AlternativeEmails; } }
 
+		/// <summary>
+		/// When serializing to JSON, we will use the rounded and prettier looking value
+		/// as obtained from <see cref="HoursTotal"/>. This value is only kept for when
+		/// the actual, unrounded value is needed.
+		/// </summary>
+		[JsonIgnore]
+		public Double HoursTotalOriginal { get; private set; }
+
+		[JsonIgnore]
+		private Double hoursTotal;
 		[JsonProperty(Order = 3)]
-		public Double HoursTotal { get; set; }
+		public Double HoursTotal
+		{
+			get => this.hoursTotal;
+			set
+			{
+				this.HoursTotalOriginal = value;
+				this.hoursTotal = Math.Round(value, 2);
+			}
+		}
 
 		[JsonProperty(Order = 4)]
 		public UInt32 NumCommits { get; set; }
