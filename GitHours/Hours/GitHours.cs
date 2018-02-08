@@ -175,7 +175,51 @@ namespace GitHours.Hours
 				return hours + (double)this.FirstCommitAdditionInMinutes / 60d;
 			});
 
-			return Math.Round(totalHours, 2);
+			return totalHours;
+		}
+
+		/// <summary>
+		/// Returns the estimated hours for an array of dates. The additional out-parameter
+		/// will yield an array of detailed estimates as <see cref="EstimateHelper"/> objects.
+		/// </summary>
+		/// <param name="dates"></param>
+		/// <param name="estimates"></param>
+		/// <returns>An amount of hours as <see cref="Double"/>.</returns>
+		protected internal Double Estimate(DateTime[] dates, out EstimateHelper[] estimates)
+		{
+			estimates = default(EstimateHelper[]);
+
+			if (dates.Length < 2)
+			{
+				return 0d;
+			}
+
+			estimates = new EstimateHelper[dates.Length - 1];
+			var sortedDates = dates.OrderBy(d => d).ToArray();
+			var allButLast = sortedDates.Reverse().Skip(1).Reverse().ToList();
+
+			for (var i = 0; i < allButLast.Count; i++)
+			{
+				var nextDate = sortedDates[i + 1];
+				var diffInMinutes = (nextDate - sortedDates[i]).TotalMinutes;
+				var isSessionInitial = diffInMinutes > this.MaxCommitDiffInMinutes;
+
+				estimates[i] = new EstimateHelper
+				{
+					Hours = (isSessionInitial ?
+						(double)this.FirstCommitAdditionInMinutes : diffInMinutes) / 60d,
+					IsInitialEstimate = isSessionInitial
+				};
+			}
+
+			return estimates.Select(e => e.Hours).Sum();
+		}
+
+		internal class EstimateHelper
+		{
+			public Double Hours { get; set; }
+
+			public Boolean IsInitialEstimate { get; set; }
 		}
 	}
 }
