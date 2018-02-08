@@ -41,7 +41,27 @@ namespace GitHours.Hours
 	/// </summary>
 	internal class GitHoursAnalysisResult
 	{
-		public Double TotalHours { get; protected internal set; }
+		/// <summary>
+		/// The precise value, not rounded. When serializing to JSON, the other,
+		/// prettier property <see cref="TotalHours"/> is used.
+		/// </summary>
+		[JsonIgnore]
+		public Double TotalHoursOriginal { get; private set; }
+
+		[JsonIgnore]
+		private Double totalHours;
+		/// <summary>
+		/// Represents the total amount of hours, rounded to 2 decimal places.
+		/// </summary>
+		public Double TotalHours
+		{
+			get => this.totalHours;
+			protected internal set
+			{
+				this.TotalHoursOriginal = value;
+				this.totalHours = Math.Round(value, 2);
+			}
+		}
 
 		public UInt32 TotalCommits { get; protected internal set; }
 
