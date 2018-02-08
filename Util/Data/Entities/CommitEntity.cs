@@ -8,7 +8,7 @@ namespace Util.Data.Entities
 	/// <summary>
 	/// An entity that can represent the most essential parts of a <see cref="Commit"/>.
 	/// </summary>
-	public class CommitEntity
+	public class CommitEntity : IEquatable<CommitEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -46,6 +46,23 @@ namespace Util.Data.Entities
 			}
 			return this;
 		}
+
+		#region equality
+		public virtual bool Equals(CommitEntity other)
+		{
+			return other is CommitEntity && other.HashSHA1 == this.HashSHA1;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return this.Equals(obj as CommitEntity);
+		}
+
+		public override int GetHashCode()
+		{
+			return this.HashSHA1.GetHashCode() * 31;
+		}
+		#endregion
 	}
 
 
