@@ -3,6 +3,7 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using Util.Data;
 
@@ -36,6 +37,59 @@ namespace Util
 		/// PHP
 		/// </summary>
 		PHP
+	}
+
+	/// <summary>
+	/// Used in <see cref="Configuration"/>.
+	/// </summary>
+	[DebuggerDisplay("MaxDiff {MaxDiff}, AddFirst {FirstCommitAdd}")]
+	public class HoursTypeConfiguration : IEquatable<HoursTypeConfiguration>
+	{
+		/// <summary>
+		/// The amount of minutes between two commits, before they are considered
+		/// belonging to a different session.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "maxDiff")]
+		public UInt32 MaxDiff { get; set; }
+
+		/// <summary>
+		/// The amount of minutes to add for the first commit of a session.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "firstCommitAdd")]
+		public UInt32 FirstCommitAdd { get; set; }
+
+		#region equality
+		/// <summary>
+		/// Returns true if both of this class' properties are equal.
+		/// </summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public bool Equals(HoursTypeConfiguration other)
+		{
+			return other is HoursTypeConfiguration &&
+				other.FirstCommitAdd == this.FirstCommitAdd && other.MaxDiff == this.MaxDiff;
+		}
+
+		/// <summary>
+		/// Overridden so that two equal instances return the same hash code.
+		/// </summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+		{
+			return this.FirstCommitAdd.GetHashCode() ^ this.MaxDiff.GetHashCode() * 31;
+		}
+
+		/// <summary>
+		/// Calls <see cref="Equals(HoursTypeConfiguration)"/> by casting the other object
+		/// to <see cref="HoursTypeConfiguration"/> using the as-operator.
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+		{
+			return this.Equals(obj as HoursTypeConfiguration);
+		}
+		#endregion
 	}
 
 	public class Configuration
