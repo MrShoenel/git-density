@@ -108,15 +108,23 @@ namespace GitDensity.Density.CloneDensity
 
 					var stdOut = proc.StandardOutput.ReadToEnd();
 					var stdErr = proc.StandardError.ReadToEnd();
-
-					proc.WaitForExit();
-					if (proc.ExitCode != 0)
+					
+					var hasExited = proc.WaitForExit((Int32)TimeSpan.FromMinutes(2).TotalMilliseconds);
+					if (!hasExited || proc.ExitCode != 0)
 					{
 						logger.LogError("Clone detection failed with Exit-Code {0}. Output:\n\n{1}",
 							proc.ExitCode, stdErr);
 						throw new InvalidOperationException(
 							"The process exited with a non-zero exitcode.");
 					}
+
+					if (!hasExited)
+					{
+						proc.Kill();
+						throw new InvalidOperationException(
+							"The clone detection timed out.");
+					}
+
 					logger.LogTrace("Clone detection output:\n\n{0}{1}", stdOut, stdErr);
 
 					if (!File.Exists(tempFile) || !ClonesXml.TryDeserialize(tempFile, out ClonesXml clonesXml))
