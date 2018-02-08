@@ -19,16 +19,19 @@ namespace GitHoursTests
 		[TestMethod]
 		public void TestAggregateHoursStats()
 		{
-			var span = new Util.GitHoursSpan(SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null);
-			var analysis = new GitHours.Hours.GitHours(span);
-			var result = analysis.Analyze(includeHourSpans: true);
-
-			Assert.AreEqual(span.FilteredCommits.Count,
-				result.AuthorStats.Select(@as => @as.HourSpans.Count).Sum());
-
-			foreach (var stat in result.AuthorStats)
+			using (var span = new Util.GitHoursSpan(SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
 			{
-				Assert.AreEqual(stat.HoursTotal, stat.HourSpans.Select(hs => hs.Hours).Sum(), 0.0000001d);
+				var analysis = new GitHours.Hours.GitHours(span);
+				var result = analysis.Analyze(hoursSpansDetailLevel: GitHours.Hours.HoursSpansDetailLevel.Standard);
+
+				Assert.AreEqual(span.FilteredCommits.Count,
+					result.AuthorStats.Select(@as => @as.HourSpans.Count).Sum());
+
+				foreach (var stat in result.AuthorStats)
+				{
+					Assert.AreEqual(stat.HoursTotalOriginal,
+						stat.HourSpans.Select(hs => hs.HoursOriginal).Sum(), 0.000001d);
+				}
 			}
 		}
 	}
