@@ -1,7 +1,9 @@
 ﻿using F23.StringSimilarity.Interfaces;
+using GitHours.Hours;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -47,6 +49,11 @@ namespace GitDensity.Density
 		private ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>> roSimMeasures;
 		public ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>> SimilarityMeasures => this.roSimMeasures;
 
+		protected IDictionary<HoursTypeConfiguration, HoursTypeEntity> hoursTypes;
+
+		private ReadOnlyDictionary<HoursTypeConfiguration, HoursTypeEntity> roHoursTypes;
+		public ReadOnlyDictionary<HoursTypeConfiguration, HoursTypeEntity> HoursTypes => this.roHoursTypes;
+
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
 		/// <summary>
@@ -54,6 +61,7 @@ namespace GitDensity.Density
 		/// </summary>
 		/// <param name="gitHoursSpan">Represents the span of commits to be analyzed.</param>
 		/// <param name="languages">Programming-languages to analyze.</param>
+		/// will compute git-hours for each type.</param>
 		/// <param name="skipInitialCommit">Skip the initial commit (the one with no parent)
 		/// when conducting the analysis.</param>
 		/// <param name="skipMergeCommits">Skip merge-commits during analysis.</param>
@@ -64,9 +72,14 @@ namespace GitDensity.Density
 		{
 			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
 			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
+
+			this.hoursTypes = new Dictionary<HoursTypeConfiguration, HoursTypeEntity>();
+			this.roHoursTypes = new ReadOnlyDictionary<HoursTypeConfiguration, HoursTypeEntity>(this.hoursTypes);
+
 			this.GitHoursSpan = gitHoursSpan;
 			this.Repository = gitHoursSpan.Repository;
 			this.ProgrammingLanguages = languages.ToArray();
+			//this.HoursTypes = new HashSet<HoursTypeConfiguration>(hoursTypes);
 			this.TempDirectory = new DirectoryInfo(tempPath ?? Path.GetTempPath());
 
 			if (skipInitialCommit.HasValue)
@@ -77,6 +90,7 @@ namespace GitDensity.Density
 			{
 				this.SkipMergeCommits = skipMergeCommits.Value;
 			}
+
 			if (fileTypeExtensions is IEnumerable<String> && fileTypeExtensions.Any())
 			{
 				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
@@ -136,6 +150,23 @@ namespace GitDensity.Density
 		}
 
 		/// <summary>
+		/// Initializes all <see cref="HoursTypeEntity"/> from a given list of types.
+		/// </summary>
+		/// <param name="hoursTypes">Set of <see cref="HoursTypeConfiguration"/>. The analysis
+		/// <returns>This (<see cref="GitDensity"/>) for chaining.</returns>
+		public GitDensity InitializeHoursTypeEntities(ISet<HoursTypeConfiguration> hoursTypesConfigurations)
+		{
+			this.hoursTypes.Clear();
+
+			foreach (var ht in hoursTypesConfigurations)
+			{
+				this.hoursTypes[ht] = HoursTypeEntity.ForSettings(ht.MaxDiff, ht.FirstCommitAdd);
+			}
+
+			return this;
+		}
+
+		/// <summary>
 		/// Run the entire analysis and return the result, that can be persisted or futher
 		/// analyzed.
 		/// </summary>
@@ -143,9 +174,14 @@ namespace GitDensity.Density
 		/// <see cref="LibGit2Sharp.Repository"/> as <see cref="RepositoryEntity"/>.</returns>
 		public GitDensityAnalysisResult Analyze()
 		{
-			if (this.similarityMeasures.Count == 0)
+			if (this.SimilarityMeasures.Count == 0)
 			{
-				logger.LogWarning($"No similarity-measures have been initialized. This can be done by calling {nameof(InitializeStringSimilarityMeasures)}(Type fromType).");
+				logger.LogWarning($"No similarity-measures have been initialized. This can be done by calling {nameof(InitializeStringSimilarityMeasures)}(). Without these, no similarities will be computed..");
+			}
+
+			if (this.HoursTypes.Count == 0)
+			{
+				logger.LogWarning($"No Hours-Types have been initialized. This can be done by calling {nameof(InitializeHoursTypeEntities)}(). Without these, no git-hours will be computed.");
 			}
 
 			logger.LogWarning("Parallel Analysis is: {0}ABLED!",
@@ -165,10 +201,6 @@ namespace GitDensity.Density
 				this.SkipInitialCommit, this.SkipMergeCommits).ToList();
 			var similarities = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.SimilarityMeasures.Select(kv => kv.Value).ToDictionary(tuple => tuple.Item1, tuple => tuple.Item2));
 			var similaritiesEmpty = new Dictionary<PropertyInfo, INormalizedStringDistance>();
-			var gitHoursAnalysesPerDeveloper = new GitHours.Hours.GitHours(GitHoursSpan)
-				.Analyze(repoEntity, includeHourSpans: true)
-				.AuthorStats.ToDictionary(
-					@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans);
 
 			var pairsDone = 0;
 			var parallelOptions = new ParallelOptions();
@@ -187,19 +219,52 @@ namespace GitDensity.Density
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
 				#region GitHours
-				var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]];
-				var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
-				var hoursEntity = new HoursEntity
+				var gitHoursAnalysesPerDeveloperAndHoursType =
+					new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
+
+				// Run all Analysis for each Hours-Type:
+				Parallel.ForEach(this.HoursTypes.Keys, parallelOptions, hoursType =>
 				{
-					InitialCommit = commits[hoursSpan.InitialCommit.Sha],
-					CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
-					CommitUntil = commits[hoursSpan.Until.Sha],
-					Developer = developers[pair.Child.Author],
-					Hours = hoursSpan.Hours,
-					HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
-						.Select(hs => hs.Hours).Sum()
-				};
-				developers[pair.Child.Author].AddHour(hoursEntity);
+					var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
+						new GitHours.Hours.GitHours(
+							this.GitHoursSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
+							.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
+							.AuthorStats.ToDictionary(
+								@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
+					
+					if (!addSuccess)
+					{
+						throw new InvalidOperationException(
+							$"Cannot add Hours-Type {hoursType.ToString()}.");
+					}
+				});
+
+				foreach (var hoursType in gitHoursAnalysesPerDeveloperAndHoursType.Keys)
+				{
+					// We need this for every HoursEntity that we use; it is already saved
+					var hoursTypeEntity = this.HoursTypes[hoursType];
+					var gitHoursAnalysesPerDeveloper =
+						gitHoursAnalysesPerDeveloperAndHoursType[hoursType];
+					var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]]
+						// OK because we analyzed with HoursSpansDetailLevel.Detailed
+						.Cast<GitHoursAuthorSpanDetailed>().ToList();
+					var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
+					var hoursEntity = new HoursEntity
+					{
+						InitialCommit = commits[hoursSpan.InitialCommit.Sha],
+						CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
+						CommitUntil = commits[hoursSpan.Until.Sha],
+						Developer = developers[pair.Child.Author],
+						Hours = hoursSpan.Hours,
+						HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
+							.Select(hs => hs.Hours).Sum(),
+
+						HoursType = hoursTypeEntity,
+						IsInitial = hoursSpan.IsInitialSpan,
+						IsSessionInitial = hoursSpan.IsSessionInitialSpan
+					};
+					developers[pair.Child.Author].AddHour(hoursEntity);
+				}
 				#endregion
 
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
@@ -276,7 +341,7 @@ namespace GitDensity.Density
 
 					// No need to save; entity is added to all other entities.
 					TreeEntryContributionEntity.Create(
-						repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, SimilarityMeasurementType.None);
+						repoEntity, developers[pair.Child.Author], commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, SimilarityMeasurementType.None);
 					#endregion
 
 					treeChangeEntity.AddFileBlock(fileBlock);
@@ -357,7 +422,7 @@ namespace GitDensity.Density
 
 						// No need to save; entity is added to all other entities.
 						TreeEntryContributionEntity.Create(
-							repoEntity, developers[pair.Child.Author], hoursEntity, commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, smt);
+							repoEntity, developers[pair.Child.Author], commits[pair.Child.Sha], pairEntity, treeChangeEntity, metricsEntity, smt);
 					}
 					#endregion
 

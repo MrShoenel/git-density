@@ -78,6 +78,7 @@
     <Compile Include="Hours\GitHours.cs" />
     <Compile Include="Hours\GitHoursAnalysisResult.cs" />
     <Compile Include="Hours\GitHoursAuthorSpan.cs" />
+    <Compile Include="Hours\GitHoursAuthorSpanDetailed.cs" />
     <Compile Include="Hours\GitHoursAuthorStat.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

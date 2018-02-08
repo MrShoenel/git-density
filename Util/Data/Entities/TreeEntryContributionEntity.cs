@@ -25,8 +25,6 @@ namespace Util.Data.Entities
 		public virtual RepositoryEntity Repository { get; set; }
 
 		public virtual DeveloperEntity Developer { get; set; }
-		
-		public virtual HoursEntity Hours { get; set; }
 
 		public virtual CommitEntity Commit { get; set; }
 
@@ -39,13 +37,12 @@ namespace Util.Data.Entities
 		[Indexed]
 		public virtual SimilarityMeasurementType SimilarityMeasurementType { get; set; }
 
-		public static TreeEntryContributionEntity Create(RepositoryEntity repository, DeveloperEntity developer, HoursEntity hours, CommitEntity commit, CommitPairEntity commitPair, TreeEntryChangesEntity treeEntryChanges, TreeEntryChangesMetricsEntity treeEntryChangesMetrics, SimilarityMeasurementType similarityMeasurementType)
+		public static TreeEntryContributionEntity Create(RepositoryEntity repository, DeveloperEntity developer, CommitEntity commit, CommitPairEntity commitPair, TreeEntryChangesEntity treeEntryChanges, TreeEntryChangesMetricsEntity treeEntryChangesMetrics, SimilarityMeasurementType similarityMeasurementType)
 		{
 			var entity = new TreeEntryContributionEntity
 			{
 				Repository = repository,
 				Developer = developer,
-				Hours = hours,
 				Commit = commit,
 				CommitPair = commitPair,
 				TreeEntryChanges = treeEntryChanges,
@@ -75,7 +72,6 @@ namespace Util.Data.Entities
 
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();
 			this.References<DeveloperEntity>(x => x.Developer).Not.Nullable();
-			this.References<HoursEntity>(x => x.Hours).Not.Nullable();
 			this.References<CommitEntity>(x => x.Commit).Not.Nullable();
 			this.References<CommitPairEntity>(x => x.CommitPair).Not.Nullable();
 			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Not.Nullable();

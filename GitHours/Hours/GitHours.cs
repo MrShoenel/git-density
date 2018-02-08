@@ -36,6 +36,25 @@ using Util.Extensions;
 
 namespace GitHours.Hours
 {
+	public enum HoursSpansDetailLevel : Int32
+	{
+		/// <summary>
+		/// Choose this if you wish not to include hours-spans in the analysis.
+		/// </summary>
+		None = 1,
+		/// <summary>
+		/// Choose this to get information about hours-spans, such as the commit-
+		/// pair and the amount of hours in between them.
+		/// </summary>
+		Standard = 2,
+		/// <summary>
+		/// Choose this option, to return <see cref="GitHoursAuthorSpanDetailed"/>
+		/// entities, rather than <see cref="GitHoursAuthorSpan"/> entities. The
+		/// former contain more details w.r.t. initial span states.
+		/// </summary>
+		Detailed = 3
+	}
+
 	/// <summary>
 	/// Implements the main functionality from this script:
 	/// <see cref="https://github.com/kimmobrunfeldt/git-hours/blob/master/src/index.js"/>
@@ -74,11 +93,12 @@ namespace GitHours.Hours
 		/// </summary>
 		/// <param name="developer"></param>
 		/// <param name="repositoryEntity"></param>
-		/// <param name="includeHourSpans">If true, will compute and include the hour-spans.</param>
+		/// <param name="hoursSpansDetailLevel">Select the designated level of detail for
+		/// the hours-spans.</param>
 		/// <returns></returns>
-		public GitHoursAuthorStat AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
+		public GitHoursAuthorStat AnalyzeForDeveloper(DeveloperEntity developer, RepositoryEntity repositoryEntity = null, HoursSpansDetailLevel hoursSpansDetailLevel = HoursSpansDetailLevel.Standard)
 		{
-			var result = this.Analyze(repositoryEntity, includeHourSpans);
+			var result = this.Analyze(repositoryEntity, hoursSpansDetailLevel);
 
 			return result.AuthorStats.Where(stats => stats.Developer.Equals(developer)).First();
 		}
@@ -88,9 +108,10 @@ namespace GitHours.Hours
 		/// for each developer and in total as <see cref="GitHoursAnalysisResult"/>.
 		/// </summary>
 		/// <param name="repositoryEntity"></param>
-		/// <param name="includeHourSpans">If true, will compute and include the hour-spans.</param>
+		/// <param name="hoursSpansDetailLevel">Select the designated level of detail for
+		/// the hours-spans.</param>
 		/// <returns></returns>
-		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null, Boolean includeHourSpans = true)
+		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null, HoursSpansDetailLevel hoursSpansDetailLevel = HoursSpansDetailLevel.Standard)
 		{
 			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper(repositoryEntity);
 			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown"); // that's how it's done in the original script
@@ -102,10 +123,14 @@ namespace GitHours.Hours
 					NumCommits = (UInt32)commitGroup.Count()
 				};
 
-				if (includeHourSpans)
+				switch (hoursSpansDetailLevel)
 				{
-					stats.HourSpans = GitHoursAuthorSpan.GetHoursSpans(commitGroup, this.Estimate).ToList();
-					var test = stats.HourSpans.Select(hs => hs.Hours).Sum();
+					case HoursSpansDetailLevel.Standard:
+						stats.HourSpans = GitHoursAuthorSpan.GetHoursSpans(commitGroup, this.Estimate).ToList();
+						break;
+					case HoursSpansDetailLevel.Detailed:
+						stats.HourSpans = GitHoursAuthorSpanDetailed.GetHoursSpans(commitGroup, this.Estimate).Cast<GitHoursAuthorSpan>().ToList();
+						break;
 				}
 
 				return stats;
@@ -113,7 +138,8 @@ namespace GitHours.Hours
 
 			return new GitHoursAnalysisResult
 			{
-				TotalHours = Math.Round(authorStats.Aggregate(0d, (sum, authorStat) => sum + authorStat.HoursTotal), 2),
+				TotalHours = authorStats.Aggregate(
+					0d, (sum, authorStat) => sum + authorStat.HoursTotal),
 				TotalCommits = (UInt32)this.GitHoursSpan.FilteredCommits.Count,
 				AuthorStats = authorStats.OrderBy(aw => aw.HoursTotal),
 
@@ -131,11 +157,11 @@ namespace GitHours.Hours
 		/// </summary>
 		/// <param name="dates"></param>
 		/// <returns>An amount of hours as <see cref="Double"/>.</returns>
-		protected Double Estimate(DateTime[] dates)
+		protected internal Double Estimate(DateTime[] dates)
 		{
 			if (dates.Length < 2)
 			{
-				return 0;
+				return 0d;
 			}
 
 			var sortedDates = dates.OrderBy(d => d).ToArray();
@@ -156,7 +182,51 @@ namespace GitHours.Hours
 				return hours + (double)this.FirstCommitAdditionInMinutes / 60d;
 			});
 
-			return Math.Round(totalHours, 2);
+			return totalHours;
+		}
+
+		/// <summary>
+		/// Returns the estimated hours for an array of dates. The additional out-parameter
+		/// will yield an array of detailed estimates as <see cref="EstimateHelper"/> objects.
+		/// </summary>
+		/// <param name="dates"></param>
+		/// <param name="estimates"></param>
+		/// <returns>An amount of hours as <see cref="Double"/>.</returns>
+		protected internal Double Estimate(DateTime[] dates, out EstimateHelper[] estimates)
+		{
+			estimates = default(EstimateHelper[]);
+
+			if (dates.Length < 2)
+			{
+				return 0d;
+			}
+
+			estimates = new EstimateHelper[dates.Length - 1];
+			var sortedDates = dates.OrderBy(d => d).ToArray();
+			var allButLast = sortedDates.Reverse().Skip(1).Reverse().ToList();
+
+			for (var i = 0; i < allButLast.Count; i++)
+			{
+				var nextDate = sortedDates[i + 1];
+				var diffInMinutes = (nextDate - sortedDates[i]).TotalMinutes;
+				var isSessionInitial = diffInMinutes > this.MaxCommitDiffInMinutes;
+
+				estimates[i] = new EstimateHelper
+				{
+					Hours = (isSessionInitial ?
+						(double)this.FirstCommitAdditionInMinutes : diffInMinutes) / 60d,
+					IsInitialEstimate = isSessionInitial
+				};
+			}
+
+			return estimates.Select(e => e.Hours).Sum();
+		}
+
+		internal class EstimateHelper
+		{
+			public Double Hours { get; set; }
+
+			public Boolean IsInitialEstimate { get; set; }
 		}
 	}
 }

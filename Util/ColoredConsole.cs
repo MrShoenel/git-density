@@ -74,6 +74,15 @@ namespace Util
 			set { Console.Title = value; }
 		}
 
+		/// <summary>
+		/// Use this as Console-width, if not console is available.
+		/// </summary>
+		public const Int32 DefaultConsoleWidth = 80;
+
+		/// <summary>
+		/// Returns the actual Console-width or <see cref="DefaultConsoleWidth"/>,
+		/// if no Console is available.
+		/// </summary>
 		public static Int32 WindowWidthSafe
 		{
 			get
@@ -84,7 +93,7 @@ namespace Util
 				}
 				catch
 				{
-					return 80;
+					return DefaultConsoleWidth;
 				}
 			}
 		}

@@ -1,9 +1,8 @@
-﻿using Util.Data.Entities;
-using LibGit2Sharp;
+﻿using LibGit2Sharp;
 using System;
 using System.Linq;
+using Util.Data.Entities;
 using Util.Density;
-using System.Collections.Generic;
 
 namespace Util.Extensions
 {

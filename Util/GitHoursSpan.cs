@@ -69,16 +69,16 @@ namespace Util
 		[JsonIgnore]
 		public LinkedList<Commit> FilteredCommits => this.lazyFilteredCommits.Value;
 
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore, Order = 1)]
 		public DateTime? SinceDateTime { get; private set; }
 
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore, Order = 3)]
 		public DateTime? UntilDateTime { get; private set; }
 
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore, Order = 2)]
 		public String SinceCommitSha { get; private set; }
 
-		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Ignore, Order = 4)]
 		public String UntilCommitSha { get; private set; }
 
 		[JsonIgnore]

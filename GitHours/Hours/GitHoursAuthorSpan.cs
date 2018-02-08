@@ -74,16 +74,25 @@ namespace GitHours.Hours
 		public String UntilId => this.Until.Sha.Substring(0, 8);
 
 		/// <summary>
+		/// Holds the original amount, rather then the to-3-decimal places rounded value
+		/// represented by <see cref="Hours"/>.
+		/// </summary>
+		[JsonIgnore]
+		public Double HoursOriginal { get; private set; }
+
+		/// <summary>
 		/// The amount of hours worked within the span of the two <see cref="Commit"/>s.
+		/// Rounded to three decimal places for prettier JSON.
 		/// </summary>
 		public Double Hours { get; private set; }
 
-		private GitHoursAuthorSpan(Commit initial, Commit since, Commit until, double hours)
+		protected GitHoursAuthorSpan(Commit initial, Commit since, Commit until, double hours)
 		{
 			this.InitialCommit = initial;
 			this.Since = since;
 			this.Until = until;
-			this.Hours = hours;
+			this.Hours = Math.Round(hours, 3);
+			this.HoursOriginal = hours;
 		}
 
 		public static IEnumerable<GitHoursAuthorSpan> GetHoursSpans(IEnumerable<Commit> commitsForDeveloper, Func<DateTime[], Double> estimator)
@@ -103,14 +112,14 @@ namespace GitHours.Hours
 			for (var take = 2; take <= commitsSorted.Count; take++)
 			{
 				hoursUntilCommit[take] = Tuple.Create(
-					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Committer.When.DateTime).ToArray()));
+					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Author.When.DateTime).ToArray()));
 			}
 
 			foreach (var kv in hoursUntilCommit)
 			{
 				var hours = kv.Value.Item2 - (hoursUntilCommit.ContainsKey(kv.Key - 1) ?  hoursUntilCommit[kv.Key - 1].Item2 : 0);
 				yield return new GitHoursAuthorSpan(commitsSorted[0],
-					commitsSorted[kv.Key - 2], kv.Value.Item1, Math.Round(hours, 3));
+					commitsSorted[kv.Key - 2], kv.Value.Item1, hours);
 			}
 		}
 	}

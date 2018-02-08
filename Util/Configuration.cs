@@ -3,6 +3,7 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using Util.Data;
 
@@ -36,6 +37,59 @@ namespace Util
 		/// PHP
 		/// </summary>
 		PHP
+	}
+
+	/// <summary>
+	/// Used in <see cref="Configuration"/>.
+	/// </summary>
+	[DebuggerDisplay("MaxDiff {MaxDiff}, AddFirst {FirstCommitAdd}")]
+	public class HoursTypeConfiguration : IEquatable<HoursTypeConfiguration>
+	{
+		/// <summary>
+		/// The amount of minutes between two commits, before they are considered
+		/// belonging to a different session.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "maxDiff")]
+		public UInt32 MaxDiff { get; set; }
+
+		/// <summary>
+		/// The amount of minutes to add for the first commit of a session.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "firstCommitAdd")]
+		public UInt32 FirstCommitAdd { get; set; }
+
+		#region equality
+		/// <summary>
+		/// Returns true if both of this class' properties are equal.
+		/// </summary>
+		/// <param name="other"></param>
+		/// <returns></returns>
+		public bool Equals(HoursTypeConfiguration other)
+		{
+			return other is HoursTypeConfiguration &&
+				other.FirstCommitAdd == this.FirstCommitAdd && other.MaxDiff == this.MaxDiff;
+		}
+
+		/// <summary>
+		/// Overridden so that two equal instances return the same hash code.
+		/// </summary>
+		/// <returns></returns>
+		public override int GetHashCode()
+		{
+			return this.FirstCommitAdd.GetHashCode() ^ this.MaxDiff.GetHashCode() * 31;
+		}
+
+		/// <summary>
+		/// Calls <see cref="Equals(HoursTypeConfiguration)"/> by casting the other object
+		/// to <see cref="HoursTypeConfiguration"/> using the as-operator.
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
+		public override bool Equals(object obj)
+		{
+			return this.Equals(obj as HoursTypeConfiguration);
+		}
+		#endregion
 	}
 
 	public class Configuration
@@ -118,6 +172,13 @@ namespace Util
 		public Dictionary<Similarity.SimilarityMeasurementType, Boolean> EnabledSimilarityMeasurements { get; set; }
 
 		/// <summary>
+		/// A set of <see cref="HoursTypeConfiguration"/> objects. For each of these, the git-hours
+		/// will be computed.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "hoursTypes")]
+		public HashSet<HoursTypeConfiguration> HoursTypes { get; set; }
+
+		/// <summary>
 		/// An example that is used to create an initial configuration, if
 		/// none exists.
 		/// </summary>
@@ -126,7 +187,9 @@ namespace Util
 			Help = $@"This is the Helptext for this configuration. Launch the program with '--help' to get more help on available switches. Most of the properties you may adjust are boolean, numbers or strings. Some properties require a specific value - those will be listed below:
 
 -> List of supported Database-Types: {{ { String.Join(", ",
-									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }}",
+									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }}
+
+-> The hoursTypes is an array of objects, where each object has the property 'maxDiff' and 'firstCommitAdd'. Both properties are in minutes and all combinations must be unique. For each object/configuration, git-hours will be computed.",
 
 
 			PathToCloneDetectionBinary = @"C:\temp\binary.exe",
@@ -139,7 +202,36 @@ namespace Util
 				.Cast<Similarity.SimilarityMeasurementType>()
 				// The following is always implicitly available and enabled, so we exclude it:
 				.Where(smt => smt != Similarity.SimilarityMeasurementType.None)
-				.ToDictionary(smt => smt, foo => true)
+				.ToDictionary(smt => smt, foo => true),
+			HoursTypes = new HashSet<HoursTypeConfiguration>
+			{
+				new HoursTypeConfiguration { MaxDiff = 30, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 60, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 90, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 120, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 150, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 180, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 240, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 300, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 360, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 420, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 480, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 540, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 600, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 660, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 720, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 780, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 840, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 900, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 960, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1080, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1140, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1200, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1260, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1320, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1380, FirstCommitAdd = 120 },
+				new HoursTypeConfiguration { MaxDiff = 1440, FirstCommitAdd = 120 }
+			}
 		};
 	}
 }

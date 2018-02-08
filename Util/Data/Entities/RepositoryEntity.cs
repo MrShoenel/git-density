@@ -31,6 +31,7 @@
 using FluentNHibernate.Mapping;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Util.Extensions;
 
 namespace Util.Data.Entities
@@ -137,6 +138,117 @@ namespace Util.Data.Entities
 			return this;
 		}
 		#endregion
+
+		#region Delete Repository and all its belongings
+		public static void Delete(UInt32 repositoryEntityId)
+		{
+			using (var session = DataFactory.Instance.OpenSession())
+			{
+				var repo = session.QueryOver<RepositoryEntity>()
+					.Where(r => r.ID == repositoryEntityId).SingleOrDefault();
+
+				if (!(repo is RepositoryEntity))
+				{
+					throw new ArgumentException($"There is no Repository with ID {repositoryEntityId}");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var contribution in repo.TreeEntryContributions)
+					{
+						session.Delete(contribution);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					var allSimilarities = repo.CommitPairs.SelectMany(cp => cp.TreeEntryChanges.SelectMany(tec => tec.FileBlocks.SelectMany(fb => fb.Similarities)));
+
+					foreach (var sim in allSimilarities)
+					{
+						session.Delete(sim);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					var allFileBlocks = repo.CommitPairs.SelectMany(cp => cp.TreeEntryChanges.SelectMany(tec => tec.FileBlocks));
+
+					foreach (var fb in allFileBlocks)
+					{
+						session.Delete(fb);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					var allMetrics = repo.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).SelectMany(tree => tree.TreeEntryChangesMetrics);
+
+					foreach (var metric in allMetrics)
+					{
+						session.Delete(metric);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					var allTrees = repo.CommitPairs.SelectMany(cp => cp.TreeEntryChanges);
+
+					foreach (var tree in allTrees)
+					{
+						session.Delete(tree);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var commitPair in repo.CommitPairs)
+					{
+						session.Delete(commitPair);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var hours in repo.Developers.SelectMany(dev => dev.Hours))
+					{
+						session.Delete(hours);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var commit in repo.Commits)
+					{
+						session.Delete(commit);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var dev in repo.Developers)
+					{
+						session.Delete(dev);
+					}
+					trans.Commit();
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					session.Delete(repo);
+					trans.Commit();
+				}
+			}
+		}
+		#endregion
 	}
 
 	public class RepositoryEntityMap : ClassMap<RepositoryEntity>
@@ -152,6 +264,7 @@ namespace Util.Data.Entities
 
 			this.HasMany<DeveloperEntity>(x => x.Developers).Cascade.Lock();
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
+			this.HasMany<CommitPairEntity>(x => x.CommitPairs).Cascade.Lock();
 			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
 
 			this.References<ProjectEntity>(x => x.Project).Unique();

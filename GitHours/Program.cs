@@ -37,6 +37,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Util;
+using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -100,10 +101,35 @@ namespace GitHours
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
+				// First let's create an actual temp-directory in the folder specified:
+				var tempDirectory = new DirectoryInfo(Path.Combine(
+					options.TempDirectory ?? Path.GetTempPath(), "GitDensity"));
+				if (tempDirectory.Exists) { tempDirectory.Delete(true); }
+				tempDirectory.Create();
+				options.TempDirectory = tempDirectory.FullName;
+				logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
+
 				Repository repository = null;
 				try
 				{
-					repository = options.RepoPath.OpenRepository(options.TempDirectory);
+					String useRepoName = null;
+					if (options.RepoPath.IsHttpUrl())
+					{
+						var project = ProjectEntity.FromCloneUrl(options.RepoPath);
+						useRepoName = !project.Name.IsNullOrEmptyOrWhiteSpace() &&
+							!project.Owner.IsNullOrEmptyOrWhiteSpace() ?
+							$"{project.Name}_{project.Owner}" : null;
+					}
+
+					var repoTempPath = Path.Combine(
+						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"GitDensity_repos");
+					if (!Directory.Exists(repoTempPath))
+					{
+						Directory.CreateDirectory(repoTempPath);
+					}
+
+					repository = options.RepoPath.OpenRepository
+						(repoTempPath, useRepoName: useRepoName);
 				}
 				catch (Exception ex)
 				{
@@ -130,7 +156,8 @@ namespace GitHours
 
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
-						var obj = JsonConvert.SerializeObject(gitHours.Analyze(includeHourSpans: options.IncludeHoursSpans), Formatting.Indented);
+						var obj = JsonConvert.SerializeObject(gitHours.Analyze(
+							hoursSpansDetailLevel: options.IncludeHoursSpans ? Hours.HoursSpansDetailLevel.Standard : Hours.HoursSpansDetailLevel.None), Formatting.Indented);
 						if (outputToConsole)
 						{
 							Console.Write(obj);

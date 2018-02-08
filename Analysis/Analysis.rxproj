@@ -11,6 +11,9 @@
   <PropertyGroup>
     <StartupFile>script.R</StartupFile>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <SettingsFile>~/Settings.R</SettingsFile>
+  </PropertyGroup>
   <ProjectExtensions>
     <VisualStudio>
       <UserProperties />
