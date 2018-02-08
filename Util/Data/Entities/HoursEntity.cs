@@ -53,6 +53,24 @@ namespace Util.Data.Entities
 		/// </summary>
 		public virtual Double HoursTotal { get; set; }
 
+		/// <summary>
+		/// Indicates whether this entity is is the developer's first logging across
+		/// the commits that were analyzed for the developer.
+		/// </summary>
+		[Indexed]
+		public virtual Boolean IsInitial { get; set; }
+
+		/// <summary>
+		/// Indicates whether this entity is the logging of the first commit within
+		/// a session. A new session begins, if the maximum difference between commits
+		/// is exceeded in time.
+		/// </summary>
+		[Indexed]
+		public virtual Boolean IsSessionInitial { get; set; }
+
+		/// <summary>
+		/// The <see cref="DeveloperEntity"/> this entity belongs to.
+		/// </summary>
 		public virtual DeveloperEntity Developer { get; set; }
 
 		/// <summary>
@@ -77,6 +95,11 @@ namespace Util.Data.Entities
 		/// changes).
 		/// </summary>
 		public virtual CommitEntity InitialCommit { get; set; }
+
+		/// <summary>
+		/// Used to reference the type of hour logged.
+		/// </summary>
+		public virtual HoursTypeEntity HoursType { get; set; }
 	}
 
 	public class HoursEntityMap : ClassMap<HoursEntity>
@@ -89,11 +112,16 @@ namespace Util.Data.Entities
 
 			this.Map(x => x.Hours).Not.Nullable();
 			this.Map(x => x.HoursTotal).Not.Nullable();
+			this.Map(x => x.IsInitial).Not.Nullable();
+			this.Map(x => x.IsSessionInitial).Not.Nullable();
 
 			this.References<DeveloperEntity>(x => x.Developer).Not.Nullable();
 			this.References<CommitEntity>(x => x.CommitSince).Nullable();
-			this.References<CommitEntity>(x => x.CommitUntil).Not.Nullable();
+			this.References<CommitEntity>(x => x.CommitUntil).Not.Nullable()
+				.UniqueKey("UNQ_HOURS_LOGGING");
 			this.References<CommitEntity>(x => x.InitialCommit).Not.Nullable();
+			this.References<HoursTypeEntity>(x => x.HoursType).Not.Nullable()
+				.UniqueKey("UNQ_HOURS_LOGGING");
 		}
 	}
 }
