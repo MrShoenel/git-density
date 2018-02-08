@@ -1,10 +1,10 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2017 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
-/// This file is part of the project GitDensity. All files in this project,
+/// This file is part of the project Util. All files in this project,
 /// if not noted otherwise, are licensed under the MIT-license.
 ///
 /// ---------------------------------------------------------------------------------

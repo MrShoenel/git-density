@@ -1,13 +1,14 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2017 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
-/// This file is part of the project GitDensity. All files in this project,
+/// This file is part of the project Util. All files in this project,
 /// if not noted otherwise, are licensed under the MIT-license.
 ///
 /// ---------------------------------------------------------------------------------
+///
 /// Permission is hereby granted, free of charge, to any person obtaining a
 /// copy of this software and associated documentation files (the "Software"),
 /// to deal in the Software without restriction, including without limitation
@@ -24,8 +25,9 @@
 /// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 /// WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 /// CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+///
 /// ---------------------------------------------------------------------------------
-
+///
 using FluentNHibernate.Cfg.Db;
 using Microsoft.Extensions.Logging;
 using NHibernate;

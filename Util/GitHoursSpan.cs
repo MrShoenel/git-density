@@ -4,7 +4,7 @@
 ///
 /// https://github.com/MrShoenel/git-density
 ///
-/// This file is part of the project GitHours. All files in this project,
+/// This file is part of the project Util. All files in this project,
 /// if not noted otherwise, are licensed under the MIT-license.
 ///
 /// ---------------------------------------------------------------------------------

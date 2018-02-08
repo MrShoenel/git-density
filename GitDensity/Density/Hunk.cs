@@ -41,8 +41,8 @@ namespace GitDensity.Density
 	/// <summary>
 	/// Represents lines added/removed/changed within a diff. Note that a diff
 	/// can consist of multiple <see cref="Hunk"/>s for one file. Use
-	/// <see cref="HunksForPatch(PatchEntryChanges)"/> to obtain all hunks for
-	/// a <see cref="PatchEntryChanges"/> for one file.
+	/// <see cref="HunksForPatch(PatchEntryChanges, DirectoryInfo, DirectoryInfo)"/>
+	/// to obtain all hunks for a <see cref="PatchEntryChanges"/> for one file.
 	/// </summary>
 	internal class Hunk
 	{
