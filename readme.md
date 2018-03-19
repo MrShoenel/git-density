@@ -2,7 +2,7 @@
 
 Git Density (`git-density`) is a tool to analyze `git`-repositories with the goal of detecting the source code density.
 
-It was developed during the research phase of the sort technical paper and poster "_A changeset-based approach to assess source code density and developer efficacy_" [1].
+It was developed during the research phase of the short technical paper and poster "_A changeset-based approach to assess source code density and developer efficacy_" [1].
 
 ## Building and running
 
@@ -18,6 +18,8 @@ ___
 
 
 
-[1] S. Hönel, M. Ericsson, W. Löwe, and A. Wingkvist, "Poster and 2 pp paper: A changeset-based approach to assess source code density and developer efficacy." _Proceedings of International Conference of Software Engineering (ICSE)_, 2018 (To appear)
+[1] S. Hönel, M. Ericsson, W. Löwe, and A. Wingkvist, "Poster and 2 pp paper: A changeset-based approach to assess source code density and developer efficacy." _Proceedings of International Conference of Software Engineering (ICSE)_, 2018 (To appear), https://www.icse2018.org/event/icse-2018-posters-poster-a-changeset-based-approach-to-assess-source-code-density-and-developer-efficacy
+
 [2] Git hours. "Estimate time spent on a Git repository." https://github.com/kimmobrunfeldt/git-hours
+
 [3] QTools Clone Detection. http://qtools.se/
