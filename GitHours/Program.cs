@@ -29,14 +29,6 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitHours
 {
-	internal enum ExitCodes : Int32
-	{
-		OK = 0,
-		RepoInvalid = -2,
-		UsageInvalid = -3,
-		OtherError = -4
-	}
-
 	/// <summary>
 	/// Uses command-line options from <see cref="CommandLineOptions"/>. This program
 	/// outputs its result as formatted JSON.
@@ -193,7 +185,7 @@ namespace GitHours
 		[Option('i', "include-hours-spans", Required = false, DefaultValue = false, HelpText = "Whether or not to include Hours-Spans. If present, then the result will include the amount of hours spent between each pair of commits for each developer.")]
 		public Boolean IncludeHoursSpans { get; set; }
 
-		[Option('s', "since", Required = false,HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]

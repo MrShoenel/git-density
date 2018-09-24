@@ -38,15 +38,6 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitDensity
 {
-	internal enum ExitCodes : Int32
-	{
-		OK = 0,
-		ConfigError = -1,
-		RepoInvalid = -2,
-		UsageInvalid = -3,
-		CmdError = -4
-	}
-
 	internal class Program
 	{
 		/// <summary>
