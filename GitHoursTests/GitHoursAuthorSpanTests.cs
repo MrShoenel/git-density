@@ -34,7 +34,7 @@ namespace GitHoursTests
 		[TestMethod]
 		public void TestAggregateHoursStats()
 		{
-			using (var span = new Util.GitHoursSpan(SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
+			using (var span = new Util.GitCommitSpan(SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
 			{
 				var analysis = new GitHours.Hours.GitHours(span);
 				var result = analysis.Analyze(hoursSpansDetailLevel: GitHours.Hours.HoursSpansDetailLevel.Standard);

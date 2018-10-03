@@ -50,17 +50,17 @@ namespace GitHours.Hours
 
 		public UInt32 FirstCommitAdditionInMinutes { get; protected set; } = 2 * 60;
 
-		public GitHoursSpan GitHoursSpan { get; protected set; }
+		public GitCommitSpan GitCommitSpan { get; protected set; }
 
 		/// <summary>
 		/// Constructor for the <see cref="GitHours"/> class.
 		/// </summary>
-		/// <param name="gitHoursSpan">Contains the (time-)span of commits to include.</param>
+		/// <param name="gitCommitSpan">Contains the (time-)span of commits to include.</param>
 		/// <param name="maxCommitDiffInMinutes"></param>
 		/// <param name="firstCommitAdditionInMinutes"></param>
-		public GitHours(GitHoursSpan gitHoursSpan, UInt32? maxCommitDiffInMinutes = null, UInt32? firstCommitAdditionInMinutes = null)
+		public GitHours(GitCommitSpan gitCommitSpan, UInt32? maxCommitDiffInMinutes = null, UInt32? firstCommitAdditionInMinutes = null)
 		{
-			this.GitHoursSpan = gitHoursSpan;
+			this.GitCommitSpan = gitCommitSpan;
 
 			if (maxCommitDiffInMinutes.HasValue)
 			{
@@ -98,7 +98,7 @@ namespace GitHours.Hours
 		/// <returns></returns>
 		public GitHoursAnalysisResult Analyze(RepositoryEntity repositoryEntity = null, HoursSpansDetailLevel hoursSpansDetailLevel = HoursSpansDetailLevel.Standard)
 		{
-			var commitsByDeveloper = this.GitHoursSpan.FilteredCommits.GroupByDeveloper(repositoryEntity);
+			var commitsByDeveloper = this.GitCommitSpan.FilteredCommits.GroupByDeveloper(repositoryEntity);
 			//var commitsByEmail = this.commits.GroupBy(commit => commit.Author?.Email ?? "unknown"); // that's how it's done in the original script
 			var authorStats = commitsByDeveloper.Where(commitGroup => commitGroup.Any()).Select(commitGroup =>
 			{
@@ -125,15 +125,15 @@ namespace GitHours.Hours
 			{
 				TotalHours = authorStats.Aggregate(
 					0d, (sum, authorStat) => sum + authorStat.HoursTotal),
-				TotalCommits = (UInt32)this.GitHoursSpan.FilteredCommits.Count,
+				TotalCommits = (UInt32)this.GitCommitSpan.FilteredCommits.Count,
 				AuthorStats = authorStats.OrderBy(aw => aw.HoursTotal),
 
 				FirstCommitAdditionInMinutes = this.FirstCommitAdditionInMinutes,
-				Sha1FirstCommit = this.GitHoursSpan.FilteredCommits.FirstOrDefault()?.Sha,
-				Sha1LastCommit = this.GitHoursSpan.FilteredCommits.LastOrDefault()?.Sha,
+				Sha1FirstCommit = this.GitCommitSpan.FilteredCommits.FirstOrDefault()?.Sha,
+				Sha1LastCommit = this.GitCommitSpan.FilteredCommits.LastOrDefault()?.Sha,
 				MaxCommitDiffInMinutes = this.MaxCommitDiffInMinutes,
-				RepositoryPath = this.GitHoursSpan.Repository.Info.WorkingDirectory,
-				GitHoursSpan = this.GitHoursSpan
+				RepositoryPath = this.GitCommitSpan.Repository.Info.WorkingDirectory,
+				GitCommitSpan = this.GitCommitSpan
 			};
 		}
 

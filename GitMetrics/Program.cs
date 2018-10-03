@@ -4,7 +4,7 @@
 ///
 /// https://github.com/MrShoenel/git-density
 ///
-/// This file is part of the project GitHours. All files in this project,
+/// This file is part of the project GitMetrics. All files in this project,
 /// if not noted otherwise, are licensed under the GPLv3-license. You will
 /// find a copy of this file in the project's root directory.
 ///
@@ -19,20 +19,19 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
-namespace GitHours
+namespace GitMetrics
 {
-	/// <summary>
-	/// Uses command-line options from <see cref="CommandLineOptions"/>. This program
-	/// outputs its result as formatted JSON.
-	/// </summary>
 	class Program
 	{
 		/// <summary>
@@ -56,10 +55,10 @@ namespace GitHours
 			};
 		}
 
-		private static BaseLogger<Program> logger = CreateLogger<Program>();
+		private static readonly BaseLogger<Program> logger = CreateLogger<Program>();
 
 		/// <summary>
-		/// Main entry point of application git-hours.
+		/// Main entry point of application git-metrics.
 		/// </summary>
 		/// <param name="args"></param>
 		static void Main(string[] args)
@@ -129,12 +128,10 @@ namespace GitHours
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
-						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
-
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
-						var obj = JsonConvert.SerializeObject(gitHours.Analyze(
-							hoursSpansDetailLevel: options.IncludeHoursSpans ? Hours.HoursSpansDetailLevel.Standard : Hours.HoursSpansDetailLevel.None), Formatting.Indented);
+						var obj = JsonConvert.SerializeObject(new Object(), Formatting.Indented); /* JsonConvert.SerializeObject(gitHours.Analyze(
+							hoursSpansDetailLevel: options.IncludeHoursSpans ? Hours.HoursSpansDetailLevel.Standard : Hours.HoursSpansDetailLevel.None), Formatting.Indented);*/
 						if (outputToConsole)
 						{
 							Console.Write(obj);
@@ -164,6 +161,8 @@ namespace GitHours
 	}
 
 
+
+
 	/// <summary>
 	/// Class that represents all options that can be supplied using
 	/// the command-line interface of this application.
@@ -173,17 +172,8 @@ namespace GitHours
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
 		public String RepoPath { get; set; }
 
-		[Option('d', "max-commit-diff", Required = false, DefaultValue = 120u, HelpText = "Optional. Maximum difference in minutes between commits counted to one session")]
-		public UInt32 MaxCommitDiff { get; set; }
-
-		[Option('a', "first-commit-add", Required = false, DefaultValue = 120u, HelpText = "Optional. How many minutes first commit of session should add to total")]
-		public UInt32 FirstCommitAdd { get; set; }
-
 		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
 		public String OutputFile { get; set; }
-
-		[Option('i', "include-hours-spans", Required = false, DefaultValue = false, HelpText = "Whether or not to include Hours-Spans. If present, then the result will include the amount of hours spent between each pair of commits for each developer.")]
-		public Boolean IncludeHoursSpans { get; set; }
 
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
