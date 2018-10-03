@@ -10,9 +10,26 @@ To build the application, restore all _nuget_ packages and simply rebuild all pr
 
 Run `GitDensity.exe`, which has an exhaustive command line interface for analyzing repositories. This implementation also includes a reimplementation of `git-hours` [2], runnable using `GitHours.exe` (with a similar command line interface).
 
-## Requirement of clone detection
-
+## Requirement of external tools
 This application relies on an external executable to run clone detection. Currently, it uses a local version of Softwerk's clone detection service [3]. To obtain a copy of this tool, please contact welf.lowe@lnu.se.
+
+As for `git-metrics`, the application relies on another tool that supports currently obtaining software metrics from Java applications. Please contact me if you intend to use Git Metrics and require the tool.
+
+
+# Structure of the applications
+Git Density is a solution that currently features these three applications:
+* __`git-density`__: A new metric to detect the density of software projects.
+  * When running `git-density` on a repository, it will compute the density metric __as well as__ `git-hours` and also attempt to obtain the project's metrics at each commit using `git-metrics`.
+  * Since the data produced by `git-density` is exhaustive and not plain, it must use a relational database as backend and does not support (yet) the output to file/stdout. All of its results are stored in the database for each repository.
+  * It is possible to remove all previous analysis results for one repository (please refer to the command-line help).
+* __`git-hours`__: A C# reimplementation of git-hours with some more features (like timespans between commits or time spent by each developer)
+  * It comes also with its own command-line interface and supports `JSON`-formatted output. This useful for just analyzing the time spent on a repository.
+  * `git-hours` is also part of the full analysis as run by `git-density`.
+* __`git-metrics`__:  A C# wrapper around another tool that can build Java-based projects and extract common software metrics at each commit.
+  * It comes also with its own command-line interface and supports `JSON`-formatted output (like `git-hours`).
+  * It is part of the full analysis of `git-density` as well.
+
+All applications can be run standalone, but may also be included as references, as they all feature a public API.
 
 ___
 
