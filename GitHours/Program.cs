@@ -127,7 +127,7 @@ namespace GitHours
 				try
 				{
 					using (repository)
-					using (var span = new GitHoursSpan(repository, options.Since, options.Until))
+					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 

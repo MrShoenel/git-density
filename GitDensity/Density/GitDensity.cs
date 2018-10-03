@@ -45,7 +45,7 @@ namespace GitDensity.Density
 		public static readonly String[] DefaultFileTypeExtensions =
 			new [] { "js", "ts", "java", "cs", "php", "phtml", "php3", "php4", "php5", "xml" };
 
-		public GitHoursSpan GitHoursSpan { get; protected internal set; }
+		public GitCommitSpan GitCommitSpan { get; protected internal set; }
 
 		public Repository Repository { get; protected internal set; }
 
@@ -74,7 +74,7 @@ namespace GitDensity.Density
 		/// <summary>
 		/// Constructs a new Analysis.
 		/// </summary>
-		/// <param name="gitHoursSpan">Represents the span of commits to be analyzed.</param>
+		/// <param name="gitCommitSpan">Represents the span of commits to be analyzed.</param>
 		/// <param name="languages">Programming-languages to analyze.</param>
 		/// will compute git-hours for each type.</param>
 		/// <param name="skipInitialCommit">Skip the initial commit (the one with no parent)
@@ -83,7 +83,7 @@ namespace GitDensity.Density
 		/// <param name="fileTypeExtensions">This list represents files that shall be analyzed.
 		/// If null, defaults to <see cref="DefaultFileTypeExtensions"/>.</param>
 		/// <param name="tempPath">A temporary path to store intermediate results in.</param>
-		public GitDensity(GitHoursSpan gitHoursSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
+		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
 		{
 			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
 			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
@@ -91,8 +91,8 @@ namespace GitDensity.Density
 			this.hoursTypes = new Dictionary<HoursTypeConfiguration, HoursTypeEntity>();
 			this.roHoursTypes = new ReadOnlyDictionary<HoursTypeConfiguration, HoursTypeEntity>(this.hoursTypes);
 
-			this.GitHoursSpan = gitHoursSpan;
-			this.Repository = gitHoursSpan.Repository;
+			this.GitCommitSpan = gitCommitSpan;
+			this.Repository = gitCommitSpan.Repository;
 			this.ProgrammingLanguages = languages.ToArray();
 			//this.HoursTypes = new HashSet<HoursTypeConfiguration>(hoursTypes);
 			this.TempDirectory = new DirectoryInfo(tempPath ?? Path.GetTempPath());
@@ -112,7 +112,7 @@ namespace GitDensity.Density
 			}
 
 			logger.LogInformation("Analyzing {0} commits, from {1} to {2} (inclusive)",
-				gitHoursSpan.FilteredCommits.Count, gitHoursSpan.SinceAsString, gitHoursSpan.UntilAsString);
+				gitCommitSpan.FilteredCommits.Count, gitCommitSpan.SinceAsString, gitCommitSpan.UntilAsString);
 		}
 
 		/// <summary>
@@ -206,13 +206,13 @@ namespace GitDensity.Density
 
 			var dirOld = "old";
 			var dirNew = "new";
-			var repoEntity = this.Repository.AsEntity(this.GitHoursSpan);
-			var developers = this.GitHoursSpan.FilteredCommits.GroupByDeveloperAsSignatures(repoEntity);
+			var repoEntity = this.Repository.AsEntity(this.GitCommitSpan);
+			var developers = this.GitCommitSpan.FilteredCommits.GroupByDeveloperAsSignatures(repoEntity);
 			repoEntity.AddDevelopers(new HashSet<DeveloperEntity>(developers.Values));
-			var commits = this.GitHoursSpan.FilteredCommits.Select(commit =>
+			var commits = this.GitCommitSpan.FilteredCommits.Select(commit =>
 				commit.AsEntity(repoEntity, developers[commit.Author]))
 				.ToDictionary(commit => commit.HashSHA1, commit => commit);
-			var pairs = this.GitHoursSpan.CommitPairs(
+			var pairs = this.GitCommitSpan.CommitPairs(
 				this.SkipInitialCommit, this.SkipMergeCommits).ToList();
 			var similarities = new ReadOnlyDictionary<PropertyInfo, INormalizedStringDistance>(this.SimilarityMeasures.Select(kv => kv.Value).ToDictionary(tuple => tuple.Item1, tuple => tuple.Item2));
 			var similaritiesEmpty = new Dictionary<PropertyInfo, INormalizedStringDistance>();
@@ -242,7 +242,7 @@ namespace GitDensity.Density
 				{
 					var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
 						new GitHours.Hours.GitHours(
-							this.GitHoursSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
+							this.GitCommitSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
 							.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
 							.AuthorStats.ToDictionary(
 								@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
@@ -472,7 +472,7 @@ namespace GitDensity.Density
 				if (disposing)
 				{
 					this.TempDirectory.Clear();
-					this.GitHoursSpan.Dispose();
+					this.GitCommitSpan.Dispose();
 				}
 
 				this.disposedValue = true;

@@ -60,7 +60,7 @@ namespace GitHours.Hours
 		[JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
 		public String Sha1LastCommit { get; protected internal set; }
 
-		public GitHoursSpan GitHoursSpan { get; protected internal set; }
+		public GitCommitSpan GitCommitSpan { get; protected internal set; }
 
 		public String RepositoryPath { get; protected internal set; }
 

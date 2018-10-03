@@ -30,7 +30,7 @@ namespace GitHoursTests
 		[TestMethod]
 		public void TestEstimatesWithHelper()
 		{
-			using (var span = new Util.GitHoursSpan(GitHoursAuthorSpanTests.SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
+			using (var span = new Util.GitCommitSpan(GitHoursAuthorSpanTests.SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
 			{
 				var analysis = new GitHours.Hours.GitHours(span);
 
