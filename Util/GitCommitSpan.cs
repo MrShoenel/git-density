@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian H�nel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
