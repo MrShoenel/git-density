@@ -40,7 +40,12 @@ namespace Util.Data.Entities
 
 		public virtual RepositoryEntity Repository { get; set; }
 
-		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+		/// <summary>
+		/// Refers to a set of contributions within this commit in the shape of
+		/// <see cref="TreeEntryContributionEntity"/> objects.
+		/// </summary>
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; }
+			= new HashSet<TreeEntryContributionEntity>();
 
 		private readonly Object padLock = new Object();
 

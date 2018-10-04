@@ -22,28 +22,55 @@ using Util.Similarity;
 
 namespace Util.Data.Entities
 {
+	/// <summary>
+	/// This entity represents a file in a changeset and the kind of changes that were
+	/// made to it (e.g. added, deleted, changed etc.). Therefore, the file's path before
+	/// and after the operation is retained. Since a <see cref="TreeEntryChangesEntity"/>
+	/// depicts the changes to a file between two commits, it also references the pair
+	/// of commits (<see cref="CommitPairEntity"/>).
+	/// </summary>
 	public class TreeEntryChangesEntity
 	{
+		/// <summary>
+		/// An unsigned, auto-increment ID.
+		/// </summary>
 		public virtual UInt32 ID { get; set; }
 
+		/// <summary>
+		/// Refers to the kind of change made to the file.
+		/// </summary>
 		[Indexed]
 		public virtual ChangeKind Status { get; set; }
 
+		/// <summary>
+		/// The path to the file within the repository before the change.
+		/// </summary>
 		public virtual String PathOld { get; set; }
 
+		/// <summary>
+		/// The path to the file within the repository after the change.
+		/// </summary>
 		public virtual String PathNew { get; set; }
 
+		/// <summary>
+		/// The related <see cref="CommitPairEntity"/>.
+		/// </summary>
 		public virtual CommitPairEntity CommitPair { get; set; }
 
-		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
+		/// <summary>
+		/// A set of <see cref="FileBlockEntity"/> objects that represent changes to
+		/// the file on block-level.
+		/// </summary>
+		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+			= new HashSet<FileBlockEntity>();
 
-		///// <summary>
-		///// For each <see cref="SimilarityMeasurementType"/>, this entity references a
-		///// different <see cref="TreeEntryChangesMetricsEntity"/>.
-		///// </summary>
-		//public virtual IDictionary<SimilarityMeasurementType, TreeEntryChangesMetricsEntity> TreeEntryChangesMetrics { get; set; } = new Dictionary<SimilarityMeasurementType, TreeEntryChangesMetricsEntity>();
-
-		public virtual ISet<TreeEntryChangesMetricsEntity> TreeEntryChangesMetrics { get; set; } = new HashSet<TreeEntryChangesMetricsEntity>();
+		/// <summary>
+		/// A set of related <see cref="TreeEntryChangesMetricsEntity"/> for this entity.
+		/// For each similarity-measurement, we may get different metrics, that is why we
+		/// have a set here.
+		/// </summary>
+		public virtual ISet<TreeEntryChangesMetricsEntity> TreeEntryChangesMetrics { get; set; }
+			= new HashSet<TreeEntryChangesMetricsEntity>();
 
 		private readonly Object padLock = new Object();
 

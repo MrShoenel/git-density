@@ -20,6 +20,12 @@ using Util.Extensions;
 
 namespace Util.Data.Entities
 {
+	/// <summary>
+	/// A <see cref="CommitPairEntity"/> glues together two arbitrary commits, so that
+	/// changes between them can be quantified. The <see cref="ChildCommit"/> refers to
+	/// a previous commit, while <see cref="ParentCommit"/> represents a commit that
+	/// happened later in time.
+	/// </summary>
 	public class CommitPairEntity
 	{
 		public virtual String ID { get; set; }
@@ -30,11 +36,17 @@ namespace Util.Data.Entities
 
 		public virtual CommitEntity ParentCommit { get; set; }
 
-		public virtual ISet<TreeEntryChangesEntity> TreeEntryChanges { get; set; } = new HashSet<TreeEntryChangesEntity>();
+		/// <summary>
+		/// Refers to a set of related changes between the two enclosed commits.
+		/// </summary>
+		public virtual ISet<TreeEntryChangesEntity> TreeEntryChanges { get; set; }
+			= new HashSet<TreeEntryChangesEntity>();
 
-		public virtual ISet<FileBlockEntity> FileBlocks { get; set; } = new HashSet<FileBlockEntity>();
+		public virtual ISet<FileBlockEntity> FileBlocks { get; set; }
+			= new HashSet<FileBlockEntity>();
 
-		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; }
+			= new HashSet<TreeEntryContributionEntity>();
 
 		private readonly Object padLock = new Object();
 

@@ -21,6 +21,10 @@ using static Util.Extensions.RepositoryExtensions;
 
 namespace Util.Data.Entities
 {
+	/// <summary>
+	/// A <see cref="DeveloperEntity"/> represents a single developer within a repository.
+	/// It refers to all the developer's commits, contributions within them and spent time.
+	/// </summary>
 	public class DeveloperEntity : IEquatable<DeveloperEntity>
 	{
 		public virtual UInt32 ID { get; set; }
@@ -35,7 +39,8 @@ namespace Util.Data.Entities
 
 		public virtual ISet<HoursEntity> Hours { get; set; } = new HashSet<HoursEntity>();
 
-		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; }
+			= new HashSet<TreeEntryContributionEntity>();
 
 		private readonly Object padLock = new Object();
 
@@ -94,6 +99,11 @@ namespace Util.Data.Entities
 			return this;
 		}
 
+		/// <summary>
+		/// Comapres two <see cref="DeveloperEntity"/> objects.
+		/// </summary>
+		/// <param name="other"></param>
+		/// <returns>True, iff the other name or email is equal to this' email or name.</returns>
 		public virtual bool Equals(DeveloperEntity other)
 		{
 			return other is DeveloperEntity && this.Name == other.Name && this.Email == other.Email;

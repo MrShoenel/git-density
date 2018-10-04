@@ -22,10 +22,14 @@ namespace Util.Data.Entities
 {
 	/// <summary>
 	/// Has a 1-to-1 relation to a <see cref="TreeEntryChangesEntity"/> and holds
-	/// (aggregated) metrics for it.
+	/// (aggregated) metrics for it. For each kind of similarity-measurement, one
+	/// instance is stored (<see cref="SimilarityMeasurementType"/>).
 	/// </summary>
 	public class TreeEntryChangesMetricsEntity
 	{
+		/// <summary>
+		/// An unsigned, auto-increment ID.
+		/// </summary>
 		public virtual UInt32 ID { get; set; }
 
 		/// <summary>
