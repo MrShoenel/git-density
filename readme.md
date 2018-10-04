@@ -22,7 +22,7 @@ Please use the following BibTeX to cite this:
 <pre>
 @inproceedings{honel2018changeset,
   title={A changeset-based approach to assess source code density and developer efficacy},
-  author={H{\"o}nel, Sebastian and Ericsson, Morgan and L{\"o}we, Weif and Wingkvist, Anna},
+  author={H{\"o}nel, Sebastian and Ericsson, Morgan and L{\"o}we, Welf and Wingkvist, Anna},
   booktitle={Proceedings of the 40th International Conference on Software Engineering: Companion Proceeedings},
   pages={220--221},
   year={2018},
