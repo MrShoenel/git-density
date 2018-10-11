@@ -93,6 +93,8 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QualityAnalyzer\IMetricsAnalysisResult.cs" />
+    <Compile Include="QualityAnalyzer\IMetricsAnalyzer.cs" />
     <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonEntity.cs" />
     <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonMetrics.cs" />
     <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonOutput.cs" />
@@ -107,6 +109,7 @@
       <Name>Util</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

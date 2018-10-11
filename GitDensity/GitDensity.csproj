@@ -196,6 +196,10 @@
       <Project>{48fd0158-7c1e-45b0-9e0e-17af2bb8c3f6}</Project>
       <Name>GitHours</Name>
     </ProjectReference>
+    <ProjectReference Include="..\GitMetrics\GitMetrics.csproj">
+      <Project>{ff0514f8-c5e8-4148-a6bf-f9fee96795ba}</Project>
+      <Name>GitMetrics</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Util\Util.csproj">
       <Project>{459dd3d3-8a12-4f92-9df6-f1e6296cc6d6}</Project>
       <Name>Util</Name>
