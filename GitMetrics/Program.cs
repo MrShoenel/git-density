@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
@@ -63,6 +64,8 @@ namespace GitMetrics
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))
