@@ -39,5 +39,9 @@ namespace GitMetrics.QualityAnalyzer
 		[JsonProperty(PropertyName = "allMetricsById", Required = Required.Always)]
 		public IDictionary<String, String> AllMetricsById { get; set; }
 			= new Dictionary<String, String>();
+
+		[JsonProperty(PropertyName = "entities", Required = Required.Always)]
+		public ICollection<JsonEntity> Entities { get; set; }
+			= new List<JsonEntity>();
 	}
 }
