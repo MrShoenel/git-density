@@ -14,11 +14,13 @@
 /// ---------------------------------------------------------------------------------
 ///
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Util.Data.Entities;
 
 namespace GitMetrics.QualityAnalyzer
 {
@@ -28,7 +30,8 @@ namespace GitMetrics.QualityAnalyzer
 	public class JsonEntity
 	{
 		[JsonProperty(PropertyName = "type", Required = Required.Always)]
-		public Int32 Type { get; set; }
+		[JsonConverter(typeof(StringEnumConverter))]
+		public OutputEntityType Type { get; set; }
 
 		[JsonProperty(PropertyName = "name", Required = Required.Always)]
 		public String Name { get; set; } = String.Empty;
