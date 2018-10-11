@@ -202,8 +202,11 @@
     <Compile Include="Configuration.cs" />
     <Compile Include="Data\DataFactory.cs" />
     <Compile Include="Data\Entities\CommitEntity.cs" />
+    <Compile Include="Data\Entities\CommitMetricsStatusEntity.cs" />
     <Compile Include="Data\Entities\CommitPairEntity.cs" />
     <Compile Include="Data\Entities\HoursTypeEntity.cs" />
+    <Compile Include="Data\Entities\MetricEntity.cs" />
+    <Compile Include="Data\Entities\MetricTypeEntity.cs" />
     <Compile Include="Data\Entities\TreeEntryContributionEntity.cs" />
     <Compile Include="Data\Entities\DeveloperEntity.cs" />
     <Compile Include="Data\Entities\FileBlockEntity.cs" />
