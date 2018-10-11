@@ -14,6 +14,10 @@ Run `GitDensity.exe`, which has an exhaustive command line interface for analyzi
 
 This application relies on an external executable to run clone detection. Currently, it uses a local version of Softwerk's clone detection service [3]. To obtain a copy of this tool, please contact welf.lowe@lnu.se.
 
+## Caveats
+
+If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate. You may also use other types of databases, as Git Density supports these: MsSQL2000, MsSQL2005, MsSQL2008, MsSQL2012, MySQL, Oracle10, Oracle9, PgSQL81, PgSQL82, SQLite, SQLiteTemp.
+
 ___
 
 
