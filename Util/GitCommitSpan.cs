@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2018 Sebastian H�nel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -16,6 +16,7 @@
 using LibGit2Sharp;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace Util
 	/// to another point in time or <see cref="Commit"/> and thus represents a range
 	/// of <see cref="Commit"/>s.
 	/// </summary>
-	public class GitCommitSpan : IDisposable
+	public class GitCommitSpan : IDisposable, IEnumerable<Commit>
 	{
 		/// <summary>
 		/// Used for parsing the date/time, if given as string. If such date/times are
@@ -203,6 +204,26 @@ namespace Util
 		{
 			Dispose(true);
 
+		}
+		#endregion
+
+		#region IEnumerable Support
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator{Commit}"/></returns>
+		public IEnumerator<Commit> GetEnumerator()
+		{
+			return this.FilteredCommits.GetEnumerator();
+		}
+
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator"/></returns>
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 		#endregion
 	}
