@@ -93,9 +93,9 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QualityAnalyzer\JsonEntity.cs" />
-    <Compile Include="QualityAnalyzer\JsonMetrics.cs" />
-    <Compile Include="QualityAnalyzer\JsonOutput.cs" />
+    <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonEntity.cs" />
+    <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonMetrics.cs" />
+    <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonOutput.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -14,40 +14,30 @@
 /// ---------------------------------------------------------------------------------
 ///
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Util.Data.Entities;
 
-namespace GitMetrics.QualityAnalyzer
+namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 {
 	/// <summary>
 	/// Used to deserialize within class <see cref="JsonOutput"/>.
 	/// </summary>
-	public class JsonMetrics
+	public class JsonEntity
 	{
-		[JsonProperty(PropertyName = "metricName", Required = Required.Always)]
+		[JsonProperty(PropertyName = "type", Required = Required.Always)]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public OutputEntityType Type { get; set; }
+
+		[JsonProperty(PropertyName = "name", Required = Required.Always)]
 		public String Name { get; set; } = String.Empty;
 
-		[JsonProperty(PropertyName = "metricDescription", Required = Required.Always)]
-		public String Description { get; set; } = String.Empty;
-
-		[JsonProperty(PropertyName = "isRoot", Required = Required.Always)]
-		public Boolean IsRoot { get; set; }
-
-		[JsonProperty(PropertyName = "isPublic", Required = Required.Always)]
-		public Boolean IsPublic { get; set; }
-
-		[JsonProperty(PropertyName = "precision", Required = Required.Always)]
-		public Double Precision { get; set; }
-
-		[JsonProperty(PropertyName = "children", Required = Required.Default)]
-		public JsonMetrics[] Children { get; set; }
-			= new JsonMetrics[0];
-
-		[JsonProperty(PropertyName = "childrenWeights", Required = Required.Default)]
-		public Double[] ChildrenWeights { get; set; }
-			= new Double[0];
+		[JsonProperty(PropertyName = "metricsValues", Required = Required.Always)]
+		public IDictionary<String, Double> MetricsValues { get; set; }
+			= new Dictionary<String, Double>();
 	}
 }

@@ -20,7 +20,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GitMetrics.QualityAnalyzer
+namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 {
 	/// <summary>
 	/// This class is the counterpart to the implementation in Java and its JSON-
