@@ -67,7 +67,7 @@ namespace Util.Data.Entities
 		public static HoursTypeEntity ForSettings(UInt32 maxCommitDiffInMinutes, UInt32 firstCommitAddMinutes)
 		{
 			// Use a Mutex across all processes
-			using (var mutex = new Mutex(false, $"mutex_{nameof(HoursEntity)}"))
+			using (var mutex = new Mutex(false, $"mutex_{nameof(HoursTypeEntity)}"))
 			using (var session = DataFactory.Instance.OpenSession())
 			using (var trans = session.BeginTransaction(System.Data.IsolationLevel.Serializable))
 			{

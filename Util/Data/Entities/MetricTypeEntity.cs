@@ -93,7 +93,7 @@ namespace Util.Data.Entities
 			const double epsilonAccuracy = 1e-12;
 
 			// Use a Mutex across all processes
-			using (var mutex = new Mutex(false, $"mutex_{nameof(HoursEntity)}"))
+			using (var mutex = new Mutex(false, $"mutex_{nameof(MetricTypeEntity)}"))
 			using (var session = DataFactory.Instance.OpenSession())
 			using (var trans = session.BeginTransaction(System.Data.IsolationLevel.Serializable))
 			{
