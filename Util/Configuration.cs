@@ -187,6 +187,13 @@ namespace Util
 		public Dictionary<Similarity.SimilarityMeasurementType, Boolean> EnabledSimilarityMeasurements { get; set; }
 
 		/// <summary>
+		/// The type-name of the analyzer-implementation to use. If this property is missing or set
+		/// to null, Git-Metrics may use the first available implementation.
+		/// </summary>
+		[JsonProperty(Required = Required.AllowNull, PropertyName = "useMetricsAnalyzer")]
+		public String UseMetricsAnalyzer { get; set; } = null;
+
+		/// <summary>
 		/// A set of <see cref="HoursTypeConfiguration"/> objects. For each of these, the git-hours
 		/// will be computed.
 		/// </summary>
@@ -213,6 +220,7 @@ namespace Util
 			CloneDetectionArgs = "-min 1 -Id -self -Num -Str",
 			DatabaseType = DatabaseType.SQLiteTemp,
 			DatabaseConnectionString = null,
+			UseMetricsAnalyzer = null,
 			EnabledSimilarityMeasurements = Enum.GetValues(typeof(Similarity.SimilarityMeasurementType))
 				.Cast<Similarity.SimilarityMeasurementType>()
 				// The following is always implicitly available and enabled, so we exclude it:
