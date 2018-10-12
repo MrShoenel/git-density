@@ -93,7 +93,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QualityAnalyzer\IMetricsAnalysisResult.cs" />
+    <Compile Include="QualityAnalyzer\MetricsAnalysisResult.cs" />
     <Compile Include="QualityAnalyzer\IMetricsAnalyzer.cs" />
     <Compile Include="QualityAnalyzer\RepositoryAnalyzer.cs" />
     <Compile Include="QualityAnalyzer\VizzAnalyzer\JsonEntity.cs" />

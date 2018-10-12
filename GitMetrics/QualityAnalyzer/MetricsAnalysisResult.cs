@@ -19,34 +19,36 @@ using Util.Data.Entities;
 
 namespace GitMetrics.QualityAnalyzer
 {
-	public interface IMetricsAnalysisResult
+	public class MetricsAnalysisResult
 	{
 		/// <summary>
 		/// Refers to the <see cref="Repository"/> that was analyzed.
 		/// </summary>
-		Repository Repository { get; }
+		public Repository Repository { get; protected set; }
 
 		/// <summary>
 		/// Refers to the <see cref="Commit"/> that was analyzed within the repository.
 		/// </summary>
-		Commit Commit { get; }
+		public Commit Commit { get; protected set; }
 
 		/// <summary>
 		/// There is one per <see cref="Commit"/>.
 		/// </summary>
-		CommitMetricsStatusEntity CommitMetricsStatus { get; }
+		public CommitMetricsStatusEntity CommitMetricsStatus { get; protected set; }
 
 		/// <summary>
 		/// A set of metrics that are used within the obtained metrics. It is recommended
 		/// that <see cref="MetricTypeEntity"/> objects are retrieved/created using the
 		/// method <see cref="MetricTypeEntity.ForSettings(string, bool, bool, bool, double, bool)"/>.
 		/// </summary>
-		IEnumerable<MetricTypeEntity> MetricTypes { get; }
+		public IList<MetricTypeEntity> MetricTypes { get; protected set; }
+			= new List<MetricTypeEntity>();
 
 		/// <summary>
 		/// An enumerable of metrics as obtained from the <see cref="Repository"/> and the
 		/// corresponding <see cref="Commit"/>.
 		/// </summary>
-		IEnumerable<MetricEntity> Metrics { get; }
+		public IList<MetricEntity> Metrics { get; protected set; }
+			= new List<MetricEntity>();
 	}
 }

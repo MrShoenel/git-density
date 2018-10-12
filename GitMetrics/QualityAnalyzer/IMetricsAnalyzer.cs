@@ -14,12 +14,13 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Util;
 
 namespace GitMetrics.QualityAnalyzer
 {
 	/// <summary>
 	/// To be implemented by various analyzers that can extract software metrics from any
-	/// software project.
+	/// software project. Each analyzer must implement a parameter-less constructor.
 	/// </summary>
 	public interface IMetricsAnalyzer
 	{
@@ -27,11 +28,17 @@ namespace GitMetrics.QualityAnalyzer
 		/// This method analyzes a <see cref="Repository"/> w.r.t. its metrics at a given
 		/// <see cref="Commit"/>. If necessary, the analyzer implementation must checkout
 		/// the commit (i.e. create a detached head). The analyzer is guaranteed to have
-		/// exclusive access to the <see cref="Repository"/>.
+		/// exclusive access to the <see cref="Repository"/> (i.e. it is operating on an
+		/// exclusive copy or similar).
 		/// </summary>
 		/// <param name="repository">The <see cref="Repository"/> to analyze.</param>
 		/// <param name="commit">The specific <see cref="Commit"/> to check out.</param>
-		/// <returns>An instance of <see cref="IMetricsAnalysisResult"/>.</returns>
-		IMetricsAnalysisResult Analyze(Repository repository, Commit commit);
+		/// <returns>An instance of <see cref="MetricsAnalysisResult"/>.</returns>
+		MetricsAnalysisResult Analyze(Repository repository, Commit commit);
+
+		/// <summary>
+		/// To be called by the factory, so that any analyzer can accept configuration.
+		/// </summary>
+		MetricsAnalyzerConfiguration Configuration { set; }
 	}
 }

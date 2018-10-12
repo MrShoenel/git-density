@@ -22,6 +22,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Util;
+using Util.Extensions;
 using Configuration = Util.Configuration;
 
 namespace GitMetrics.QualityAnalyzer
@@ -34,14 +35,14 @@ namespace GitMetrics.QualityAnalyzer
 
 		public ISet<Commit> Commits { get; protected internal set; }
 
-		public ConcurrentBag<IMetricsAnalysisResult> Results { get; protected internal set; }
+		public ConcurrentBag<MetricsAnalysisResult> Results { get; protected internal set; }
 
 		public RepositoryAnalyzer(Configuration configuration, Repository repository, IEnumerable<Commit> commits)
 		{
 			this.Configuration = configuration;
 			this.Repository = repository;
 			this.Commits = new HashSet<Commit>(commits);
-			this.Results = new ConcurrentBag<IMetricsAnalysisResult>();
+			this.Results = new ConcurrentBag<MetricsAnalysisResult>();
 		}
 
 		public void Analyze()
