@@ -61,5 +61,21 @@ namespace Util.Extensions
 				yield return array.Take(i).ToList();
 			}
 		}
+
+		/// <summary>
+		/// Adds all items to this collection and returns it.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="coll"></param>
+		/// <param name="items"></param>
+		/// <returns></returns>
+		public static ICollection<T> AddAll<T>(this ICollection<T> coll, IEnumerable<T> items)
+		{
+			foreach (var item in items)
+			{
+				coll.Add(item);
+			}
+			return coll;
+		}
 	}
 }
