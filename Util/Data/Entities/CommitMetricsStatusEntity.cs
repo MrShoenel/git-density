@@ -27,6 +27,7 @@ namespace Util.Data.Entities
 	/// For each commit, we can obtain metrics. For that purpose, the project has to
 	/// be built at that commit. This can either work or some error can occur. In case
 	/// of an error, we are interested in the kind of error.
+	/// These codes match with VizzAnalyzer's ExitCodes-enum.
 	/// </summary>
 	public enum CommitMetricsStatus
 	{
@@ -35,13 +36,21 @@ namespace Util.Data.Entities
 		/// </summary>
 		OK = 0,
 		/// <summary>
-		/// The commit could not be built and metrics could not be obtained.
-		/// </summary>
-		BuildError = 1,
-		/// <summary>
 		/// The current project (its repository) does not support building/obtaining metrics.
 		/// </summary>
-		InvalidProjectType = 2
+		InvalidProjectType = -2,
+		/// <summary>
+		/// The commit could not be built and metrics could not be obtained.
+		/// </summary>
+		BuildError = -3,
+		/// <summary>
+		/// To be used when the analyzer encounters an internal error.
+		/// </summary>
+		AnalyzerError = -4,
+		/// <summary>
+		/// Shall be used for any other unspecific error.
+		/// </summary>
+		OtherError = SByte.MinValue
 	}
 
 
