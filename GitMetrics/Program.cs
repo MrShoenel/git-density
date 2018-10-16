@@ -31,6 +31,8 @@ using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using Configuration = Util.Configuration;
+using GitMetrics.QualityAnalyzer;
 
 namespace GitMetrics
 {
@@ -82,12 +84,23 @@ namespace GitMetrics
 				}
 
 				// First let's create an actual temp-directory in the folder specified:
-				var tempDirectory = new DirectoryInfo(Path.Combine(
-					options.TempDirectory ?? Path.GetTempPath(), "GitDensity"));
-				if (tempDirectory.Exists) { tempDirectory.Delete(true); }
-				tempDirectory.Create();
-				options.TempDirectory = tempDirectory.FullName;
+				Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
+					options.TempDirectory ?? Path.GetTempPath(), nameof(GitMetrics)));
+				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+				Configuration.TempDirectory.Create();
+				options.TempDirectory = Configuration.TempDirectory.FullName;
 				logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
+
+				Configuration configuration = null;
+				try {
+					configuration = Configuration.ReadDefault();
+					logger.LogDebug("Read the following configuration:\n{0}",
+						JsonConvert.SerializeObject(configuration, Formatting.Indented));
+				}
+				catch (Exception ex)
+				{
+					throw new IOException("Error reading the configuration. Perhaps try to generate and derive an example configuration (use '--help')", ex);
+				}
 
 				Repository repository = null;
 				try
@@ -102,7 +115,7 @@ namespace GitMetrics
 					}
 
 					var repoTempPath = Path.Combine(
-						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"GitDensity_repos");
+						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"{nameof(GitMetrics)}_repos");
 					if (!Directory.Exists(repoTempPath))
 					{
 						Directory.CreateDirectory(repoTempPath);

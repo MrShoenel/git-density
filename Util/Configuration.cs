@@ -19,7 +19,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Util.Data;
 
 namespace Util
@@ -140,8 +142,51 @@ namespace Util
 
 	public class Configuration
 	{
+		/// <summary>
+		/// The default name of the serialized configuration.
+		/// </summary>
+		[JsonIgnore]
 		public const String DefaultFileName = "configuration.json";
 
+		/// <summary>
+		/// The directory of the currently executing binary/assembly,
+		/// i.e. 'GitDensity.exe'.
+		/// </summary>
+		[JsonIgnore]
+		public static readonly String WorkingDirOfExecutable =
+			Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+		/// <summary>
+		/// An absolute path to the default configuration file.
+		/// </summary>
+		[JsonIgnore]
+		public static readonly String DefaultConfigFilePath =
+			Path.Combine(WorkingDirOfExecutable, DefaultFileName);
+
+		/// <summary>
+		/// This can be set and read from within any of the Git*-applications.
+		/// </summary>
+		[JsonIgnore]
+		public static DirectoryInfo TempDirectory { get; set; }
+
+		/// <summary>
+		/// Writes the example (<see cref="Example"/>) to the <see cref="DefaultConfigFilePath"/>.
+		/// </summary>
+		public static void WriteDefault()
+		{
+			File.WriteAllText(DefaultConfigFilePath,
+				JsonConvert.SerializeObject(Example, Formatting.Indented));
+		}
+
+		/// <summary>
+		/// Attempts to read the default configuration from the <see cref="DefaultConfigFilePath"/>.
+		/// </summary>
+		/// <returns>An instance of <see cref="Configuration"/>.</returns>
+		public static Configuration ReadDefault()
+		{
+			return JsonConvert.DeserializeObject<Configuration>(
+				File.ReadAllText(DefaultConfigFilePath));
+		}
 
 		/// <summary>
 		/// A Dictionary that holds for each <see cref="ProgrammingLanguage"/>

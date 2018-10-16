@@ -62,13 +62,6 @@ namespace GitDensity
 		}
 
 		/// <summary>
-		/// The directory of the currently executing binary/assembly,
-		/// i.e. 'GitDensity.exe'.
-		/// </summary>
-		public static readonly String WorkingDirOfExecutable =
-			Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-		/// <summary>
 		/// The program's configuration, as read from 'configuration.json'.
 		/// </summary>
 		public static Configuration Configuration { private set; get; }
@@ -82,8 +75,6 @@ namespace GitDensity
 		static void Main(string[] args)
 		{
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
-
-			var configFilePath = Path.Combine(WorkingDirOfExecutable, Configuration.DefaultFileName);
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options) && options.TryValidate())
@@ -98,12 +89,10 @@ namespace GitDensity
 					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
 					Environment.Exit((int)ExitCodes.OK);
 				}
-				else if (options.WriteExampeConfig || !File.Exists(configFilePath))
+				else if (options.WriteExampeConfig || !File.Exists(Configuration.DefaultConfigFilePath))
 				{
-					logger.LogCritical("Writing example to file: {0}", configFilePath);
-
-					File.WriteAllText(configFilePath,
-						JsonConvert.SerializeObject(Configuration.Example, Formatting.Indented));
+					logger.LogCritical("Writing example to file: {0}", Configuration.DefaultConfigFilePath);
+					Configuration.WriteDefault();
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
@@ -118,17 +107,16 @@ namespace GitDensity
 				try
 				{
 					// First let's create an actual temp-directory in the folder specified:
-					var tempDirectory = new DirectoryInfo(Path.Combine(
+					Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
 						options.TempDirectory ?? Path.GetTempPath(), nameof(GitDensity)));
-					if (tempDirectory.Exists) { tempDirectory.Delete(true); }
-					tempDirectory.Create();
-					options.TempDirectory = tempDirectory.FullName;
+					if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+					Configuration.TempDirectory.Create();
+					options.TempDirectory = Configuration.TempDirectory.FullName;
 					logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
 
 					try
 					{
-						Program.Configuration = JsonConvert.DeserializeObject<Configuration>(
-							File.ReadAllText(configFilePath));
+						Program.Configuration = Configuration.ReadDefault();
 						logger.LogDebug("Read the following configuration:\n{0}",
 							JsonConvert.SerializeObject(Program.Configuration, Formatting.Indented));
 					}
