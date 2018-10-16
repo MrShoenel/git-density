@@ -25,6 +25,7 @@ using Util.Density;
 using Util.Metrics;
 using System.Text;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace Util.Extensions
 {
@@ -399,6 +400,91 @@ namespace Util.Extensions
 			{
 				fieldContentChangesStringBuilder.SetValue(pec, null);
 			}
+		}
+
+		/// <summary>
+		/// Bundles this <see cref="Repository"/> to a single file (a git bundle), moves
+		/// the file to the target-path and un-bundles (clones from) it. Then removes the
+		/// bundle file, opens the new copy of the repository and returns it.
+		/// </summary>
+		/// <param name="repository">The <see cref="Repository"/> to clone.</param>
+		/// <param name="targetPath">The path to clone the new repository to.</param>
+		/// <returns>The <see cref="Repository"/> that was opened on the new path.</returns>
+		public static Repository BundleAndCloneTo(this Repository repository, String targetPath)
+		{
+			var id = Guid.NewGuid().ToString();
+			var bundleName = $"{id}.bundle";
+
+			using (var proc = Process.Start(new ProcessStartInfo {
+				FileName = "git",
+				Arguments = $"bundle create {bundleName} --all",
+				WorkingDirectory = repository.Info.WorkingDirectory,
+				WindowStyle = ProcessWindowStyle.Hidden
+			}))
+			{
+				proc.WaitForExit();
+			}
+
+			File.Move(
+				Path.Combine(repository.Info.WorkingDirectory, bundleName),
+				Path.Combine(targetPath, bundleName));
+
+			using (var proc = Process.Start(new ProcessStartInfo {
+				FileName = "git",
+				Arguments = $"clone {bundleName}",
+				WorkingDirectory = targetPath,
+				WindowStyle = ProcessWindowStyle.Hidden
+			}))
+			{
+				proc.WaitForExit();
+			}
+
+			// Delete the bundle after cloning:
+			File.Delete(Path.Combine(targetPath, bundleName));
+
+			var clonedRepoPath = Path.Combine(targetPath, id);
+			return clonedRepoPath.OpenRepository();
+		}
+
+		/// <summary>
+		/// Obtain all commits from all branches.
+		/// </summary>
+		/// <param name="repository"></param>
+		/// <returns>An <see cref="ISet{Commit}"/> with all the repository's commits.</returns>
+		public static ISet<Commit> GetAllCommits(this Repository repository)
+		{
+			return new HashSet<Commit>(repository.Branches.SelectMany(br => br.Commits));
+		}
+
+		/// <summary>
+		/// Obtains all commits of a repository and goes to the latests, as determined
+		/// by <see cref="Commit.Committer"/>.
+		/// </summary>
+		/// <see cref="GetAllCommits(Repository)"/>
+		/// <param name="repository"></param>
+		/// <returns>The same <see cref="Repository"/> with the latest <see cref="Commit"/>
+		/// being checked out.</returns>
+		public static Repository CheckoutLatestCommit(this Repository repository)
+		{
+			Commands.Checkout(repository,
+				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.DateTime).First());
+
+			return repository;
+		}
+
+		/// <summary>
+		/// Creates a short SHA1-string (default is 7 characters long) for a Commit.
+		/// </summary>
+		/// <param name="commit"></param>
+		/// <param name="length"></param>
+		/// <returns></returns>
+		public static String ShaShort(this Commit commit, int length = 7)
+		{
+			if (length < 4 || length > 39)
+			{
+				throw new ArgumentOutOfRangeException($"{nameof(length)}: {length}");
+			}
+			return commit.Sha.Substring(0, length);
 		}
 	}
 }
