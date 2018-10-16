@@ -82,7 +82,7 @@ namespace GitHours.Hours
 
 		public static IEnumerable<GitHoursAuthorSpan> GetHoursSpans(IEnumerable<Commit> commitsForDeveloper, Func<DateTime[], Double> estimator)
 		{
-			var commitsSorted = commitsForDeveloper.OrderBy(commit => commit.Author.When).ToList();
+			var commitsSorted = commitsForDeveloper.OrderBy(commit => commit.Committer.When).ToList();
 
 			if (commitsSorted.Count == 0)
 			{
@@ -97,7 +97,7 @@ namespace GitHours.Hours
 			for (var take = 2; take <= commitsSorted.Count; take++)
 			{
 				hoursUntilCommit[take] = Tuple.Create(
-					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Author.When.DateTime).ToArray()));
+					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Committer.When.DateTime).ToArray()));
 			}
 
 			foreach (var kv in hoursUntilCommit)

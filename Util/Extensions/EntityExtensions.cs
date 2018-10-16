@@ -147,7 +147,7 @@ namespace Util.Extensions
 		{
 			var entity = new CommitEntity
 			{
-				CommitDate = commit.Author.When.DateTime,
+				CommitDate = commit.Committer.When.DateTime,
 				HashSHA1 = commit.Sha,
 				IsMergeCommit = commit.Parents.Count() > 1,
 				Repository = repositoryEntity,
