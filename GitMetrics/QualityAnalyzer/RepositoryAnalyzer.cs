@@ -55,6 +55,7 @@ namespace GitMetrics.QualityAnalyzer
 				{
 					throw new Exception($"No implementations of {nameof(IMetricsAnalyzer)} were found!");
 				}
+				// TODO: Improve selection by basing it on current project's language.
 				analyzerTypeName = AnalyzerImplementationsFQ.First().Key;
 			}
 			else
@@ -70,11 +71,11 @@ namespace GitMetrics.QualityAnalyzer
 			}
 
 			Parallel.ForEach(this.Commits, parallelOptions, commit => {
-				// TODO: For each commit, bundle/un-bundle repo, checkout commit
-				// Run analysis on it and store result in bag.
+				var copyRepo = this.Repository.BundleAndCloneTo(Configuration.TempDirectory.FullName);
+				Commands.Checkout(copyRepo, commit);
 
-				var analyzer = CreateAnalyzer(analyzerTypeName, analyzerTypeName.Contains("."));
-				this.Results.Add(analyzer.Analyze(this.Repository, commit));
+				var analyzer = CreateAnalyzer(this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
+				this.Results.Add(analyzer.Analyze(copyRepo, commit));
 			});
 		}
 
@@ -98,7 +99,7 @@ namespace GitMetrics.QualityAnalyzer
 			= new Lazy<IReadOnlyDictionary<string, Type>>(() =>
 			{
 				return new ReadOnlyDictionary<String, Type>(AnalyzerImplementations
-					.ToDictionary(kv => kv.Value.AssemblyQualifiedName, kv => kv.Value));
+					.ToDictionary(kv => kv.Value.FullName, kv => kv.Value));
 			});
 
 		/// <summary>
@@ -124,7 +125,7 @@ namespace GitMetrics.QualityAnalyzer
 		/// <param name="nameIsFullyQualified">Should be set to true, iff the type's name was given
 		/// fully qualified.</param>
 		/// <returns></returns>
-		public static IMetricsAnalyzer CreateAnalyzer(String typeName, Boolean nameIsFullyQualified = false)
+		public static IMetricsAnalyzer CreateAnalyzer(Configuration configuration, String typeName, Boolean nameIsFullyQualified = false)
 		{
 			var dict = nameIsFullyQualified ? AnalyzerImplementationsFQ : AnalyzerImplementations;
 
@@ -134,7 +135,10 @@ namespace GitMetrics.QualityAnalyzer
 			}
 
 			var type = dict[typeName];
-			return (IMetricsAnalyzer)Activator.CreateInstance(type);
+			var analyzer = (IMetricsAnalyzer)Activator.CreateInstance(type);
+			analyzer.Configuration = configuration.MetricsAnalyzers
+				.Where(ma => ma.TypeName == typeName).First();
+			return analyzer;
 		}
 		#endregion
 	}

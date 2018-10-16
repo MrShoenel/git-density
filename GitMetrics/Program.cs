@@ -134,7 +134,7 @@ namespace GitMetrics
 				var outputToConsole = String.IsNullOrEmpty(options.OutputFile);
 				if (!outputToConsole)
 				{
-					logger.LogWarning("Hello, this is GitHours.");
+					logger.LogWarning($"Hello, this is {nameof(GitMetrics)}.");
 				}
 				logger.LogDebug("You supplied the following arguments: {0}",
 					String.Join(", ", args.Select(a => $"'{a}'")));
@@ -145,6 +145,13 @@ namespace GitMetrics
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
+						var ra = new RepositoryAnalyzer(configuration, repository, span);
+						ra.ExecutionPolicy = ExecutionPolicy.Linear;
+						ra.Analyze();
+						var foo = ra.Results.ToList();
+
+
+
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
 						var obj = JsonConvert.SerializeObject(new Object(), Formatting.Indented); /* JsonConvert.SerializeObject(gitHours.Analyze(
