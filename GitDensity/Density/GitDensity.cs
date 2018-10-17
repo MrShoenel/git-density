@@ -167,7 +167,7 @@ namespace GitDensity.Density
 		/// <summary>
 		/// Initializes all <see cref="HoursTypeEntity"/> from a given list of types.
 		/// </summary>
-		/// <param name="hoursTypes">Set of <see cref="HoursTypeConfiguration"/>. The analysis
+		/// <param name="hoursTypesConfigurations">Set of <see cref="HoursTypeConfiguration"/>.</param>
 		/// <returns>This (<see cref="GitDensity"/>) for chaining.</returns>
 		public GitDensity InitializeHoursTypeEntities(ISet<HoursTypeConfiguration> hoursTypesConfigurations)
 		{
@@ -233,7 +233,7 @@ namespace GitDensity.Density
 				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
-				#region GitHours
+				#region Full Analysis: GitHours (spent time per commit & developer)
 				var gitHoursAnalysesPerDeveloperAndHoursType =
 					new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
 
@@ -282,6 +282,8 @@ namespace GitDensity.Density
 				}
 				#endregion
 
+				#region Full Analysis: GitDensity (commit-pair-wise clone-detection)
+				#region Identify relevant tree-changes
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
 				{
@@ -296,28 +298,18 @@ namespace GitDensity.Density
 					return this.FileTypeExtensions.Any(extension => rtc.Path.EndsWith(extension))
 					|| this.FileTypeExtensions.Any(extension => rtc.OldPath.EndsWith(extension));
 				});
+				#endregion
 
+				#region Write out commit-pair
 				var pairDirectory = new DirectoryInfo(Path.Combine(this.TempDirectory.FullName, pair.Id));
 				var oldDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirOld));
 				var newDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirNew));
 				pairDirectory.Create();
 				pair.WriteOutTree(
 					relevantTreeChanges, pairDirectory, wipeTargetDirectoryBefore: true, parentDirectoryName: dirOld, childDirectoryName: dirNew);
+				#endregion
 
-
-				// Run the clone detection for each pair and each language. We add all sets
-				// to the same list, regardless of their language.
-				var cloneSets = new List<CloneDensity.ClonesXmlSet>();
-				foreach (var language in this.ProgrammingLanguages)
-				{
-					var cloneWrapper = new CloneDensity.CloneDetectionWrapper(
-						pairDirectory, language, this.TempDirectory);
-					cloneSets.AddRange(cloneWrapper.PerformCloneDetection()
-						// Filter out relevant sets: those that are concerned with two version
-						// of the same file (and therefore have exactly two blocks).
-						.Where(set => set.Blocks.Length == 2));
-				}
-
+				#region added/deleted files
 				// The following block concerns all pure ADDs and DELETEs (i.e. the file
 				// in the patch did not exists previously or was deleted in the more recent
 				// patch). That means, for each such file, exactly one FileBlock exists.
@@ -366,8 +358,24 @@ namespace GitDensity.Density
 					patchNew.Clear();
 					patchOld.Clear();
 				}
+				#endregion
 
+				#region Run clone detection for each commit-pair
+				// Run the clone detection for each pair and each language. We add all sets
+				// to the same list, regardless of their language.
+				var cloneSets = new List<CloneDensity.ClonesXmlSet>();
+				foreach (var language in this.ProgrammingLanguages)
+				{
+					var cloneWrapper = new CloneDensity.CloneDetectionWrapper(
+						pairDirectory, language, this.TempDirectory);
+					cloneSets.AddRange(cloneWrapper.PerformCloneDetection()
+						// Filter out relevant sets: those that are concerned with two version
+						// of the same file (and therefore have exactly two blocks).
+						.Where(set => set.Blocks.Length == 2));
+				}
+				#endregion
 
+				#region Check non-pure modifications
 				// The following block concerns all changes that represent modifications to
 				// two different versions of the same file. The file may have been renamed
 				// or moved as well (a so-called non-pure modification).
@@ -449,9 +457,10 @@ namespace GitDensity.Density
 					hunks.Clear();
 					fileBlockTuples.Clear();
 				}
+				#endregion
+				#endregion
 
 				cloneSets.Clear();
-				
 				pair.Dispose(); // also releases the expensive patches.
 			});
 
