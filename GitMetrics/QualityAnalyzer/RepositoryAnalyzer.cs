@@ -18,6 +18,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +30,13 @@ namespace GitMetrics.QualityAnalyzer
 {
 	public class RepositoryAnalyzer : ISupportsExecutionPolicy
 	{
+		/// <summary>
+		/// For each commit to analyze, the bundled repository is cloned to a new directory.
+		/// This copy of the repository is rather useless outside the bounds of
+		/// <see cref="RepositoryAnalyzer"/> and can be safely deleted.
+		/// </summary>
+		public Boolean DeleteClonedRepoAfterwards { get; set; } = true;
+
 		public Configuration Configuration { get; protected internal set; }
 
 		public Repository Repository { get; protected internal set; }
@@ -76,6 +84,10 @@ namespace GitMetrics.QualityAnalyzer
 
 				var analyzer = CreateAnalyzer(this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
 				this.Results.Add(analyzer.Analyze(copyRepo, commit));
+				if (this.DeleteClonedRepoAfterwards)
+				{
+					Directory.Delete(copyRepo.Info.WorkingDirectory, true);
+				}
 			});
 		}
 
