@@ -29,7 +29,7 @@ namespace Util.Data.Entities
 	/// depicts the changes to a file between two commits, it also references the pair
 	/// of commits (<see cref="CommitPairEntity"/>).
 	/// </summary>
-	public class TreeEntryChangesEntity
+	public class TreeEntryChangesEntity : BaseEntity<TreeEntryChanges>
 	{
 		/// <summary>
 		/// An unsigned, auto-increment ID.

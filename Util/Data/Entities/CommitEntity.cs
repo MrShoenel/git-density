@@ -14,8 +14,10 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Util.Extensions;
 
 namespace Util.Data.Entities
@@ -23,7 +25,8 @@ namespace Util.Data.Entities
 	/// <summary>
 	/// An entity that can represent the most essential parts of a <see cref="Commit"/>.
 	/// </summary>
-	public class CommitEntity : IEquatable<CommitEntity>
+	[DebuggerDisplay("CommitEntity {HashSHA1}")]
+	public class CommitEntity : BaseEntity<Commit>, IEquatable<CommitEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 

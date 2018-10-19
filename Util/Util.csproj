@@ -201,6 +201,7 @@
     <Compile Include="ColoredConsole.cs" />
     <Compile Include="Configuration.cs" />
     <Compile Include="Data\DataFactory.cs" />
+    <Compile Include="Data\Entities\BaseEntity.cs" />
     <Compile Include="Data\Entities\CommitEntity.cs" />
     <Compile Include="Data\Entities\CommitMetricsStatusEntity.cs" />
     <Compile Include="Data\Entities\CommitPairEntity.cs" />

@@ -16,6 +16,7 @@
 using FluentNHibernate.Mapping;
 using System;
 using System.Collections.Generic;
+using Util.Density;
 using Util.Extensions;
 
 namespace Util.Data.Entities
@@ -26,7 +27,7 @@ namespace Util.Data.Entities
 	/// a previous commit, while <see cref="ParentCommit"/> represents a commit that
 	/// happened later in time.
 	/// </summary>
-	public class CommitPairEntity
+	public class CommitPairEntity : BaseEntity<CommitPair>
 	{
 		public virtual String ID { get; set; }
 

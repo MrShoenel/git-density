@@ -254,7 +254,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byMailDict[mail] = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = String.Empty, Email = signature.Email, Repository = repository };
+							{ BaseObject = signature, Name = String.Empty, Email = signature.Email, Repository = repository };
 					}
 				}
 				else if (mail == String.Empty)
@@ -266,7 +266,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byNameDict[name] = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = signature.Name, Email = String.Empty, Repository = repository };
+							{ BaseObject = signature, Name = signature.Name, Email = String.Empty, Repository = repository };
 					}
 				}
 				else
@@ -284,7 +284,7 @@ namespace Util.Extensions
 					{
 						// new entity, add to both dictionaries
 						devEntity = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = signature.Name, Email = signature.Email, Repository = repository };
+							{ BaseObject = signature, Name = signature.Name, Email = signature.Email, Repository = repository };
 						byMailDict[mail] = devEntity;
 						byNameDict[name] = devEntity;
 					}

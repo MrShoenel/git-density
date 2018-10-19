@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace Util.Data.Entities
 	/// Represents a <see cref="LibGit2Sharp.Repository"/> that is associated with
 	/// a number of developers through <see cref="DeveloperEntity"/> objects.
 	/// </summary>
-	public class RepositoryEntity
+	public class RepositoryEntity : BaseEntity<Repository>
 	{
 		public virtual UInt32 ID { get; set; }
 

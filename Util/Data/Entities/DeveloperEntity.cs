@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using Util.Extensions;
@@ -25,7 +26,7 @@ namespace Util.Data.Entities
 	/// A <see cref="DeveloperEntity"/> represents a single developer within a repository.
 	/// It refers to all the developer's commits, contributions within them and spent time.
 	/// </summary>
-	public class DeveloperEntity : IEquatable<DeveloperEntity>
+	public class DeveloperEntity : BaseEntity<Signature>, IEquatable<DeveloperEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 

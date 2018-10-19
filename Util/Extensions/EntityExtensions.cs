@@ -37,6 +37,7 @@ namespace Util.Extensions
 		{
 			return new RepositoryEntity
 			{
+				BaseObject = repository,
 				Url = repository.Info.Path,
 				SinceCommitSha1 = gitCommitSpan.FilteredCommits.First().Sha,
 				UntilCommitSha1 = gitCommitSpan.FilteredCommits.Last().Sha
@@ -54,6 +55,7 @@ namespace Util.Extensions
 		{
 			var entity = new TreeEntryChangesEntity
 			{
+				BaseObject = changes,
 				PathNew = changes.Path,
 				PathOld = changes.OldPath,
 				Status = changes.Status,
@@ -79,6 +81,7 @@ namespace Util.Extensions
 		{
 			var entity = new DeveloperEntity
 			{
+				BaseObject = signature,
 				Email = signature.Email,
 				Name = signature.Email,
 				Repository = repositoryEntity
@@ -106,6 +109,7 @@ namespace Util.Extensions
 		{
 			var entity = new CommitPairEntity
 			{
+				BaseObject = pair,
 				ID = pair.Id,
 				ChildCommit = childCommitEntity,
 				ParentCommit = parentCommitEntity,
@@ -147,6 +151,7 @@ namespace Util.Extensions
 		{
 			var entity = new CommitEntity
 			{
+				BaseObject = commit,
 				CommitDate = commit.Committer.When.DateTime,
 				HashSHA1 = commit.Sha,
 				IsMergeCommit = commit.Parents.Count() > 1,
