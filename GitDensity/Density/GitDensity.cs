@@ -480,7 +480,7 @@ namespace GitDensity.Density
 			{
 				if (disposing)
 				{
-					this.TempDirectory.Clear();
+					this.TempDirectory.TryClear();
 					this.GitCommitSpan.Dispose();
 				}
 

@@ -28,7 +28,7 @@ namespace Util.Data.Entities
 	/// The <see cref="MetricTypeEntity"/> reflects a specific metric (e.g. LOC) and
 	/// its properties, such as its precision/accuracy, name or whether it is a score.
 	/// </summary>
-	public class MetricTypeEntity
+	public class MetricTypeEntity : IEquatable<MetricTypeEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -141,6 +141,23 @@ namespace Util.Data.Entities
 				return mte;
 			}
 		}
+
+		#region equality
+		public override int GetHashCode()
+		{
+			return 31 * (this.MetricName ?? String.Empty).GetHashCode() ^ this.IsPublic.GetHashCode() ^ this.IsRoot.GetHashCode() ^ this.IsScore.GetHashCode();
+		}
+
+		public virtual bool Equals(MetricTypeEntity other)
+		{
+			return other is MetricTypeEntity && other.IsPublic == this.IsPublic && other.IsRoot == this.IsRoot && other.IsScore == this.IsScore && other.MetricName.Equals(this.MetricName, StringComparison.InvariantCultureIgnoreCase);
+		}
+
+		public override bool Equals(object obj)
+		{
+			return this.Equals(obj as MetricTypeEntity);
+		}
+		#endregion
 		#endregion
 	}
 
