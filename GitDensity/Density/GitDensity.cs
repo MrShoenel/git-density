@@ -477,6 +477,41 @@ namespace GitDensity.Density
 				pair.Dispose(); // also releases the expensive patches.
 			});
 
+			#region Full Analysis: GitMetrics (project-/file-metrics per commit
+			if (this.SkipGitMetricsAnalysis)
+			{
+				goto SkipGitMetricsAnalysis;
+			}
+
+			var metricsRepoAnalyzer = new GitMetrics.QualityAnalyzer.RepositoryAnalyzer(
+				Program.Configuration, repoEntity, commits.Values)
+			{
+				DeleteClonedRepoAfterwards = true,
+				// We don't want parallelism here, as pairs are already processed in
+				// parallel and extracting metrics is a very expensive task, as it
+				// usually involves building the underlying repository.
+				ExecutionPolicy = ExecutionPolicy.Linear
+			};
+
+			metricsRepoAnalyzer.Analyze();
+			foreach (var result in metricsRepoAnalyzer.Results)
+			{
+				// Per result we get: ref to repo and commit and a list of metricTypeEntities
+				// as well as a list of metricEntities. Across all results, the entities for
+				// metricType are the same instances and will saved implicitly when saving
+				// the metrics.
+				repoEntity.AddCommitMetricsStatus(new CommitMetricsStatusEntity
+				{
+					Commit = result.Commit,
+					MetricsStatus = result.CommitMetricsStatus
+				});
+
+				result.Commit.AddMetrics(result.Metrics);
+			}
+
+			SkipGitMetricsAnalysis:
+			#endregion
+
 			return new GitDensityAnalysisResult(repoEntity);
 		}
 
