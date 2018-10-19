@@ -86,7 +86,7 @@ namespace GitMetrics.QualityAnalyzer
 				this.Results.Add(analyzer.Analyze(copyRepo, commit));
 				if (this.DeleteClonedRepoAfterwards)
 				{
-					Directory.Delete(copyRepo.Info.WorkingDirectory, true);
+					new DirectoryInfo(copyRepo.Info.WorkingDirectory).TryDelete();
 				}
 			});
 		}

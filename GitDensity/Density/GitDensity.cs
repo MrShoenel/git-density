@@ -202,7 +202,7 @@ namespace GitDensity.Density
 			logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
-			this.TempDirectory.Clear();
+			this.TempDirectory.TryClear();
 
 			var dirOld = "old";
 			var dirNew = "new";

@@ -109,7 +109,7 @@ namespace GitDensity
 					// First let's create an actual temp-directory in the folder specified:
 					Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
 						options.TempDirectory ?? Path.GetTempPath(), nameof(GitDensity)));
-					if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+					if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
 					Configuration.TempDirectory.Create();
 					options.TempDirectory = Configuration.TempDirectory.FullName;
 					logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
