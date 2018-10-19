@@ -66,6 +66,23 @@ namespace Util.Data.Entities
 			return this;
 		}
 
+		private const double lookupEpsilonAccuracy = 1e-12;
+
+		private static ISet<MetricTypeEntity> cache = new HashSet<MetricTypeEntity>();
+
+		private static Boolean TryCache(out MetricTypeEntity mte, String name, Boolean isScore, Boolean isRoot, Boolean isPublic, Double accuracy, Boolean forceLookupAccuary = false)
+		{
+			mte = default(MetricTypeEntity);
+			if (cache.Count == 0)
+			{
+				return false;
+			}
+
+			mte = cache.Where(x => x.MetricName.Equals(name, StringComparison.InvariantCultureIgnoreCase) && x.IsScore == isScore && x.IsRoot == isRoot && x.IsPublic == isPublic && (!forceLookupAccuary || Math.Abs(x.Accuracy - accuracy) < lookupEpsilonAccuracy)).SingleOrDefault();
+
+			return mte is MetricTypeEntity;
+		}
+
 		/// <summary>
 		/// Exclusively obtains an <see cref="MetricTypeEntity"/> for the given settings.
 		/// If the entity does not exist yet, it will be created and saved before it is
@@ -90,7 +107,11 @@ namespace Util.Data.Entities
 		/// <returns>The <see cref="MetricTypeEntity"/> for the settings.</returns>
 		public static MetricTypeEntity ForSettings(String name, Boolean isScore, Boolean isRoot, Boolean isPublic, Double accuracy, Boolean forceLookupAccuary = false)
 		{
-			const double epsilonAccuracy = 1e-12;
+			MetricTypeEntity mte;
+			if (TryCache(out mte, name, isScore, isRoot, isPublic, accuracy, forceLookupAccuary))
+			{
+				return mte;
+			}
 
 			// Use a Mutex across all processes
 			using (var mutex = new Mutex(false, $"mutex_{nameof(MetricTypeEntity)}"))
@@ -105,23 +126,32 @@ namespace Util.Data.Entities
 				catch (AbandonedMutexException) { }
 
 
-				var mte = session.QueryOver<MetricTypeEntity>()
-					.Where(x => x.MetricName.Equals(name, StringComparison.OrdinalIgnoreCase)
-						&& x.IsScore == isScore
-						&& x.IsRoot == isRoot
-						&& x.IsPublic == isPublic
-						&& (!forceLookupAccuary || Math.Abs(x.Accuracy - accuracy) < epsilonAccuracy))
-					.SingleOrDefault();
+				var mtes = session.QueryOver<MetricTypeEntity>()
+					.WhereRestrictionOn(x => x.MetricName).IsInsensitiveLike(name)
+					.Where(x => x.IsScore == isScore && x.IsRoot == isRoot && x.IsPublic == isPublic).List();
 
-				if (mte is MetricTypeEntity)
+			CheckCount:
+				switch (mtes.Count)
 				{
-					if (waitSuccess)
-					{
-						mutex.ReleaseMutex();
-					}
-					return mte;
+					case 0:
+						goto CreateNew;
+					case 1:
+						mte = mtes[0];
+						goto ReleaseReturnCache;
+					default:
+						// More than 1, let's check if we shall filter by accuracy:
+						if (forceLookupAccuary)
+						{
+							mtes = mtes.Where(x => Math.Abs(x.Accuracy - accuracy) < lookupEpsilonAccuracy).ToList();
+							goto CheckCount;
+						}
+						else
+						{
+							throw new Exception($"Cannot identify the requested {nameof(MetricTypeEntity)}, got {mtes.Count} results.");
+						}
 				}
 
+			CreateNew:
 				mte = new MetricTypeEntity
 				{
 					MetricName = name,
@@ -133,11 +163,14 @@ namespace Util.Data.Entities
 				session.Save(mte);
 				trans.Commit();
 
+			ReleaseReturnCache:
+
 				if (waitSuccess)
 				{
 					mutex.ReleaseMutex();
 				}
 
+				cache.Add(mte);
 				return mte;
 			}
 		}
