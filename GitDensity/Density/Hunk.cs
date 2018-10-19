@@ -160,16 +160,20 @@ namespace GitDensity.Density
 					OldNumberOfLines = 0u,
 					NewLineStart = 0u,
 					NewNumberOfLines = 0u,
-					SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath),
-					TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path)
+					SourceFilePath = new DirectoryInfo(
+						Path.Combine(pairSourceDirectory.FullName, pec.OldPath)).FullName,
+					TargetFilePath = new DirectoryInfo(
+						Path.Combine(pairTargetDirectory.FullName, pec.Path)).FullName
 				};
 				yield break;
 			}
 
 			foreach (var hunk in Hunk.SplitPatch(pec.Patch))
 			{
-				hunk.SourceFilePath = Path.Combine(pairSourceDirectory.FullName, pec.OldPath);
-				hunk.TargetFilePath = Path.Combine(pairTargetDirectory.FullName, pec.Path);
+				hunk.SourceFilePath = new DirectoryInfo(
+					Path.Combine(pairSourceDirectory.FullName, pec.OldPath)).FullName;
+				hunk.TargetFilePath = new DirectoryInfo(
+					Path.Combine(pairTargetDirectory.FullName, pec.Path)).FullName;
 
 				yield return hunk.ComputeLinesAddedAndDeleted(); // Important to call having set the props;
 			}
