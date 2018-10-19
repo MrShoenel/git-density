@@ -55,6 +55,8 @@ namespace GitDensity.Density
 
 		public Boolean SkipMergeCommits { get; protected internal set; } = true;
 
+		public Boolean SkipGitMetricsAnalysis { get; protected internal set; } = false;
+
 		public ICollection<String> FileTypeExtensions { get; protected internal set; } = GitDensity.DefaultFileTypeExtensions;
 
 		public DirectoryInfo TempDirectory { get; protected internal set; }
@@ -76,14 +78,16 @@ namespace GitDensity.Density
 		/// </summary>
 		/// <param name="gitCommitSpan">Represents the span of commits to be analyzed.</param>
 		/// <param name="languages">Programming-languages to analyze.</param>
-		/// will compute git-hours for each type.</param>
 		/// <param name="skipInitialCommit">Skip the initial commit (the one with no parent)
 		/// when conducting the analysis.</param>
 		/// <param name="skipMergeCommits">Skip merge-commits during analysis.</param>
 		/// <param name="fileTypeExtensions">This list represents files that shall be analyzed.
 		/// If null, defaults to <see cref="DefaultFileTypeExtensions"/>.</param>
 		/// <param name="tempPath">A temporary path to store intermediate results in.</param>
-		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
+		/// <param name="skipGitMetrics">Whether or not to skip the metrics analysis using
+		/// GitMetrics.</param>
+		[Obsolete("This constructor is not obsolete, but should be refactored so that we e.g. use the property initializers instead of using many arguments (that would probably require removing the protected-modifier from the setters).")]
+		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null, Boolean? skipGitMetrics = null)
 		{
 			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
 			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
@@ -99,16 +103,25 @@ namespace GitDensity.Density
 
 			if (skipInitialCommit.HasValue)
 			{
+				logger.LogWarning($"Skipping initial commit: {(skipInitialCommit.Value ? "Yes" : "No")}");
 				this.SkipInitialCommit = skipInitialCommit.Value;
 			}
 			if (skipMergeCommits.HasValue)
 			{
+				logger.LogWarning($"Skipping merge commits: {(skipMergeCommits.Value ? "Yes" : "No")}");
 				this.SkipMergeCommits = skipMergeCommits.Value;
 			}
 
 			if (fileTypeExtensions is IEnumerable<String> && fileTypeExtensions.Any())
 			{
+				logger.LogWarning($"Using filetype extensions: {String.Join(", ", fileTypeExtensions)}");
 				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
+			}
+
+			if (skipGitMetrics.HasValue)
+			{
+				logger.LogWarning($"Skipping GitMetrics analysis: {(skipGitMetrics.Value ? "Yes" : "No")}");
+				this.SkipGitMetricsAnalysis = skipGitMetrics.Value;
 			}
 
 			logger.LogInformation("Analyzing {0} commits, from {1} to {2} (inclusive)",
