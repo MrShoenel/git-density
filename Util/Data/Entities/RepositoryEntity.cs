@@ -150,8 +150,10 @@ namespace Util.Data.Entities
 		#endregion
 
 		#region Delete Repository and all its belongings
-		public static void Delete(UInt32 repositoryEntityId)
+		public static void Delete(UInt32 repositoryEntityId, BaseLogger<RepositoryEntity> logger)
 		{
+			logger.LogCritical($"Attempting to delete Repository with ID {repositoryEntityId}..");
+
 			using (var session = DataFactory.Instance.OpenSession())
 			{
 				var repo = session.QueryOver<RepositoryEntity>()
@@ -164,11 +166,24 @@ namespace Util.Data.Entities
 
 				using (var trans = session.BeginTransaction())
 				{
+					var allCodeMetrics = repo.Commits.SelectMany(commit => commit.Metrics);
+
+					foreach (var codeMetric in allCodeMetrics)
+					{
+						session.Delete(codeMetric);
+					}
+					trans.Commit();
+					logger.LogWarning("Deleted all code metrics.");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
 					foreach (var contribution in repo.TreeEntryContributions)
 					{
 						session.Delete(contribution);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntry-contributions.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -180,6 +195,7 @@ namespace Util.Data.Entities
 						session.Delete(sim);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all similarity metrics.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -191,6 +207,7 @@ namespace Util.Data.Entities
 						session.Delete(fb);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all FileBlocks.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -202,6 +219,7 @@ namespace Util.Data.Entities
 						session.Delete(metric);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntryChange-metrics.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -213,6 +231,7 @@ namespace Util.Data.Entities
 						session.Delete(tree);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntryChanges.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -231,6 +250,17 @@ namespace Util.Data.Entities
 						session.Delete(hours);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all developers' Hours.");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var status in repo.CommitMetricsStatuses)
+					{
+						session.Delete(status);
+					}
+					trans.Commit();
+					logger.LogWarning("Deleted all CommitMetricsStatuses.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -240,6 +270,7 @@ namespace Util.Data.Entities
 						session.Delete(commit);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all Commits.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -249,12 +280,14 @@ namespace Util.Data.Entities
 						session.Delete(dev);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all Developers.");
 				}
 
 				using (var trans = session.BeginTransaction())
 				{
 					session.Delete(repo);
 					trans.Commit();
+					logger.LogWarning("Deleted the entire Repository.");
 				}
 			}
 		}

@@ -49,6 +49,7 @@ namespace Util.Data.Entities
 		AnalyzerError = -4,
 		/// <summary>
 		/// Shall be used for any other unspecific error.
+		/// Equal to <see cref="SByte.MinValue"/>.
 		/// </summary>
 		OtherError = SByte.MinValue
 	}

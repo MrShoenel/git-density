@@ -97,19 +97,17 @@ namespace Util.Data.Entities
 
 			this.Id(x => x.ID).GeneratedBy.Identity();
 
-			const string unqKey = "UNQ_COMMIT_METRIC";
-
 			this.Map(x => x.OutputEntityType)
 				.CustomType<OutputEntityType>()
-				.Not.Nullable().UniqueKey(unqKey);
+				.Not.Nullable();
 			this.Map(x => x.MetricValue).Not.Nullable();
 
 			this.References<CommitEntity>(x => x.Commit)
-				.Not.Nullable().UniqueKey(unqKey);
+				.Not.Nullable();
 			this.References<TreeEntryChangesEntity>(x => x.TreeEntryChange)
 				.Nullable();
 			this.References<MetricTypeEntity>(x => x.MetricType)
-				.Not.Nullable().UniqueKey(unqKey);
+				.Not.Nullable();
 		}
 	}
 }
