@@ -69,7 +69,7 @@ namespace GitHours.Hours
 		/// <returns>The estimates based on the given commits.</returns>
 		public static IEnumerable<GitHoursAuthorSpanDetailed> GetHoursSpans(IEnumerable<Commit> commitsForDeveloper, Estimator estimator)
 		{
-			var commitsSorted = commitsForDeveloper.OrderBy(commit => commit.Author.When).ToList();
+			var commitsSorted = commitsForDeveloper.OrderBy(commit => commit.Committer.When).ToList();
 
 			if (commitsSorted.Count == 0)
 			{
@@ -82,7 +82,7 @@ namespace GitHours.Hours
 				commitsSorted[0], null, commitsSorted[0], 0d, true, true);
 
 			estimator(
-				commitsSorted.Select(commit => commit.Author.When.DateTime).ToArray(),
+				commitsSorted.Select(commit => commit.Committer.When.DateTime).ToArray(),
 				out EstimateHelper[] estimates);
 
 			for (int i = 0; i < commitsSorted.Count - 1; i++)

@@ -14,8 +14,10 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Util.Extensions;
 
 namespace Util.Data.Entities
@@ -23,7 +25,8 @@ namespace Util.Data.Entities
 	/// <summary>
 	/// An entity that can represent the most essential parts of a <see cref="Commit"/>.
 	/// </summary>
-	public class CommitEntity : IEquatable<CommitEntity>
+	[DebuggerDisplay("CommitEntity {HashSHA1}")]
+	public class CommitEntity : BaseEntity<Commit>, IEquatable<CommitEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -40,7 +43,19 @@ namespace Util.Data.Entities
 
 		public virtual RepositoryEntity Repository { get; set; }
 
-		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; } = new HashSet<TreeEntryContributionEntity>();
+		/// <summary>
+		/// Refers to a set of contributions within this commit in the shape of
+		/// <see cref="TreeEntryContributionEntity"/> objects.
+		/// </summary>
+		public virtual ISet<TreeEntryContributionEntity> TreeEntryContributions { get; set; }
+			= new HashSet<TreeEntryContributionEntity>();
+
+		/// <summary>
+		/// There may be any number of metrics associated with this commit. These
+		/// metrics may be specific to the repo/project or a file.
+		/// </summary>
+		public virtual ISet<MetricEntity> Metrics { get; set; }
+			= new HashSet<MetricEntity>();
 
 		private readonly Object padLock = new Object();
 
@@ -58,6 +73,24 @@ namespace Util.Data.Entities
 			foreach (var contribution in contributions)
 			{
 				this.AddContribution(contribution);
+			}
+			return this;
+		}
+
+		public virtual CommitEntity AddMetric(MetricEntity metric)
+		{
+			lock (this.padLock)
+			{
+				this.Metrics.Add(metric);
+				return this;
+			}
+		}
+
+		public virtual CommitEntity AddMetrics(IEnumerable<MetricEntity> metrics)
+		{
+			foreach (var metric in metrics)
+			{
+				this.AddMetric(metric);
 			}
 			return this;
 		}
@@ -93,6 +126,7 @@ namespace Util.Data.Entities
 			this.Map(x => x.IsMergeCommit).Not.Nullable();
 
 			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
+			this.HasMany<MetricEntity>(x => x.Metrics).Cascade.Lock();
 
 			this.References<DeveloperEntity>(x => x.Developer).Not.Nullable();
 			this.References<RepositoryEntity>(x => x.Repository).Not.Nullable();

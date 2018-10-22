@@ -1,0 +1,154 @@
+{
+  "//": "This is the Helptext for this configuration. Launch the program with '--help' to get more help on available switches. Most of the properties you may adjust are boolean, numbers or strings. Some properties require a specific value - those will be listed below:\n\n-> List of supported Database-Types: { MsSQL2000, MsSQL2005, MsSQL2008, MsSQL2012, MySQL, Oracle10, Oracle9, PgSQL81, PgSQL82, SQLite, SQLiteTemp }\n\n-> The hoursTypes is an array of objects, where each object has the property 'maxDiff' and 'firstCommitAdd'. Both properties are in minutes and all combinations must be unique. For each object/configuration, git-hours will be computed.",
+  "pathToCloneDetectionBinary": "C:\\ProgramData\\Oracle\\Java\\javapath\\java.exe",
+  "cloneDetectionArgs": "-jar C:\\programs\\Java-Clone-Detection.jar -min 1 -Id -self -Num -Str",
+  "databaseType": "MySQL",
+  "//": "The schema within the Database likely needs to exist; the tables however are created/updated by GitDensity.",
+  "databaseConnectionString": "server=172.16.0.1; uid=root; pwd=root; DefaultCommandTimeout=300; database=git_density",
+  "enabledSimilarityMeasurements": {
+    "NormalizedLevenshtein": true,
+    "JaroWinkler": true,
+    "MetricLongestCommonSubSequence": true,
+    "NGram2": true,
+    "NGram3": true,
+    "NGram4": true,
+    "NGram5": true,
+    "NGram6": true,
+    "Cosine2": true,
+    "Cosine3": true,
+    "Cosine4": true,
+    "Cosine5": true,
+    "Cosine6": true,
+    "Jaccard2": true,
+    "Jaccard3": true,
+    "Jaccard4": true,
+    "Jaccard5": true,
+    "Jaccard6": true,
+    "SorensenDice2": true,
+    "SorensenDice3": true,
+    "SorensenDice4": true,
+    "SorensenDice5": true,
+    "SorensenDice6": true
+  },
+  "metricsAnalyzers": [
+    {
+      "typeName": "GitMetrics.QualityAnalyzer.VizzAnalyzer.VizzMetricsAnalyzer",
+      "supportedLanguages": [
+        "Java"
+      ],
+      "configuration": {
+        "pathToBinary": "C:\\ProgramData\\Oracle\\Java\\javapath\\java.exe",
+        "args": "-jar C:\\programs\\Java-Quality-Analyzer.jar"
+      }
+    }
+  ],
+  "//": "Preferred metrics analyzer or null, to have GitMetrics pick one.",
+  "useMetricsAnalyzer": null,
+  "//": "These are settings for GitHours:",
+  "hoursTypes": [
+    {
+      "maxDiff": 30,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 60,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 90,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 120,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 150,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 180,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 240,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 300,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 360,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 420,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 480,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 540,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 600,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 660,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 720,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 780,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 840,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 900,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 960,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1080,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1140,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1200,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1260,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1320,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1380,
+      "firstCommitAdd": 120
+    },
+    {
+      "maxDiff": 1440,
+      "firstCommitAdd": 120
+    }
+  ]
+}

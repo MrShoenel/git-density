@@ -109,9 +109,9 @@ namespace Util.Data
 					.Mappings(mappings =>
 					{
 						mappings.FluentMappings
-						.AddFromAssemblyOf<DataFactory>()
-						.Conventions.Add(typeof(IndexedConvention))
-						.Conventions.Add(typeof(ForeignKeyConvention));
+							.AddFromAssemblyOf<DataFactory>()
+							.Conventions.Add(typeof(IndexedConvention))
+							.Conventions.Add(typeof(ForeignKeyConvention));
 					})
 					.BuildSessionFactory();
 

@@ -22,8 +22,30 @@ using System.Threading.Tasks;
 
 namespace Util.Extensions
 {
+	/// <summary>
+	/// Extension-methods for <see cref="DirectoryInfo"/>.
+	/// </summary>
 	public static class DirectoryInfoExtensions
 	{
+		/// <summary>
+		/// Attempts to delete this <see cref="DirectoryInfo"/> and returns a boolean value
+		/// that indicates the success of the operation.
+		/// </summary>
+		/// <param name="directoryInfo"></param>
+		/// <param name="recursive"></param>
+		/// <returns></returns>
+		public static Boolean TryDelete(this DirectoryInfo directoryInfo, Boolean recursive = true)
+		{
+			try
+			{
+				directoryInfo.Delete(recursive);
+				return true;
+			} catch
+			{
+				return false;
+			}
+		}
+
 		/// <summary>
 		/// Clears a <see cref="DirectoryInfo"/>. That means that all files and folders
 		/// in it will be deleted recursively, without the actual directory being deleted.
@@ -42,6 +64,35 @@ namespace Util.Extensions
 			}
 
 			return directoryInfo;
+		}
+
+		/// <summary>
+		/// Attempts to clear this <see cref="DirectoryInfo"/> and returns a boolean that
+		/// indicates the success of the operation.
+		/// </summary>
+		/// <param name="directoryInfo"></param>
+		/// <returns></returns>
+		public static Boolean TryClear(this DirectoryInfo directoryInfo)
+		{
+			foreach (var file in directoryInfo.GetFiles())
+			{
+				try
+				{
+					file.Delete();
+				} catch
+				{
+					return false;
+				}
+			}
+			foreach (var dir in directoryInfo.GetDirectories())
+			{
+				if (!dir.TryDelete(true))
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 	}
 }

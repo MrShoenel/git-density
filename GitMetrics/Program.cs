@@ -20,15 +20,19 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using Configuration = Util.Configuration;
+using GitMetrics.QualityAnalyzer;
 
 namespace GitMetrics
 {
@@ -63,6 +67,8 @@ namespace GitMetrics
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))
@@ -78,12 +84,23 @@ namespace GitMetrics
 				}
 
 				// First let's create an actual temp-directory in the folder specified:
-				var tempDirectory = new DirectoryInfo(Path.Combine(
-					options.TempDirectory ?? Path.GetTempPath(), "GitDensity"));
-				if (tempDirectory.Exists) { tempDirectory.Delete(true); }
-				tempDirectory.Create();
-				options.TempDirectory = tempDirectory.FullName;
+				Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
+					options.TempDirectory ?? Path.GetTempPath(), nameof(GitMetrics)));
+				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+				Configuration.TempDirectory.Create();
+				options.TempDirectory = Configuration.TempDirectory.FullName;
 				logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
+
+				Configuration configuration = null;
+				try {
+					configuration = Configuration.ReadDefault();
+					logger.LogDebug("Read the following configuration:\n{0}",
+						JsonConvert.SerializeObject(configuration, Formatting.Indented));
+				}
+				catch (Exception ex)
+				{
+					throw new IOException("Error reading the configuration. Perhaps try to generate and derive an example configuration (use '--help')", ex);
+				}
 
 				Repository repository = null;
 				try
@@ -98,7 +115,7 @@ namespace GitMetrics
 					}
 
 					var repoTempPath = Path.Combine(
-						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"GitDensity_repos");
+						new DirectoryInfo(options.TempDirectory).Parent.FullName, $"{nameof(GitMetrics)}_repos");
 					if (!Directory.Exists(repoTempPath))
 					{
 						Directory.CreateDirectory(repoTempPath);
@@ -117,7 +134,7 @@ namespace GitMetrics
 				var outputToConsole = String.IsNullOrEmpty(options.OutputFile);
 				if (!outputToConsole)
 				{
-					logger.LogWarning("Hello, this is GitHours.");
+					logger.LogWarning($"Hello, this is {nameof(GitMetrics)}.");
 				}
 				logger.LogDebug("You supplied the following arguments: {0}",
 					String.Join(", ", args.Select(a => $"'{a}'")));
@@ -128,6 +145,15 @@ namespace GitMetrics
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
+						var repoEntity = repository.AsEntity(span);
+						var commitEntities = span.Select(commit => commit.AsEntity(repoEntity)).ToList();
+						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities);
+						ra.ExecutionPolicy = ExecutionPolicy.Linear;
+						ra.Analyze();
+						var foo = ra.Results.ToList();
+
+
+
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
 						var obj = JsonConvert.SerializeObject(new Object(), Formatting.Indented); /* JsonConvert.SerializeObject(gitHours.Analyze(

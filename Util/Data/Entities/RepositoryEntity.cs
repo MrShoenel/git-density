@@ -14,10 +14,13 @@
 /// ---------------------------------------------------------------------------------
 ///
 using FluentNHibernate.Mapping;
+using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Util.Extensions;
+using Util.Logging;
 
 namespace Util.Data.Entities
 {
@@ -25,7 +28,7 @@ namespace Util.Data.Entities
 	/// Represents a <see cref="LibGit2Sharp.Repository"/> that is associated with
 	/// a number of developers through <see cref="DeveloperEntity"/> objects.
 	/// </summary>
-	public class RepositoryEntity
+	public class RepositoryEntity : BaseEntity<Repository>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -40,7 +43,11 @@ namespace Util.Data.Entities
 
 		public virtual ISet<DeveloperEntity> Developers { get; set; } = new HashSet<DeveloperEntity>();
 
-		public virtual ISet<CommitEntity> Commits { get; set; } = new HashSet<CommitEntity>();
+		public virtual ISet<CommitEntity> Commits { get; set; }
+			= new HashSet<CommitEntity>();
+
+		public virtual ISet<CommitMetricsStatusEntity> CommitMetricsStatuses { get; set; }
+			= new HashSet<CommitMetricsStatusEntity>();
 
 		public virtual ISet<CommitPairEntity> CommitPairs { get; set; } = new HashSet<CommitPairEntity>();
 
@@ -87,6 +94,24 @@ namespace Util.Data.Entities
 			return this;
 		}
 
+		public virtual RepositoryEntity AddCommitMetricsStatus(CommitMetricsStatusEntity cmse)
+		{
+			lock (this.padLock)
+			{
+				this.CommitMetricsStatuses.Add(cmse);
+				return this;
+			}
+		}
+
+		public virtual RepositoryEntity AddCommitMetricsStatuses(IEnumerable<CommitMetricsStatusEntity> statuses)
+		{
+			foreach (var status in statuses)
+			{
+				this.AddCommitMetricsStatus(status);
+			}
+			return this;
+		}
+
 		public virtual RepositoryEntity AddCommitPair(CommitPairEntity commitPair)
 		{
 			lock (padLock)
@@ -125,8 +150,10 @@ namespace Util.Data.Entities
 		#endregion
 
 		#region Delete Repository and all its belongings
-		public static void Delete(UInt32 repositoryEntityId)
+		public static void Delete(UInt32 repositoryEntityId, BaseLogger<RepositoryEntity> logger)
 		{
+			logger.LogCritical($"Attempting to delete Repository with ID {repositoryEntityId}..");
+
 			using (var session = DataFactory.Instance.OpenSession())
 			{
 				var repo = session.QueryOver<RepositoryEntity>()
@@ -139,11 +166,24 @@ namespace Util.Data.Entities
 
 				using (var trans = session.BeginTransaction())
 				{
+					var allCodeMetrics = repo.Commits.SelectMany(commit => commit.Metrics);
+
+					foreach (var codeMetric in allCodeMetrics)
+					{
+						session.Delete(codeMetric);
+					}
+					trans.Commit();
+					logger.LogWarning("Deleted all code metrics.");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
 					foreach (var contribution in repo.TreeEntryContributions)
 					{
 						session.Delete(contribution);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntry-contributions.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -155,6 +195,7 @@ namespace Util.Data.Entities
 						session.Delete(sim);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all similarity metrics.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -166,6 +207,7 @@ namespace Util.Data.Entities
 						session.Delete(fb);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all FileBlocks.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -177,6 +219,7 @@ namespace Util.Data.Entities
 						session.Delete(metric);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntryChange-metrics.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -188,6 +231,7 @@ namespace Util.Data.Entities
 						session.Delete(tree);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all TreeEntryChanges.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -206,6 +250,17 @@ namespace Util.Data.Entities
 						session.Delete(hours);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all developers' Hours.");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var status in repo.CommitMetricsStatuses)
+					{
+						session.Delete(status);
+					}
+					trans.Commit();
+					logger.LogWarning("Deleted all CommitMetricsStatuses.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -215,6 +270,7 @@ namespace Util.Data.Entities
 						session.Delete(commit);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all Commits.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -224,12 +280,14 @@ namespace Util.Data.Entities
 						session.Delete(dev);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all Developers.");
 				}
 
 				using (var trans = session.BeginTransaction())
 				{
 					session.Delete(repo);
 					trans.Commit();
+					logger.LogWarning("Deleted the entire Repository.");
 				}
 			}
 		}
@@ -251,6 +309,7 @@ namespace Util.Data.Entities
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
 			this.HasMany<CommitPairEntity>(x => x.CommitPairs).Cascade.Lock();
 			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
+			this.HasMany<CommitMetricsStatusEntity>(x => x.CommitMetricsStatuses).Cascade.Lock();
 
 			this.References<ProjectEntity>(x => x.Project).Unique();
 		}

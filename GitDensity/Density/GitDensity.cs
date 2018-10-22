@@ -55,6 +55,8 @@ namespace GitDensity.Density
 
 		public Boolean SkipMergeCommits { get; protected internal set; } = true;
 
+		public Boolean SkipGitMetricsAnalysis { get; protected internal set; } = false;
+
 		public ICollection<String> FileTypeExtensions { get; protected internal set; } = GitDensity.DefaultFileTypeExtensions;
 
 		public DirectoryInfo TempDirectory { get; protected internal set; }
@@ -76,14 +78,16 @@ namespace GitDensity.Density
 		/// </summary>
 		/// <param name="gitCommitSpan">Represents the span of commits to be analyzed.</param>
 		/// <param name="languages">Programming-languages to analyze.</param>
-		/// will compute git-hours for each type.</param>
 		/// <param name="skipInitialCommit">Skip the initial commit (the one with no parent)
 		/// when conducting the analysis.</param>
 		/// <param name="skipMergeCommits">Skip merge-commits during analysis.</param>
 		/// <param name="fileTypeExtensions">This list represents files that shall be analyzed.
 		/// If null, defaults to <see cref="DefaultFileTypeExtensions"/>.</param>
 		/// <param name="tempPath">A temporary path to store intermediate results in.</param>
-		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null)
+		/// <param name="skipGitMetrics">Whether or not to skip the metrics analysis using
+		/// GitMetrics.</param>
+		[Obsolete("This constructor is not obsolete, but should be refactored so that we e.g. use the property initializers instead of using many arguments (that would probably require removing the protected-modifier from the setters).")]
+		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null, Boolean? skipGitMetrics = null)
 		{
 			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
 			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
@@ -99,16 +103,25 @@ namespace GitDensity.Density
 
 			if (skipInitialCommit.HasValue)
 			{
+				logger.LogWarning($"Skipping initial commit: {(skipInitialCommit.Value ? "Yes" : "No")}");
 				this.SkipInitialCommit = skipInitialCommit.Value;
 			}
 			if (skipMergeCommits.HasValue)
 			{
+				logger.LogWarning($"Skipping merge commits: {(skipMergeCommits.Value ? "Yes" : "No")}");
 				this.SkipMergeCommits = skipMergeCommits.Value;
 			}
 
 			if (fileTypeExtensions is IEnumerable<String> && fileTypeExtensions.Any())
 			{
+				logger.LogWarning($"Using filetype extensions: {String.Join(", ", fileTypeExtensions)}");
 				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
+			}
+
+			if (skipGitMetrics.HasValue)
+			{
+				logger.LogWarning($"Skipping GitMetrics analysis: {(skipGitMetrics.Value ? "Yes" : "No")}");
+				this.SkipGitMetricsAnalysis = skipGitMetrics.Value;
 			}
 
 			logger.LogInformation("Analyzing {0} commits, from {1} to {2} (inclusive)",
@@ -167,7 +180,7 @@ namespace GitDensity.Density
 		/// <summary>
 		/// Initializes all <see cref="HoursTypeEntity"/> from a given list of types.
 		/// </summary>
-		/// <param name="hoursTypes">Set of <see cref="HoursTypeConfiguration"/>. The analysis
+		/// <param name="hoursTypesConfigurations">Set of <see cref="HoursTypeConfiguration"/>.</param>
 		/// <returns>This (<see cref="GitDensity"/>) for chaining.</returns>
 		public GitDensity InitializeHoursTypeEntities(ISet<HoursTypeConfiguration> hoursTypesConfigurations)
 		{
@@ -202,7 +215,7 @@ namespace GitDensity.Density
 			logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
-			this.TempDirectory.Clear();
+			this.TempDirectory.TryClear();
 
 			var dirOld = "old";
 			var dirNew = "new";
@@ -233,7 +246,7 @@ namespace GitDensity.Density
 				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 
-				#region GitHours
+				#region Full Analysis: GitHours (spent time per commit & developer)
 				var gitHoursAnalysesPerDeveloperAndHoursType =
 					new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
 
@@ -282,6 +295,8 @@ namespace GitDensity.Density
 				}
 				#endregion
 
+				#region Full Analysis: GitDensity (commit-pair-wise clone-detection)
+				#region Identify relevant tree-changes
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
 				{
@@ -296,28 +311,18 @@ namespace GitDensity.Density
 					return this.FileTypeExtensions.Any(extension => rtc.Path.EndsWith(extension))
 					|| this.FileTypeExtensions.Any(extension => rtc.OldPath.EndsWith(extension));
 				});
+				#endregion
 
+				#region Write out commit-pair
 				var pairDirectory = new DirectoryInfo(Path.Combine(this.TempDirectory.FullName, pair.Id));
 				var oldDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirOld));
 				var newDirectory = new DirectoryInfo(Path.Combine(pairDirectory.FullName, dirNew));
 				pairDirectory.Create();
 				pair.WriteOutTree(
 					relevantTreeChanges, pairDirectory, wipeTargetDirectoryBefore: true, parentDirectoryName: dirOld, childDirectoryName: dirNew);
+				#endregion
 
-
-				// Run the clone detection for each pair and each language. We add all sets
-				// to the same list, regardless of their language.
-				var cloneSets = new List<CloneDensity.ClonesXmlSet>();
-				foreach (var language in this.ProgrammingLanguages)
-				{
-					var cloneWrapper = new CloneDensity.CloneDetectionWrapper(
-						pairDirectory, language, this.TempDirectory);
-					cloneSets.AddRange(cloneWrapper.PerformCloneDetection()
-						// Filter out relevant sets: those that are concerned with two version
-						// of the same file (and therefore have exactly two blocks).
-						.Where(set => set.Blocks.Length == 2));
-				}
-
+				#region added/deleted files
 				// The following block concerns all pure ADDs and DELETEs (i.e. the file
 				// in the patch did not exists previously or was deleted in the more recent
 				// patch). That means, for each such file, exactly one FileBlock exists.
@@ -366,8 +371,24 @@ namespace GitDensity.Density
 					patchNew.Clear();
 					patchOld.Clear();
 				}
+				#endregion
 
+				#region Run clone detection for each commit-pair
+				// Run the clone detection for each pair and each language. We add all sets
+				// to the same list, regardless of their language.
+				var cloneSets = new List<CloneDensity.ClonesXmlSet>();
+				foreach (var language in this.ProgrammingLanguages)
+				{
+					var cloneWrapper = new CloneDensity.CloneDetectionWrapper(
+						pairDirectory, language, this.TempDirectory);
+					cloneSets.AddRange(cloneWrapper.PerformCloneDetection()
+						// Filter out relevant sets: those that are concerned with two version
+						// of the same file (and therefore have exactly two blocks).
+						.Where(set => set.Blocks.Length == 2));
+				}
+				#endregion
 
+				#region Check non-pure modifications
 				// The following block concerns all changes that represent modifications to
 				// two different versions of the same file. The file may have been renamed
 				// or moved as well (a so-called non-pure modification).
@@ -449,11 +470,47 @@ namespace GitDensity.Density
 					hunks.Clear();
 					fileBlockTuples.Clear();
 				}
+				#endregion
+				#endregion
 
 				cloneSets.Clear();
-				
 				pair.Dispose(); // also releases the expensive patches.
 			});
+
+			#region Full Analysis: GitMetrics (project-/file-metrics per commit
+			if (this.SkipGitMetricsAnalysis)
+			{
+				goto SkipGitMetricsAnalysis;
+			}
+
+			var metricsRepoAnalyzer = new GitMetrics.QualityAnalyzer.RepositoryAnalyzer(
+				Program.Configuration, repoEntity, commits.Values)
+			{
+				DeleteClonedRepoAfterwards = true,
+				// We don't want parallelism here, as pairs are already processed in
+				// parallel and extracting metrics is a very expensive task, as it
+				// usually involves building the underlying repository.
+				ExecutionPolicy = ExecutionPolicy.Linear
+			};
+
+			metricsRepoAnalyzer.Analyze();
+			foreach (var result in metricsRepoAnalyzer.Results)
+			{
+				// Per result we get: ref to repo and commit and a list of metricTypeEntities
+				// as well as a list of metricEntities. Across all results, the entities for
+				// metricType are the same instances and will saved implicitly when saving
+				// the metrics.
+				repoEntity.AddCommitMetricsStatus(new CommitMetricsStatusEntity
+				{
+					Commit = result.Commit,
+					MetricsStatus = result.CommitMetricsStatus
+				});
+
+				result.Commit.AddMetrics(result.Metrics);
+			}
+
+			SkipGitMetricsAnalysis:
+			#endregion
 
 			return new GitDensityAnalysisResult(repoEntity);
 		}
@@ -471,7 +528,7 @@ namespace GitDensity.Density
 			{
 				if (disposing)
 				{
-					this.TempDirectory.Clear();
+					this.TempDirectory.TryClear();
 					this.GitCommitSpan.Dispose();
 				}
 

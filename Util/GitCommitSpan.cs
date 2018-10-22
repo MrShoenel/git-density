@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2018 Sebastian H�nel [sebastian.honel@lnu.se]
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -16,10 +16,12 @@
 using LibGit2Sharp;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Util.Extensions;
 
 namespace Util
 {
@@ -28,7 +30,7 @@ namespace Util
 	/// to another point in time or <see cref="Commit"/> and thus represents a range
 	/// of <see cref="Commit"/>s.
 	/// </summary>
-	public class GitCommitSpan : IDisposable
+	public class GitCommitSpan : IDisposable, IEnumerable<Commit>
 	{
 		/// <summary>
 		/// Used for parsing the date/time, if given as string. If such date/times are
@@ -142,12 +144,12 @@ namespace Util
 
 			this.lazyFilteredCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
-				var orderedOldToNew = this.Repository.Commits.OrderBy(commit => commit.Author.When).ToList();
+				var orderedOldToNew = this.Repository.GetAllCommits().OrderBy(commit => commit.Committer.When).ToList();
 				var idxSince = orderedOldToNew.FindIndex(commit =>
 				{
 					if (this.SinceDateTime.HasValue)
 					{
-						return commit.Author.When.DateTime >= this.SinceDateTime;
+						return commit.Committer.When.DateTime >= this.SinceDateTime;
 					}
 					else if (this.SinceCommitSha != null)
 					{
@@ -158,7 +160,7 @@ namespace Util
 				});
 
 				var idxUntil = this.UntilDateTime.HasValue ?
-					orderedOldToNew.TakeWhile(commit => commit.Author.When.DateTime <= this.UntilDateTime).Count() - 1
+					orderedOldToNew.TakeWhile(commit => commit.Committer.When.DateTime <= this.UntilDateTime).Count() - 1
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
 
@@ -203,6 +205,26 @@ namespace Util
 		{
 			Dispose(true);
 
+		}
+		#endregion
+
+		#region IEnumerable Support
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator{Commit}"/></returns>
+		public IEnumerator<Commit> GetEnumerator()
+		{
+			return this.FilteredCommits.GetEnumerator();
+		}
+
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator"/></returns>
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 		#endregion
 	}

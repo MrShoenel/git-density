@@ -19,7 +19,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Util.Data;
 
 namespace Util
@@ -107,8 +109,86 @@ namespace Util
 		#endregion
 	}
 
+	/// <summary>
+	/// Used in <see cref="Configuration"/> for configuring each metrics-analyzer.
+	/// </summary>
+	public class MetricsAnalyzerConfiguration
+	{
+		/// <summary>
+		/// The name of analyzer's implementation's type, to be referred to by
+		/// <see cref="Configuration.UseMetricsAnalyzer"/>. It is recommended to
+		/// use the fully qualified name.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "typeName")]
+		public String TypeName { get; set; }
+
+		/// <summary>
+		/// A set of supported Programming languages the analyzer supports. This list
+		/// may be used to select an appropriate analyzer.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "supportedLanguages")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public ISet<ProgrammingLanguage> SupportedLanguages { get; set; }
+			= new HashSet<ProgrammingLanguage>();
+
+		/// <summary>
+		/// A dictionary with settings specific to the analyzer. The values of this
+		/// dictionary must be JSON-deserializable, so that for the type
+		/// <see cref="IComparable"/> was chosen (implemented by all structs and string).
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "configuration")]
+		public IDictionary<String, IComparable> Configuration { get; set; }
+			= new Dictionary<String, IComparable>();
+	}
+
 	public class Configuration
 	{
+		/// <summary>
+		/// The default name of the serialized configuration.
+		/// </summary>
+		[JsonIgnore]
+		public const String DefaultFileName = "configuration.json";
+
+		/// <summary>
+		/// The directory of the currently executing binary/assembly,
+		/// i.e. 'GitDensity.exe'.
+		/// </summary>
+		[JsonIgnore]
+		public static readonly String WorkingDirOfExecutable =
+			Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+		/// <summary>
+		/// An absolute path to the default configuration file.
+		/// </summary>
+		[JsonIgnore]
+		public static readonly String DefaultConfigFilePath =
+			Path.Combine(WorkingDirOfExecutable, DefaultFileName);
+
+		/// <summary>
+		/// This can be set and read from within any of the Git*-applications.
+		/// </summary>
+		[JsonIgnore]
+		public static DirectoryInfo TempDirectory { get; set; }
+
+		/// <summary>
+		/// Writes the example (<see cref="Example"/>) to the <see cref="DefaultConfigFilePath"/>.
+		/// </summary>
+		public static void WriteDefault()
+		{
+			File.WriteAllText(DefaultConfigFilePath,
+				JsonConvert.SerializeObject(Example, Formatting.Indented));
+		}
+
+		/// <summary>
+		/// Attempts to read the default configuration from the <see cref="DefaultConfigFilePath"/>.
+		/// </summary>
+		/// <returns>An instance of <see cref="Configuration"/>.</returns>
+		public static Configuration ReadDefault()
+		{
+			return JsonConvert.DeserializeObject<Configuration>(
+				File.ReadAllText(DefaultConfigFilePath));
+		}
+
 		/// <summary>
 		/// A Dictionary that holds for each <see cref="ProgrammingLanguage"/>
 		/// a collection of accepted filename extensions. This is important so that only
@@ -131,8 +211,6 @@ namespace Util
 				new [] { "php", "phtml", "php3", "php4", "php5" }.ToList()
 			)}
 		});
-
-		public const String DefaultFileName = "configuration.json";
 
 		/// <summary>
 		/// When writing out a new example, we include the helptext as first property
@@ -187,6 +265,23 @@ namespace Util
 		public Dictionary<Similarity.SimilarityMeasurementType, Boolean> EnabledSimilarityMeasurements { get; set; }
 
 		/// <summary>
+		/// A list of available implementations of analyzers for metrics.
+		/// </summary>
+		[JsonProperty(Required = Required.Always, PropertyName = "metricsAnalyzers")]
+		public IList<MetricsAnalyzerConfiguration> MetricsAnalyzers { get; set; }
+			= new List<MetricsAnalyzerConfiguration>();
+
+		/// <summary>
+		/// The type-name of the analyzer-implementation to use. If this property is missing or set
+		/// to null, Git-Metrics may use the first available implementation or tries to select an
+		/// appropriate analyzer from <see cref="MetricsAnalyzers"/> based on criteria, such as the
+		/// underlying type of the project.
+		/// Please note that setting this property to null will not disable the analysis.
+		/// </summary>
+		[JsonProperty(Required = Required.AllowNull, PropertyName = "useMetricsAnalyzer")]
+		public String UseMetricsAnalyzer { get; set; } = null;
+
+		/// <summary>
 		/// A set of <see cref="HoursTypeConfiguration"/> objects. For each of these, the git-hours
 		/// will be computed.
 		/// </summary>
@@ -201,18 +296,35 @@ namespace Util
 		{
 			Help = $@"This is the Helptext for this configuration. Launch the program with '--help' to get more help on available switches. Most of the properties you may adjust are boolean, numbers or strings. Some properties require a specific value - those will be listed below:
 
+-> List of supported Programming-Languages: {{ {String.Join(", ", Enum.GetNames(typeof(ProgrammingLanguage)).OrderBy(v => v))} }};
+
 -> List of supported Database-Types: {{ { String.Join(", ",
-									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }}
+									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }};
 
 -> The hoursTypes is an array of objects, where each object has the property 'maxDiff' and 'firstCommitAdd'. Both properties are in minutes and all combinations must be unique. For each object/configuration, git-hours will be computed.",
 
 
-			PathToCloneDetectionBinary = @"C:\temp\binary.exe",
+			PathToCloneDetectionBinary = @"C:\ProgramData\Oracle\Java\javapath\java.exe",
 			// Detect clones of at least one line, ignore identifier names, ignore self-clones,
 			// ignore numeric and string literals
 			CloneDetectionArgs = "-min 1 -Id -self -Num -Str",
 			DatabaseType = DatabaseType.SQLiteTemp,
 			DatabaseConnectionString = null,
+			MetricsAnalyzers = new List<MetricsAnalyzerConfiguration> {
+				new MetricsAnalyzerConfiguration
+				{
+					TypeName = "GitMetrics.QualityAnalyzer.VizzAnalyzer.VizzMetricsAnalyzer",
+					SupportedLanguages = new HashSet<ProgrammingLanguage> {
+						ProgrammingLanguage.Java
+					},
+					Configuration = new Dictionary<String, IComparable> {
+						{ "pathToBinary", @"C:\ProgramData\Oracle\Java\javapath\java.exe" },
+						{ "args", @"-jar C:\temp\jqa.jar" }
+
+					}
+				}
+			},
+			UseMetricsAnalyzer = null,
 			EnabledSimilarityMeasurements = Enum.GetValues(typeof(Similarity.SimilarityMeasurementType))
 				.Cast<Similarity.SimilarityMeasurementType>()
 				// The following is always implicitly available and enabled, so we exclude it:

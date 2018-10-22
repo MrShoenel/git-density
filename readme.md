@@ -30,6 +30,9 @@ Git Density is a solution that currently features these three applications:
   * It is part of the full analysis of `git-density` as well.
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
+## Caveats
+
+If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate. You may also use other types of databases, as Git Density supports these: MsSQL2000, MsSQL2005, MsSQL2008, MsSQL2012, MySQL, Oracle10, Oracle9, PgSQL81, PgSQL82, SQLite, SQLiteTemp.
 
 ___
 
