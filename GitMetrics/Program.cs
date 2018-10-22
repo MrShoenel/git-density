@@ -145,7 +145,9 @@ namespace GitMetrics
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
-						var ra = new RepositoryAnalyzer(configuration, repository, span);
+						var repoEntity = repository.AsEntity(span);
+						var commitEntities = span.Select(commit => commit.AsEntity(repoEntity)).ToList();
+						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities);
 						ra.ExecutionPolicy = ExecutionPolicy.Linear;
 						ra.Analyze();
 						var foo = ra.Results.ToList();
