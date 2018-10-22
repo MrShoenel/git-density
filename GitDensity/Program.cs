@@ -143,11 +143,9 @@ namespace GitDensity
 				#region check for Commands
 				if (options.DeleteRepoId != default(UInt32))
 				{
-					logger.LogWarning("Attempting to delete Repository with ID {0}", options.DeleteRepoId);
-
 					try
 					{
-						RepositoryEntity.Delete(options.DeleteRepoId);
+						RepositoryEntity.Delete(options.DeleteRepoId, CreateLogger<RepositoryEntity>());
 						Environment.Exit((int)ExitCodes.OK);
 					}
 					catch (Exception ex)
@@ -228,7 +226,8 @@ namespace GitDensity
 							Configuration.LanguagesAndFileExtensions
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
-							options.TempDirectory))
+							options.TempDirectory,
+							options.SkipGitMetricsAnalysis))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
 
@@ -488,6 +487,9 @@ namespace GitDensity
 
 		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
 		public Boolean NoWait { get; set; }
+
+		[Option("skip-git-metrics", Required = false, DefaultValue = false, HelpText = "Optional. If present, then metrics using GitMetrics will not be analyzed or included in the result.")]
+		public Boolean SkipGitMetricsAnalysis { get; set; } = false;
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
