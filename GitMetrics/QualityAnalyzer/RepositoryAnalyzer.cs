@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Util;
+using Util.Data.Entities;
 using Util.Extensions;
 using Configuration = Util.Configuration;
 
@@ -39,17 +40,19 @@ namespace GitMetrics.QualityAnalyzer
 
 		public Configuration Configuration { get; protected internal set; }
 
-		public Repository Repository { get; protected internal set; }
+		public RepositoryEntity RepositoryEntity { get; protected internal set; }
 
-		public ISet<Commit> Commits { get; protected internal set; }
+		public Repository Repository { get => this.RepositoryEntity.BaseObject; }
+
+		public ISet<CommitEntity> CommitEntities { get; protected internal set; }
 
 		public ConcurrentBag<MetricsAnalysisResult> Results { get; protected internal set; }
 
-		public RepositoryAnalyzer(Configuration configuration, Repository repository, IEnumerable<Commit> commits)
+		public RepositoryAnalyzer(Configuration configuration, RepositoryEntity repository, IEnumerable<CommitEntity> commits)
 		{
 			this.Configuration = configuration;
-			this.Repository = repository;
-			this.Commits = new HashSet<Commit>(commits);
+			this.RepositoryEntity = repository;
+			this.CommitEntities = new HashSet<CommitEntity>(commits);
 			this.Results = new ConcurrentBag<MetricsAnalysisResult>();
 		}
 
@@ -78,12 +81,16 @@ namespace GitMetrics.QualityAnalyzer
 				parallelOptions.MaxDegreeOfParallelism = 1;
 			}
 
-			Parallel.ForEach(this.Commits, parallelOptions, commit => {
-				var copyRepo = this.Repository.BundleAndCloneTo(Configuration.TempDirectory.FullName);
-				Commands.Checkout(copyRepo, commit);
+			Parallel.ForEach(this.CommitEntities, parallelOptions, commit => {
+				var copyRepo = this.Repository.BundleAndCloneTo(
+					Configuration.TempDirectory.FullName);
+				Commands.Checkout(copyRepo, commit.BaseObject);
 
-				var analyzer = CreateAnalyzer(this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
-				this.Results.Add(analyzer.Analyze(copyRepo, commit));
+				var analyzer = CreateAnalyzer(
+					this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
+
+				this.Results.Add(analyzer.Analyze(copyRepo, this.RepositoryEntity, commit));
+
 				if (this.DeleteClonedRepoAfterwards)
 				{
 					new DirectoryInfo(copyRepo.Info.WorkingDirectory).TryDelete();

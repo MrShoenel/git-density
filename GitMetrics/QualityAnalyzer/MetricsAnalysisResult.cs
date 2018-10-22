@@ -19,17 +19,26 @@ using Util.Data.Entities;
 
 namespace GitMetrics.QualityAnalyzer
 {
+	/// <summary>
+	/// Class to be filled with resulting entities by implementations of
+	/// <see cref="IMetricsAnalyzer"/>.
+	/// Please note that the actual analyzer must not interconnect the
+	/// entities (e.g. adding <see cref="MetricEntity"/> objects to the
+	/// e.g. <see cref="RepositoryEntity"/> object. The only exception to
+	/// this is referencing the <see cref="MetricTypeEntity"/> from within
+	/// each of the <see cref="MetricEntity"/> objects.
+	/// </summary>
 	public class MetricsAnalysisResult
 	{
 		/// <summary>
-		/// Refers to the <see cref="Repository"/> that was analyzed.
+		/// Refers to the <see cref="RepositoryEntity"/> that was analyzed.
 		/// </summary>
-		public Repository Repository { get; set; }
+		public RepositoryEntity Repository { get; set; }
 
 		/// <summary>
-		/// Refers to the <see cref="Commit"/> that was analyzed within the repository.
+		/// Refers to the <see cref="CommitEntity"/> that was analyzed within the repository.
 		/// </summary>
-		public Commit Commit { get; set; }
+		public CommitEntity Commit { get; set; }
 
 		/// <summary>
 		/// There is one per <see cref="Commit"/>.

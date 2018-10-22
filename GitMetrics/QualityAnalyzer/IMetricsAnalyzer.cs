@@ -15,6 +15,7 @@
 ///
 using LibGit2Sharp;
 using Util;
+using Util.Data.Entities;
 
 namespace GitMetrics.QualityAnalyzer
 {
@@ -31,10 +32,13 @@ namespace GitMetrics.QualityAnalyzer
 		/// exclusive access to the <see cref="Repository"/> (i.e. it is operating on an
 		/// exclusive copy or similar).
 		/// </summary>
-		/// <param name="repository">The <see cref="Repository"/> to analyze.</param>
-		/// <param name="commit">The specific <see cref="Commit"/> to check out.</param>
+		/// <param name="clonedRepository">The cloned repository.</param>
+		/// <param name="originalRepositoryEntity">The <see cref="RepositoryEntity"/> to add all
+		/// newly created entities to (please note that the underlying <see cref="Repository"/>)
+		/// points to the cloned copy, not the original that the first parameter points to.</param>
+		/// <param name="originalCommitEntity">The specific <see cref="CommitEntity"/> to check out.</param>
 		/// <returns>An instance of <see cref="MetricsAnalysisResult"/>.</returns>
-		MetricsAnalysisResult Analyze(Repository repository, Commit commit);
+		MetricsAnalysisResult Analyze(Repository clonedRepository, RepositoryEntity originalRepositoryEntity, CommitEntity originalCommitEntity);
 
 		/// <summary>
 		/// To be called by the factory, so that any analyzer can accept configuration.
