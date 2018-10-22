@@ -127,6 +127,7 @@ namespace Util
 		/// may be used to select an appropriate analyzer.
 		/// </summary>
 		[JsonProperty(Required = Required.Always, PropertyName = "supportedLanguages")]
+		[JsonConverter(typeof(StringEnumConverter))]
 		public ISet<ProgrammingLanguage> SupportedLanguages { get; set; }
 			= new HashSet<ProgrammingLanguage>();
 
@@ -273,7 +274,9 @@ namespace Util
 		/// <summary>
 		/// The type-name of the analyzer-implementation to use. If this property is missing or set
 		/// to null, Git-Metrics may use the first available implementation or tries to select an
-		/// appropriate analyzer from <see cref="MetricsAnalyzers"/>.
+		/// appropriate analyzer from <see cref="MetricsAnalyzers"/> based on criteria, such as the
+		/// underlying type of the project.
+		/// Please note that setting this property to null will not disable the analysis.
 		/// </summary>
 		[JsonProperty(Required = Required.AllowNull, PropertyName = "useMetricsAnalyzer")]
 		public String UseMetricsAnalyzer { get; set; } = null;
@@ -293,8 +296,10 @@ namespace Util
 		{
 			Help = $@"This is the Helptext for this configuration. Launch the program with '--help' to get more help on available switches. Most of the properties you may adjust are boolean, numbers or strings. Some properties require a specific value - those will be listed below:
 
+-> List of supported Programming-Languages: {{ {String.Join(", ", Enum.GetNames(typeof(ProgrammingLanguage)).OrderBy(v => v))} }};
+
 -> List of supported Database-Types: {{ { String.Join(", ",
-									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }}
+									Enum.GetNames(typeof(DatabaseType)).OrderBy(v => v)) } }};
 
 -> The hoursTypes is an array of objects, where each object has the property 'maxDiff' and 'firstCommitAdd'. Both properties are in minutes and all combinations must be unique. For each object/configuration, git-hours will be computed.",
 
