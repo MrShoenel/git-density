@@ -20,6 +20,10 @@ using Util.Extensions;
 
 namespace Util.Data.Entities
 {
+	/// <summary>
+	/// Represents the type of block that was changed within a file. This could be a new,
+	/// deleted or changed block.
+	/// </summary>
 	public enum FileBlockType
 	{
 		Added = 1,
@@ -27,6 +31,11 @@ namespace Util.Data.Entities
 		Modified = 3
 	}
 
+	/// <summary>
+	/// A <see cref="FileBlockEntity"/> represents a specific set of continouos lines
+	/// within a file that changed. This could be added, deleted or changed lines. It
+	/// represents how many lines changed and where the change occurred.
+	/// </summary>
 	public class FileBlockEntity
 	{
 		#region Columns and virtual entities
@@ -47,7 +56,8 @@ namespace Util.Data.Entities
 
 		public virtual TreeEntryChangesEntity TreeEntryChanges { get; set; }
 
-		public virtual ISet<SimilarityEntity> Similarities { get; set; } = new HashSet<SimilarityEntity>();
+		public virtual ISet<SimilarityEntity> Similarities { get; set; }
+			= new HashSet<SimilarityEntity>();
 		#endregion
 
 		private readonly Object padLock = new Object();

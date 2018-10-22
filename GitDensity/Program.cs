@@ -38,15 +38,6 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitDensity
 {
-	internal enum ExitCodes : Int32
-	{
-		OK = 0,
-		ConfigError = -1,
-		RepoInvalid = -2,
-		UsageInvalid = -3,
-		CmdError = -4
-	}
-
 	internal class Program
 	{
 		/// <summary>
@@ -71,13 +62,6 @@ namespace GitDensity
 		}
 
 		/// <summary>
-		/// The directory of the currently executing binary/assembly,
-		/// i.e. 'GitDensity.exe'.
-		/// </summary>
-		public static readonly String WorkingDirOfExecutable =
-			Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-		/// <summary>
 		/// The program's configuration, as read from 'configuration.json'.
 		/// </summary>
 		public static Configuration Configuration { private set; get; }
@@ -91,8 +75,6 @@ namespace GitDensity
 		static void Main(string[] args)
 		{
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
-
-			var configFilePath = Path.Combine(WorkingDirOfExecutable, Configuration.DefaultFileName);
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options) && options.TryValidate())
@@ -107,12 +89,10 @@ namespace GitDensity
 					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
 					Environment.Exit((int)ExitCodes.OK);
 				}
-				else if (options.WriteExampeConfig || !File.Exists(configFilePath))
+				else if (options.WriteExampeConfig || !File.Exists(Configuration.DefaultConfigFilePath))
 				{
-					logger.LogCritical("Writing example to file: {0}", configFilePath);
-
-					File.WriteAllText(configFilePath,
-						JsonConvert.SerializeObject(Configuration.Example, Formatting.Indented));
+					logger.LogCritical("Writing example to file: {0}", Configuration.DefaultConfigFilePath);
+					Configuration.WriteDefault();
 					Environment.Exit((int)ExitCodes.OK);
 				}
 
@@ -127,17 +107,16 @@ namespace GitDensity
 				try
 				{
 					// First let's create an actual temp-directory in the folder specified:
-					var tempDirectory = new DirectoryInfo(Path.Combine(
+					Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
 						options.TempDirectory ?? Path.GetTempPath(), nameof(GitDensity)));
-					if (tempDirectory.Exists) { tempDirectory.Delete(true); }
-					tempDirectory.Create();
-					options.TempDirectory = tempDirectory.FullName;
+					if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
+					Configuration.TempDirectory.Create();
+					options.TempDirectory = Configuration.TempDirectory.FullName;
 					logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
 
 					try
 					{
-						Program.Configuration = JsonConvert.DeserializeObject<Configuration>(
-							File.ReadAllText(configFilePath));
+						Program.Configuration = Configuration.ReadDefault();
 						logger.LogDebug("Read the following configuration:\n{0}",
 							JsonConvert.SerializeObject(Program.Configuration, Formatting.Indented));
 					}
@@ -164,11 +143,9 @@ namespace GitDensity
 				#region check for Commands
 				if (options.DeleteRepoId != default(UInt32))
 				{
-					logger.LogWarning("Attempting to delete Repository with ID {0}", options.DeleteRepoId);
-
 					try
 					{
-						RepositoryEntity.Delete(options.DeleteRepoId);
+						RepositoryEntity.Delete(options.DeleteRepoId, CreateLogger<RepositoryEntity>());
 						Environment.Exit((int)ExitCodes.OK);
 					}
 					catch (Exception ex)
@@ -240,7 +217,7 @@ namespace GitDensity
 					using (var repo = options.RepoPath.OpenRepository(
 						repoTempPath, useRepoName: useRepoName, pullIfAlreadyExists: true))
 					{
-						var span = new GitHoursSpan(repo, options.Since, options.Until);
+						var span = new GitCommitSpan(repo, options.Since, options.Until);
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
@@ -249,7 +226,8 @@ namespace GitDensity
 							Configuration.LanguagesAndFileExtensions
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
-							options.TempDirectory))
+							options.TempDirectory,
+							options.SkipGitMetricsAnalysis))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
 
@@ -316,6 +294,7 @@ namespace GitDensity
 		/// the already analyzed repositories.
 		/// </summary>
 		/// <param name="options"></param>
+		[Obsolete]
 		protected internal static void RecomputeGitHours(CommandLineOptions options)
 		{
 			var parallelOptions = new ParallelOptions();
@@ -368,13 +347,13 @@ namespace GitDensity
 						#endregion
 
 						#region compute git-hours
-						var gitHoursSpan = new GitHoursSpan(repo,
+						var gitCommitSpan = new GitCommitSpan(repo,
 							sinceDateTimeOrCommitSha: repoEntity.SinceCommitSha1,
 							untilDatetimeOrCommitSha: repoEntity.UntilCommitSha1);
-						var pairs = gitHoursSpan.CommitPairs().ToList();
+						var pairs = gitCommitSpan.CommitPairs().ToList();
 						var commits = repoEntity.Commits.ToDictionary(c => c.HashSHA1, c => c);
 
-						var developersRaw = gitHoursSpan.FilteredCommits
+						var developersRaw = gitCommitSpan.FilteredCommits
 							.GroupByDeveloperAsSignatures(repoEntity);
 						var developers = developersRaw.ToDictionary(
 							kv => kv.Key, kv =>
@@ -394,7 +373,7 @@ namespace GitDensity
 							{
 								var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
 									new GitHours.Hours.GitHours(
-										gitHoursSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
+										gitCommitSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
 											.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
 											.AuthorStats.ToDictionary(
 												@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
@@ -509,17 +488,20 @@ namespace GitDensity
 		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
 		public Boolean NoWait { get; set; }
 
+		[Option("skip-git-metrics", Required = false, DefaultValue = false, HelpText = "Optional. If present, then metrics using GitMetrics will not be analyzed or included in the result.")]
+		public Boolean SkipGitMetricsAnalysis { get; set; } = false;
+
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
-		#region Command-Options
-		[Option("delete-repo-id", Required = false, HelpText = "Removes analysis results for an entire RepositoryEntity and all of its associated entities.")]
-		public UInt32 DeleteRepoId { get; set; }
-
-		[Option("write-config", Required = false, DefaultValue = false, HelpText = "Optional. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file.")]
+		[Option("cmd-write-config", Required = false, DefaultValue = false, HelpText = "Command. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file. The program will terminate afterwards.")]
 		public Boolean WriteExampeConfig { get; set; }
 
-		[Option("cmd-recompute-githours", Required = false, DefaultValue = false, HelpText = "Command. Run the method " + nameof(Program.RecomputeGitHours) + "(). If called, the application will only run this and ignore/do nothing else.")]
+		#region Command-Options
+		[Option("cmd-delete-repo-id", Required = false, HelpText = "Command. Removes analysis results for an entire RepositoryEntity and all of its associated entities, then terminates the program.")]
+		public UInt32 DeleteRepoId { get; set; }
+
+		[Option("cmd-recompute-githours", Required = false, DefaultValue = false, HelpText = "Command. Run the method " + nameof(Program.RecomputeGitHours) + "(). If called, the application will only run this and ignore/do nothing else. This method was intended to recompute git-hours of already analyzed repos and should not be used anymore.")]
 		public Boolean CmdRecomputeGitHours { get; set; }
 		#endregion
 
@@ -570,17 +552,17 @@ namespace GitDensity
 				HelpText.DefaultParsingErrorsHandler(this, ht);
 			}
 			
-			var exitCodes = !wasHelpRequested ? String.Empty : "\n\n> Possible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
+			var exitCodes = !wasHelpRequested ? String.Empty : "\n\nPossible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
 				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
-			var supportedLanguages = !wasHelpRequested ? String.Empty : "\n\n> Supported programming languages: " + String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
-			var implementedSimilarities = !wasHelpRequested ? String.Empty : "\n\n> Implemented similarity measurements: " + String.Join(", ", SimilarityEntity.SmtToPropertyInfo.Keys
+			var supportedLanguages = !wasHelpRequested ? String.Empty : "\n\nSupported programming languages: " + String.Join(", ", Configuration.LanguagesAndFileExtensions.OrderBy(kv => kv.Key.ToString()).Select(kv => $"{kv.Key.ToString()} ({String.Join(", ", kv.Value.Select(v => $".{v}"))})"));
+			var implementedSimilarities = !wasHelpRequested ? String.Empty : "\n\nImplemented similarity measurements: " + String.Join(", ", SimilarityEntity.SmtToPropertyInfo.Keys
 				.OrderBy(smt => (int)smt)
 				.Select(smt => $"{smt.ToString()} ({(int)smt})")
 			);
 			var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
 				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
 
-			return $"{fullLine}\n{exitReason}{ht}{supportedLanguages}{implementedSimilarities}{exitCodes}\n\n{fullLine}";
+			return $"{fullLine}\n{exitReason}{ht}{exitCodes}{supportedLanguages}{implementedSimilarities}\n\n{fullLine}";
 		}
 
 		/// <summary>

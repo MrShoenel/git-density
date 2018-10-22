@@ -26,7 +26,7 @@ namespace Util.Data.Entities
 	/// of <see cref="HoursTypeEntity"/>. This entity represents a specific
 	/// configuration, for how times were logged.
 	/// </summary>
-	public class HoursTypeEntity
+	public class HoursTypeEntity : IEquatable<HoursTypeEntity>
 	{
 		public virtual UInt32 ID { get; set; }
 
@@ -67,7 +67,7 @@ namespace Util.Data.Entities
 		public static HoursTypeEntity ForSettings(UInt32 maxCommitDiffInMinutes, UInt32 firstCommitAddMinutes)
 		{
 			// Use a Mutex across all processes
-			using (var mutex = new Mutex(false, $"mutex_{nameof(HoursEntity)}"))
+			using (var mutex = new Mutex(false, $"mutex_{nameof(HoursTypeEntity)}"))
 			using (var session = DataFactory.Instance.OpenSession())
 			using (var trans = session.BeginTransaction(System.Data.IsolationLevel.Serializable))
 			{
@@ -108,6 +108,23 @@ namespace Util.Data.Entities
 				return hte;
 			}
 		}
+
+		#region equality
+		public virtual bool Equals(HoursTypeEntity other)
+		{
+			return other is HoursTypeEntity && other.FirstCommitAddMinutes == this.FirstCommitAddMinutes && other.MaxCommitDiffMinutes == this.MaxCommitDiffMinutes;
+		}
+
+		public override bool Equals(object obj)
+		{
+			return this.Equals(obj as HoursTypeEntity);
+		}
+
+		public override int GetHashCode()
+		{
+			return 31 * this.FirstCommitAddMinutes.GetHashCode() ^ this.MaxCommitDiffMinutes.GetHashCode();
+		}
+		#endregion
 		#endregion
 	}
 

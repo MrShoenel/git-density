@@ -30,11 +30,11 @@ namespace GitHoursTests
 		[TestMethod]
 		public void TestEstimatesWithHelper()
 		{
-			using (var span = new Util.GitHoursSpan(GitHoursAuthorSpanTests.SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
+			using (var span = new Util.GitCommitSpan(GitHoursAuthorSpanTests.SolutionDirectory.FullName.OpenRepository(), (String)null, (String)null))
 			{
 				var analysis = new GitHours.Hours.GitHours(span);
 
-				var dates = span.Repository.Commits.Select(c => c.Author.When.DateTime).ToArray();
+				var dates = span.Repository.Commits.Select(c => c.Committer.When.DateTime).ToArray();
 				var original = analysis.Estimate(dates);
 				var withHelper = analysis.Estimate(dates, out EstimateHelper[] estimates);
 

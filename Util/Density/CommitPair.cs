@@ -145,7 +145,7 @@ namespace Util.Density
 
 			if (wipeTargetDirectoryBefore && targetDirectory.Exists)
 			{
-				targetDirectory.Clear();
+				targetDirectory.TryClear();
 			}
 
 			var diOld = new DirectoryInfo(Path.Combine(targetDirectory.FullName, parentDirectoryName));

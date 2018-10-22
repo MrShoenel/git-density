@@ -82,8 +82,6 @@ namespace GitDensity.Density
 				{
 					session.Insert(tree);
 					numEntities++;
-					//session.Insert(tree.TreeEntryChangesMetrics);
-					//numEntities++;
 
 					foreach (var metricsEntity in tree.TreeEntryChangesMetrics)
 					{
@@ -109,6 +107,18 @@ namespace GitDensity.Density
 					numEntities++;
 				}
 
+				foreach (var metricsStatus in this.Repository.CommitMetricsStatuses)
+				{
+					session.Insert(metricsStatus);
+					numEntities++;
+				}
+
+				foreach (var metrics in this.Repository.Commits.SelectMany(c => c.Metrics))
+				{
+					session.Insert(metrics);
+					numEntities++;
+				}
+
 				logger.LogInformation("Trying to commit transaction..");
 				trans.Commit();
 				logger.LogInformation("Success! Storing the result took {0}", (DateTime.Now - start));
@@ -126,8 +136,10 @@ namespace GitDensity.Density
 					"`- TreeEntryChangesMetrics:\t{6}\n" +
 					"`- TreeEntryContributions:\t{}\n" +
 					"`- FileBlocks:\t\t\t{7} ({8} modified)\n" +
-					"`- Similarities:\t\t{9}\n" + fullLine +
-					"\t\t\t\t{10} total\n" + fullLine,
+					"`- Similarities:\t\t{9}\n" +
+					"`- MetricsStatuses:\t\t{10}\n" +
+					"`- Metrics:\t\t\t{11}\n" + fullLine +
+					"\t\t\t\t{12} total\n" + fullLine,
 					numEntities,
 					this.Repository.Developers.Count,
 					this.Repository.Commits.Count,
@@ -143,6 +155,8 @@ namespace GitDensity.Density
 						.SelectMany(tec => tec.FileBlocks).Where(fb => fb.FileBlockType == FileBlockType.Modified).Count(),
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
 						.SelectMany(tec => tec.FileBlocks.SelectMany(fb => fb.Similarities)).Count(),
+					this.Repository.CommitMetricsStatuses.Count,
+					this.Repository.Commits.SelectMany(c => c.Metrics).Count(),
 					numEntities
 				);
 			}

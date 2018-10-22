@@ -25,6 +25,7 @@ using Util.Density;
 using Util.Metrics;
 using System.Text;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace Util.Extensions
 {
@@ -41,7 +42,8 @@ namespace Util.Extensions
 		/// to compute the differences between the selected commits. A pair consists of a
 		/// commit and its direct parent.
 		/// </summary>
-		/// <param name="repo">The <see cref="Repository"/> to pull the commits from.</param>
+		/// <param name="gitCommitSpan">A commit span to delimit the range of returned pairs
+		/// of commits.</param>
 		/// <param name="skipInitialCommit">If true, then the initial commit will be discarded
 		/// and not be included in any pair. This might be useful, because the initial commit
 		/// consists only of new files.</param>
@@ -52,10 +54,10 @@ namespace Util.Extensions
 		/// <param name="sortOrder">If <see cref="SortOrder.OldestFirst"/>, the first pair returned
 		/// contains the initial commit (if not skipped) and null as a parent.</param>
 		/// <returns>An <see cref="IEnumerable{CommitPair}"/> of pairs of commits.</returns>
-		public static IEnumerable<CommitPair> CommitPairs(this GitHoursSpan gitHoursSpan, bool skipInitialCommit = false, bool skipMergeCommits = true, SortOrder sortOrder = SortOrder.OldestFirst)
+		public static IEnumerable<CommitPair> CommitPairs(this GitCommitSpan gitCommitSpan, bool skipInitialCommit = false, bool skipMergeCommits = true, SortOrder sortOrder = SortOrder.OldestFirst)
 		{
 			var commits = (sortOrder == SortOrder.LatestFirst ?
-				gitHoursSpan.FilteredCommits.Reverse() : gitHoursSpan.FilteredCommits).ToList();
+				gitCommitSpan.FilteredCommits.Reverse() : gitCommitSpan.FilteredCommits).ToList();
 
 			foreach (var commit in commits)
 			{
@@ -76,7 +78,7 @@ namespace Util.Extensions
 
 
 				// Note that the parent can be null, if initial commit is not skipped.
-				yield return new CommitPair(gitHoursSpan.Repository,
+				yield return new CommitPair(gitCommitSpan.Repository,
 					commit, isInitialCommit ? null : commit.Parents.FirstOrDefault());
 			}
 		}
@@ -252,7 +254,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byMailDict[mail] = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = String.Empty, Email = signature.Email, Repository = repository };
+							{ BaseObject = signature, Name = String.Empty, Email = signature.Email, Repository = repository };
 					}
 				}
 				else if (mail == String.Empty)
@@ -264,7 +266,7 @@ namespace Util.Extensions
 					else
 					{
 						devEntity = byNameDict[name] = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = signature.Name, Email = String.Empty, Repository = repository };
+							{ BaseObject = signature, Name = signature.Name, Email = String.Empty, Repository = repository };
 					}
 				}
 				else
@@ -282,7 +284,7 @@ namespace Util.Extensions
 					{
 						// new entity, add to both dictionaries
 						devEntity = new DeveloperWithAlternativeNamesAndEmails
-							{ Name = signature.Name, Email = signature.Email, Repository = repository };
+							{ BaseObject = signature, Name = signature.Name, Email = signature.Email, Repository = repository };
 						byMailDict[mail] = devEntity;
 						byNameDict[name] = devEntity;
 					}
@@ -398,6 +400,91 @@ namespace Util.Extensions
 			{
 				fieldContentChangesStringBuilder.SetValue(pec, null);
 			}
+		}
+
+		/// <summary>
+		/// Bundles this <see cref="Repository"/> to a single file (a git bundle), moves
+		/// the file to the target-path and un-bundles (clones from) it. Then removes the
+		/// bundle file, opens the new copy of the repository and returns it.
+		/// </summary>
+		/// <param name="repository">The <see cref="Repository"/> to clone.</param>
+		/// <param name="targetPath">The path to clone the new repository to.</param>
+		/// <returns>The <see cref="Repository"/> that was opened on the new path.</returns>
+		public static Repository BundleAndCloneTo(this Repository repository, String targetPath)
+		{
+			var id = Guid.NewGuid().ToString();
+			var bundleName = $"{id}.bundle";
+
+			using (var proc = Process.Start(new ProcessStartInfo {
+				FileName = "git",
+				Arguments = $"bundle create {bundleName} --all",
+				WorkingDirectory = repository.Info.WorkingDirectory,
+				WindowStyle = ProcessWindowStyle.Hidden
+			}))
+			{
+				proc.WaitForExit();
+			}
+
+			File.Move(
+				Path.Combine(repository.Info.WorkingDirectory, bundleName),
+				Path.Combine(targetPath, bundleName));
+
+			using (var proc = Process.Start(new ProcessStartInfo {
+				FileName = "git",
+				Arguments = $"clone {bundleName}",
+				WorkingDirectory = targetPath,
+				WindowStyle = ProcessWindowStyle.Hidden
+			}))
+			{
+				proc.WaitForExit();
+			}
+
+			// Delete the bundle after cloning:
+			File.Delete(Path.Combine(targetPath, bundleName));
+
+			var clonedRepoPath = Path.Combine(targetPath, id);
+			return clonedRepoPath.OpenRepository();
+		}
+
+		/// <summary>
+		/// Obtain all commits from all branches.
+		/// </summary>
+		/// <param name="repository"></param>
+		/// <returns>An <see cref="ISet{Commit}"/> with all the repository's commits.</returns>
+		public static ISet<Commit> GetAllCommits(this Repository repository)
+		{
+			return new HashSet<Commit>(repository.Branches.SelectMany(br => br.Commits));
+		}
+
+		/// <summary>
+		/// Obtains all commits of a repository and goes to the latests, as determined
+		/// by <see cref="Commit.Committer"/>.
+		/// </summary>
+		/// <see cref="GetAllCommits(Repository)"/>
+		/// <param name="repository"></param>
+		/// <returns>The same <see cref="Repository"/> with the latest <see cref="Commit"/>
+		/// being checked out.</returns>
+		public static Repository CheckoutLatestCommit(this Repository repository)
+		{
+			Commands.Checkout(repository,
+				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.DateTime).First());
+
+			return repository;
+		}
+
+		/// <summary>
+		/// Creates a short SHA1-string (default is 7 characters long) for a Commit.
+		/// </summary>
+		/// <param name="commit"></param>
+		/// <param name="length"></param>
+		/// <returns></returns>
+		public static String ShaShort(this Commit commit, int length = 7)
+		{
+			if (length < 4 || length > 39)
+			{
+				throw new ArgumentOutOfRangeException($"{nameof(length)}: {length}");
+			}
+			return commit.Sha.Substring(0, length);
 		}
 	}
 }

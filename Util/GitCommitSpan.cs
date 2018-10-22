@@ -16,10 +16,12 @@
 using LibGit2Sharp;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Util.Extensions;
 
 namespace Util
 {
@@ -28,7 +30,7 @@ namespace Util
 	/// to another point in time or <see cref="Commit"/> and thus represents a range
 	/// of <see cref="Commit"/>s.
 	/// </summary>
-	public class GitHoursSpan : IDisposable
+	public class GitCommitSpan : IDisposable, IEnumerable<Commit>
 	{
 		/// <summary>
 		/// Used for parsing the date/time, if given as string. If such date/times are
@@ -77,20 +79,20 @@ namespace Util
 				"#" + this.UntilCommitSha.Substring(0, Math.Min(this.UntilCommitSha.Length, 8));
 
 		/// <summary>
-		/// Constructs a new <see cref="GitHoursSpan"/> using two <see cref="Commit"/>s
+		/// Constructs a new <see cref="GitCommitSpan"/> using two <see cref="Commit"/>s
 		/// to delimit the range. Both <see cref="Commit"/>s will be included in the span.
 		/// </summary>
-		/// <see cref="GitHoursSpan(Repository, string, string)"/>.
+		/// <see cref="GitCommitSpan(Repository, string, string)"/>.
 		/// <param name="repository"></param>
 		/// <param name="sinceCommit"></param>
 		/// <param name="untilCommit"></param>
-		public GitHoursSpan(Repository repository, Commit sinceCommit, Commit untilCommit)
+		public GitCommitSpan(Repository repository, Commit sinceCommit, Commit untilCommit)
 			: this(repository, sinceCommit.Sha, untilCommit.Sha)
 		{
 		}
 
 		/// <summary>
-		/// Constructs a new <see cref="GitHoursSpan"/> using two <see cref="String"/>s,
+		/// Constructs a new <see cref="GitCommitSpan"/> using two <see cref="String"/>s,
 		/// where each of these can represent a (partial) SHA1 of commit's hash or a properly
 		/// formatted date and time.
 		/// </summary>
@@ -101,7 +103,7 @@ namespace Util
 		/// <param name="untilDatetimeOrCommitSha">(Partial) SHA1 of commit or parseable
 		/// date/time (according to <see cref="DateTimeFormat"/>). This offset is the
 		/// inclusive end of the span.</param>
-		public GitHoursSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null)
+		public GitCommitSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null)
 		{
 			this.Repository = repository;
 			var ic = CultureInfo.InvariantCulture;
@@ -119,7 +121,7 @@ namespace Util
 				}
 				else
 				{
-					this.SinceDateTime = DateTime.ParseExact(sinceDateTimeOrCommitSha, GitHoursSpan.DateTimeFormat, ic);
+					this.SinceDateTime = DateTime.ParseExact(sinceDateTimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic);
 				}
 			}
 
@@ -136,18 +138,18 @@ namespace Util
 				}
 				else
 				{
-					this.UntilDateTime = DateTime.ParseExact(untilDatetimeOrCommitSha, GitHoursSpan.DateTimeFormat, ic);
+					this.UntilDateTime = DateTime.ParseExact(untilDatetimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic);
 				}
 			}
 
 			this.lazyFilteredCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
-				var orderedOldToNew = this.Repository.Commits.OrderBy(commit => commit.Author.When).ToList();
+				var orderedOldToNew = this.Repository.GetAllCommits().OrderBy(commit => commit.Committer.When).ToList();
 				var idxSince = orderedOldToNew.FindIndex(commit =>
 				{
 					if (this.SinceDateTime.HasValue)
 					{
-						return commit.Author.When.DateTime >= this.SinceDateTime;
+						return commit.Committer.When.DateTime >= this.SinceDateTime;
 					}
 					else if (this.SinceCommitSha != null)
 					{
@@ -158,7 +160,7 @@ namespace Util
 				});
 
 				var idxUntil = this.UntilDateTime.HasValue ?
-					orderedOldToNew.TakeWhile(commit => commit.Author.When.DateTime <= this.UntilDateTime).Count() - 1
+					orderedOldToNew.TakeWhile(commit => commit.Committer.When.DateTime <= this.UntilDateTime).Count() - 1
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
 
@@ -203,6 +205,26 @@ namespace Util
 		{
 			Dispose(true);
 
+		}
+		#endregion
+
+		#region IEnumerable Support
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator{Commit}"/></returns>
+		public IEnumerator<Commit> GetEnumerator()
+		{
+			return this.FilteredCommits.GetEnumerator();
+		}
+
+		/// <summary>
+		/// Returns an enumerator for <see cref="FilteredCommits"/>.
+		/// </summary>
+		/// <returns>An <see cref="IEnumerator"/></returns>
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
 		}
 		#endregion
 	}
