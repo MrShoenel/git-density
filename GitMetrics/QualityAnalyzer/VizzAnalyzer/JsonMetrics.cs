@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Util.Data.Entities;
+using Util.Extensions;
 
 namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 {
@@ -49,5 +51,36 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 		[JsonProperty(PropertyName = "childrenWeights", Required = Required.Default)]
 		public Double[] ChildrenWeights { get; set; }
 			= new Double[0];
+
+		protected readonly Lazy<MetricTypeEntity> asMetricType;
+
+		public MetricTypeEntity AsMetricType { get => this.asMetricType.Value; }
+
+		public ISet<MetricTypeEntity> AsMetricTypeWithChildren
+		{
+			get
+			{
+				var set = new HashSet<MetricTypeEntity>();
+				set.Add(this.AsMetricType);
+				set.AddAll(this.Children.Select(child => child.AsMetricType));
+				return set;
+			}
+		}
+
+		public JsonMetrics()
+		{
+			this.asMetricType = new Lazy<MetricTypeEntity>(() =>
+			{
+				return MetricTypeEntity.ForSettings(
+					this.Name,
+					// The property actually does not exist in the JSON at this time and the types
+					// of metrics are only later inserted and also retrieved by ::ForSettings(..).
+					isScore: false,
+					isRoot: this.IsRoot,
+					isPublic: this.IsPublic,
+					accuracy: this.Precision,
+					forceLookupAccuary: true);
+ 			});
+		}
 	}
 }
