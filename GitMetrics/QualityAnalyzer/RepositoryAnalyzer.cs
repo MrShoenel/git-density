@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -25,12 +26,19 @@ using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
+using Util.Logging;
 using Configuration = Util.Configuration;
 
 namespace GitMetrics.QualityAnalyzer
 {
 	public class RepositoryAnalyzer : ISupportsExecutionPolicy
 	{
+		/// <summary>
+		/// Used for logging in this and deriving classes.
+		/// </summary>
+		protected internal static BaseLogger<RepositoryAnalyzer> logger
+			= Program.CreateLogger<RepositoryAnalyzer>();
+
 		/// <summary>
 		/// For each commit to analyze, the bundled repository is cloned to a new directory.
 		/// This copy of the repository is rather useless outside the bounds of
@@ -84,7 +92,24 @@ namespace GitMetrics.QualityAnalyzer
 			Parallel.ForEach(this.CommitEntities, parallelOptions, commit => {
 				var copyRepo = this.Repository.BundleAndCloneTo(
 					Configuration.TempDirectory.FullName);
-				Commands.Checkout(copyRepo, commit.BaseObject);
+				try
+				{
+					Commands.Checkout(copyRepo, commit.BaseObject);
+				}
+				catch (Exception ex)
+				{
+					logger.LogError($"Cannot checkout commit #{commit.BaseObject.ShaShort()}: {ex.Message}", ex);
+
+					this.Results.Add(new MetricsAnalysisResult
+					{
+						Commit = commit,
+						Metrics = new List<MetricEntity>(),
+						MetricTypes = new List<MetricTypeEntity>(),
+						Repository = this.RepositoryEntity,
+						CommitMetricsStatus = CommitMetricsStatus.CheckoutError
+					});
+					return;
+				}
 
 				var analyzer = CreateAnalyzer(
 					this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
