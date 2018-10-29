@@ -153,26 +153,49 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 
 		protected static Regex RegexMatchFileType = new Regex(@"\.[a-z0-9]+$", RegexOptions.ECMAScript | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+		/// <summary>
+		/// From the metrics analysis, we get a JSON-formatted output that contains metrics
+		/// for entire project and for each file. This method tries to match each so-called
+		/// OutputEntity to a change in the file-tree. Note that this cannot always work, as
+		/// the metrics analysis analyzes every while, while not every file necessarily has
+		/// to change and thus no <see cref="MetricEntity"/> is returned in that case.
+		/// </summary>
+		/// <param name="output"></param>
+		/// <returns></returns>
 		protected IEnumerable<MetricEntity> GetMetricsFromJson(JsonOutput output)
 		{
 			this.PrepareTreeEntryChanges();
 
 			foreach (var entity in output.Entities)
 			{
+				TreeEntryChangesEntity tece = null;
+				if (entity.Type == OutputEntityType.File &&
+					!this.TryGetTreeEntryChangeForMetricsEntity(out tece, entity))
+				{
+					continue;
+					// It is a file but cannot be matched to a TreeEntryChange,
+					// Probably because it wasn't actually changed.
+				}
+
 				foreach (var value in entity.MetricsValues)
 				{
+
 					yield return new MetricEntity
 					{
 						Commit = this.CommitEntity,
 						MetricType = this.MetricTypes[value.Key],
 						MetricValue = value.Value,
 						OutputEntityType = entity.Type,
-						TreeEntryChange = this.GetTreeEntryChangeForMetricsEntity(entity)
+						TreeEntryChange = tece
 					};
 				}
 			}
 		}
 
+		/// <summary>
+		/// Clears the internal dictionary with fully-qualified Java-name tree-changes and
+		/// fills it by normalizing paths with a dot (to match the Java package name).
+		/// </summary>
 		protected void PrepareTreeEntryChanges()
 		{
 			this.FQJNTreeEntryChanges.Clear();
@@ -193,17 +216,39 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 			}
 		}
 
-		protected TreeEntryChangesEntity GetTreeEntryChangeForMetricsEntity(JsonEntity je)
+		/// <summary>
+		/// This method attempts to match the metrics gathered for one file to an actual
+		/// change in the git-tree and returns true only on success.
+		/// </summary>
+		/// <param name="tece"></param>
+		/// <param name="je"></param>
+		/// <returns></returns>
+		protected bool TryGetTreeEntryChangeForMetricsEntity(out TreeEntryChangesEntity tece, JsonEntity je)
 		{
-			// A TreeEntryChangesEntity is only returned for type file; all others must be null!
+			// This method may only be used with files.
 			if (je.Type != OutputEntityType.File)
 			{
-				return null;
+				throw new Exception($"This method may only be used with type {OutputEntityType.File}.");
 			}
 
-			// It's a file; let's try to match the fully qualified Java name to a
-			// TreeEntryChange. This must work, so we use .Single()!
-			return this.FQJNTreeEntryChanges.Where(kv => kv.Key.EndsWith(je.Name)).Single().Value;
+			// This is a list of size=1, if that exact file was indeed changed and thus
+			// has a corresponding TreeEntryChange. If the size=0, then the file was not
+			// changed. If size>1, then we have encountered an ambiguity.
+			var temp = this.FQJNTreeEntryChanges.Where(kv => kv.Key.EndsWith(je.Name)).ToList();
+
+			if (temp.Count == 0)
+			{
+				tece = null;
+				return false;
+			}
+			if (temp.Count == 1)
+			{
+				tece = temp[0].Value;
+				return true;
+			}
+
+			throw new Exception($"{je.Name} matched more than one TreeEntryChange!");
+
 		}
 	}
 }
