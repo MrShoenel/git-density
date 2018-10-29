@@ -48,6 +48,10 @@ namespace Util.Data.Entities
 		/// </summary>
 		AnalyzerError = -4,
 		/// <summary>
+		/// Happens if a specific commit cannot be checked out (illegal file name for example).
+		/// </summary>
+		CheckoutError = -5,
+		/// <summary>
 		/// Shall be used for any other unspecific error.
 		/// Equal to <see cref="SByte.MinValue"/>.
 		/// </summary>
@@ -73,7 +77,6 @@ namespace Util.Data.Entities
 		/// <summary>
 		/// There can only be one status for each commit.
 		/// </summary>
-		[Indexed(Unique = true)]
 		public virtual CommitEntity Commit { get; set; }
 		#endregion
 	}
