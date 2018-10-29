@@ -28,6 +28,7 @@ Git Density is a solution that currently features these three applications:
 * __`git-metrics`__:  A C# wrapper around another tool that can build Java-based projects and extract common software metrics at each commit.
   * It comes also with its own command-line interface and supports `JSON`-formatted output (like `git-hours`).
   * It is part of the full analysis of `git-density` as well.
+  * Please note that the standalone CLI interface is not yet fully implemented, although just minor things are missing.
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
 ## Caveats
