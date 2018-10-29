@@ -27,6 +27,7 @@ using Newtonsoft.Json;
 using Util.Logging;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 {
@@ -78,7 +79,7 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 
 			this.logger.LogDebug($"Starting metrics extraction at commit {this.Commit.ShaShort()}");
 			using (var proc = Process.Start(new ProcessStartInfo {
-				FileName = (String)conf["pathToBinary"],
+				FileName = Path.GetFullPath((String)conf["pathToBinary"]),
 				Arguments = $"{(String)conf["args"]} {this.OriginalRepository.Info.WorkingDirectory}",
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
