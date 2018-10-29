@@ -126,8 +126,7 @@ namespace Util
 		/// A set of supported Programming languages the analyzer supports. This list
 		/// may be used to select an appropriate analyzer.
 		/// </summary>
-		[JsonProperty(Required = Required.Always, PropertyName = "supportedLanguages")]
-		[JsonConverter(typeof(StringEnumConverter))]
+		[JsonProperty(Required = Required.Always, PropertyName = "supportedLanguages", ItemConverterType = typeof(StringEnumConverter))]
 		public ISet<ProgrammingLanguage> SupportedLanguages { get; set; }
 			= new HashSet<ProgrammingLanguage>();
 

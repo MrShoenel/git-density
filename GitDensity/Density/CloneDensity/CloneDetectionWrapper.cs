@@ -79,7 +79,7 @@ namespace GitDensity.Density.CloneDensity
 				using (var proc = Process.Start(new ProcessStartInfo
 				{
 					WorkingDirectory = this.Directory.FullName,
-					FileName = Program.Configuration.PathToCloneDetectionBinary,
+					FileName = Path.GetFullPath(Program.Configuration.PathToCloneDetectionBinary),
 					Arguments = $"{Program.Configuration.CloneDetectionArgs} -l {this.Language.ToString().ToLowerInvariant()} " +
 						$"-t {tempFile} -s \"{this.Directory.FullName}\"",
 					RedirectStandardError = true,
