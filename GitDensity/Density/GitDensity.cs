@@ -243,8 +243,18 @@ namespace GitDensity.Density
 					numDone, pairs.Count, pair.Id);
 
 				pair.ExecutionPolicy = this.ExecutionPolicy;
-				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
-					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
+				CommitPairEntity pairEntity = null;
+				try
+				{
+					pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
+						pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
+				}
+				catch (KeyNotFoundException knfe)
+				{
+					logger.LogError($"The relation between commits {pair.Child.ShaShort()} and {(pair.Parent is Commit ? pair.Parent.ShaShort() : "(inital)")} is not a valid parent-child relation (e.g. commits from different branches).");
+					logger.LogError($"Skipping invalid commit-pair {pair.Id}");
+					return;
+				}
 
 				#region Full Analysis: GitHours (spent time per commit & developer)
 				var gitHoursAnalysesPerDeveloperAndHoursType =
