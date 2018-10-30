@@ -249,8 +249,12 @@ namespace GitDensity.Density
 					pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
 						pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
 				}
-				catch (KeyNotFoundException knfe)
+				catch (KeyNotFoundException)
 				{
+					// TODO: Add handling of detached (arbitrary) commits and make
+					// it configurable, as the analysis is perfectly capable of it.
+					// For now it results in an error, but there may be use cases
+					// where analyzing two distant/detached does make sense.
 					logger.LogError($"The relation between commits {pair.Child.ShaShort()} and {(pair.Parent is Commit ? pair.Parent.ShaShort() : "(inital)")} is not a valid parent-child relation (e.g. commits from different branches).");
 					logger.LogError($"Skipping invalid commit-pair {pair.Id}");
 					return;
