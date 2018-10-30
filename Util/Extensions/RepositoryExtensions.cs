@@ -480,7 +480,7 @@ namespace Util.Extensions
 		/// <returns></returns>
 		public static String ShaShort(this Commit commit, int length = 7)
 		{
-			if (length < 4 || length > 39)
+			if (length < 4 || length > 15)
 			{
 				throw new ArgumentOutOfRangeException($"{nameof(length)}: {length}");
 			}
