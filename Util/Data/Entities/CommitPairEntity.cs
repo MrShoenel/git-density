@@ -105,7 +105,7 @@ namespace Util.Data.Entities
 		{
 			this.Table(nameof(CommitPairEntity).ToSimpleUnderscoreCase());
 
-			this.Id(x => x.ID).GeneratedBy.Assigned().Length(32); // as guaranteed by CommitPair
+			this.Id(x => x.ID).GeneratedBy.Assigned().Length(32); // as guaranteed by CommitPair and ShaShort()
 
 			this.HasMany<TreeEntryChangesEntity>(x => x.TreeEntryChanges).Cascade.Lock();
 			this.HasMany<FileBlockEntity>(x => x.FileBlocks).Cascade.Lock();
