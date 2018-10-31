@@ -472,7 +472,11 @@ namespace GitDensity
 		[Option('i', "skip-initial-commit", Required = false, DefaultValue = false, HelpText = "If present, does not analyze the pair that consists of the 2nd and the initial commit to a repository.")]
 		public Boolean SkipInitialCommit { get; set; }
 
-		[Option('m', "skip-merge-commits", Required = false, DefaultValue = true, HelpText = "If present, does not analyze pairs where the younger commit is a merge commit.")]
+		/// <summary>
+		/// Please note that the default behavior (value) was changed to false, as this
+		/// is a boolean option that could otherwise not be switched off.
+		/// </summary>
+		[Option('m', "skip-merge-commits", Required = false, DefaultValue = false, HelpText = "If present, does not analyze pairs where the younger commit is a merge commit.")]
 		public Boolean SkipMergeCommits { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
@@ -485,6 +489,7 @@ namespace GitDensity
 		public String Until { get; set; }
 
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
+		[JsonConverter(typeof(StringEnumConverter))]
 		public ExecutionPolicy ExecutionPolicy { get; set; }
 
 		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
@@ -494,6 +499,7 @@ namespace GitDensity
 		public Boolean SkipGitMetricsAnalysis { get; set; } = false;
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
+		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
 		[Option("cmd-write-config", Required = false, DefaultValue = false, HelpText = "Command. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file. The program will terminate afterwards.")]
