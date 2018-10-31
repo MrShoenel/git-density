@@ -88,6 +88,10 @@ namespace GitMetrics.QualityAnalyzer
 			{
 				parallelOptions.MaxDegreeOfParallelism = 1;
 			}
+			else
+			{
+				parallelOptions.MaxDegreeOfParallelism = Environment.ProcessorCount / 2;
+			}
 
 			Parallel.ForEach(this.CommitEntities, parallelOptions, commit => {
 				var copyRepo = this.Repository.BundleAndCloneTo(
