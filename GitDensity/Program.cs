@@ -18,6 +18,7 @@ using CommandLine.Text;
 using GitHours.Hours;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -100,6 +101,7 @@ namespace GitDensity
 				logger.LogWarning("Hello, this is GitDensity.");
 				logger.LogDebug("You supplied the following arguments: {0}",
 					String.Join(", ", args.Select(a => $"'{a}'")));
+				logger.LogDebug($"Settings:\n{JsonConvert.SerializeObject(options, Formatting.Indented)}");
 				logger.LogWarning("Initializing..");
 
 
