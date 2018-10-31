@@ -501,10 +501,8 @@ namespace GitDensity.Density
 				Program.Configuration, repoEntity, commits.Values)
 			{
 				DeleteClonedRepoAfterwards = true,
-				// We don't want parallelism here, as pairs are already processed in
-				// parallel and extracting metrics is a very expensive task, as it
-				// usually involves building the underlying repository.
-				ExecutionPolicy = ExecutionPolicy.Linear
+				// We can go for parallelism here, but obtaining metrics is very expensive.
+				ExecutionPolicy = ExecutionPolicy.Parallel
 			};
 
 			metricsRepoAnalyzer.Analyze();
