@@ -47,52 +47,63 @@ namespace GitDensity.Density
 				{
 					if (this.Repository.Project.AiId == 0uL)
 					{
+						logger.LogDebug("Inserting the related Project..");
 						session.Insert(this.Repository.Project);
 					}
 				}
 
+				logger.LogDebug("Inserting the Repository..");
 				session.Insert(this.Repository);
 				numEntities++;
 
+				logger.LogDebug("Inserting the Developers..");
 				foreach (var dev in this.Repository.Developers)
 				{
 					session.Insert(dev);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the Commits..");
 				foreach (var commit in this.Repository.Commits)
 				{
 					session.Insert(commit);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the HoursEntities..");
 				foreach (var hour in this.Repository.Developers.SelectMany(dev => dev.Hours))
 				{
 					session.Insert(hour);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the CommitPairs..");
 				foreach (var pair in this.Repository.CommitPairs)
 				{
 					session.Insert(pair);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the TreeEntryChanges, their Metrics, FileBlocks and Similarities (this might take a while)..");
 				foreach (var tree in this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges))
 				{
 					session.Insert(tree);
 					numEntities++;
 
+					logger.LogTrace($"Inserting {tree.TreeEntryChangesMetrics.Count} Metrics of Tree {tree.PathNew}..");
 					foreach (var metricsEntity in tree.TreeEntryChangesMetrics)
 					{
 						session.Insert(metricsEntity);
 						numEntities++;
 					}
 
+					logger.LogTrace($"Inserting {tree.FileBlocks.Count} FileBlocks of Tree {tree.PathNew}..");
 					foreach (var fb in tree.FileBlocks)
 					{
 						session.Insert(fb);
 						numEntities++;
+
+						logger.LogTrace($"Inserting {fb.Similarities.Count} Similarities of FileBlock #{fb.ID} of Tree {tree.PathNew}..");
 						foreach (var sim in fb.Similarities)
 						{
 							session.Insert(sim);
@@ -101,18 +112,21 @@ namespace GitDensity.Density
 					}
 				}
 
+				logger.LogDebug("Inserting the TreeEntryContributions..");
 				foreach (var contribution in this.Repository.TreeEntryContributions)
 				{
 					session.Insert(contribution);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the CommitMetricsStatuses..");
 				foreach (var metricsStatus in this.Repository.CommitMetricsStatuses)
 				{
 					session.Insert(metricsStatus);
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the Commits' Metrics..");
 				foreach (var metrics in this.Repository.Commits.SelectMany(c => c.Metrics))
 				{
 					session.Insert(metrics);
