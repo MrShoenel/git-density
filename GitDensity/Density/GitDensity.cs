@@ -436,7 +436,7 @@ namespace GitDensity.Density
 					var hunks = Hunk.HunksForPatch(patchNew, oldDirectory, newDirectory).ToList();
 					// We are only interested in LOC regarding the new file, because the LOC
 					// of its previous version are covered in the previous CommitPair.
-					var simpleLoc = new SimpleLoc(pair.Child[change.Path].GetLines());
+					var simpleLoc = pair.Child[change.Path].GetSimpleLoc();
 
 					
 					var fileBlockTuples = hunks.Select(hunk =>
