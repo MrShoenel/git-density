@@ -120,7 +120,7 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 
 				if (result.CommitMetricsStatus != CommitMetricsStatus.OK)
 				{
-					this.logger.LogWarning($"The metrics extraction failed ({result.CommitMetricsStatus}).");
+					this.logger.LogWarning($"The metrics extraction failed at commit {this.Commit.ShaShort()} ({result.CommitMetricsStatus}).");
 				}
 			}
 
@@ -179,7 +179,6 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 
 				foreach (var value in entity.MetricsValues)
 				{
-
 					yield return new MetricEntity
 					{
 						Commit = this.CommitEntity,
@@ -200,11 +199,11 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 		{
 			this.FQJNTreeEntryChanges.Clear();
 
-			foreach (var tec in this.RepositoryEntity.TreeEntryContributions.Select(tec => tec.TreeEntryChanges))
+			foreach (var tec in this.RepositoryEntity.TreeEntryContributions.Where(tec => tec.Commit.BaseObject == this.Commit).Select(tec => tec.TreeEntryChanges))
 			{
 				// We're always interested in the file as it's now, so use PathNew:
 				var path = tec.PathNew;
-				// path my look like:
+				// path may look like:
 				// 'src\main\java\de\alaoli\games\minecraft\mods\limitedresources\Config.java'
 				// .. and we need to transform it into a fully-qualified class-name, like:
 				// 'src.main.java.de.alaoli.games.minecraft.mods.limitedresources.Config'
@@ -225,10 +224,33 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 		/// <returns></returns>
 		protected bool TryGetTreeEntryChangeForMetricsEntity(out TreeEntryChangesEntity tece, JsonEntity je)
 		{
+			tece = null;
+			if (this.FQJNTreeEntryChanges.Count == 0)
+			{
+				return false;
+			}
+
 			// This method may only be used with files.
 			if (je.Type != OutputEntityType.File)
 			{
 				throw new Exception($"This method may only be used with type {OutputEntityType.File}.");
+			}
+
+			// VizzAnalyzer special case: Classes that do not declare their package, end up
+			// in a virtual package called default.
+			if (je.Name.StartsWith("default."))
+			{
+				// If we get here, try to select exactly one class. Stop if fails.
+				var clazzName = je.Name.Substring("default.".Length);
+				var defaultList = this.FQJNTreeEntryChanges.Where(kv => kv.Key.EndsWith(clazzName)).ToList();
+
+				if (defaultList.Count == 1)
+				{
+					tece = defaultList[0].Value;
+					return true;
+				}
+
+				return false;
 			}
 
 			// This is a list of size=1, if that exact file was indeed changed and thus
@@ -238,7 +260,6 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 
 			if (temp.Count == 0)
 			{
-				tece = null;
 				return false;
 			}
 			if (temp.Count == 1)
@@ -248,7 +269,6 @@ namespace GitMetrics.QualityAnalyzer.VizzAnalyzer
 			}
 
 			throw new Exception($"{je.Name} matched more than one TreeEntryChange!");
-
 		}
 	}
 }

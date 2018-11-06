@@ -243,8 +243,22 @@ namespace GitDensity.Density
 					numDone, pairs.Count, pair.Id);
 
 				pair.ExecutionPolicy = this.ExecutionPolicy;
-				var pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
-					pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
+				CommitPairEntity pairEntity = null;
+				try
+				{
+					pairEntity = pair.AsEntity(repoEntity, commits[pair.Child.Sha],
+						pair.Parent is Commit ? commits[pair.Parent.Sha] : null); // handle initial commits
+				}
+				catch (KeyNotFoundException)
+				{
+					// TODO: Add handling of detached (arbitrary) commits and make
+					// it configurable, as the analysis is perfectly capable of it.
+					// For now it results in an error, but there may be use cases
+					// where analyzing two distant/detached does make sense.
+					logger.LogError($"The relation between commits {pair.Child.ShaShort()} and {(pair.Parent is Commit ? pair.Parent.ShaShort() : "(inital)")} is not a valid parent-child relation (e.g. commits from different branches).");
+					logger.LogError($"Skipping invalid commit-pair {pair.Id}");
+					return;
+				}
 
 				#region Full Analysis: GitHours (spent time per commit & developer)
 				var gitHoursAnalysesPerDeveloperAndHoursType =
@@ -422,7 +436,7 @@ namespace GitDensity.Density
 					var hunks = Hunk.HunksForPatch(patchNew, oldDirectory, newDirectory).ToList();
 					// We are only interested in LOC regarding the new file, because the LOC
 					// of its previous version are covered in the previous CommitPair.
-					var simpleLoc = new SimpleLoc(pair.Child[change.Path].GetLines());
+					var simpleLoc = pair.Child[change.Path].GetSimpleLoc();
 
 					
 					var fileBlockTuples = hunks.Select(hunk =>
@@ -487,10 +501,8 @@ namespace GitDensity.Density
 				Program.Configuration, repoEntity, commits.Values)
 			{
 				DeleteClonedRepoAfterwards = true,
-				// We don't want parallelism here, as pairs are already processed in
-				// parallel and extracting metrics is a very expensive task, as it
-				// usually involves building the underlying repository.
-				ExecutionPolicy = ExecutionPolicy.Linear
+				// We can go for parallelism here, but obtaining metrics is very expensive.
+				ExecutionPolicy = ExecutionPolicy.Parallel
 			};
 
 			metricsRepoAnalyzer.Analyze();

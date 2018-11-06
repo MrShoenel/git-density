@@ -25,14 +25,15 @@ Git Density is a solution that currently features these three applications:
 * __`git-hours`__: A C# reimplementation of git-hours with some more features (like timespans between commits or time spent by each developer)
   * It comes also with its own command-line interface and supports `JSON`-formatted output. This useful for just analyzing the time spent on a repository.
   * `git-hours` is also part of the full analysis as run by `git-density`.
-* __`git-metrics`__:  A C# wrapper around another tool that can build Java-based projects and extract common software metrics at each commit.
+* __`git-metrics`__:  A C# wrapper around another tool that can build Java-based projects and extract common software metrics at each commit for the entire project and for files affected by the commit.
   * It comes also with its own command-line interface and supports `JSON`-formatted output (like `git-hours`).
   * It is part of the full analysis of `git-density` as well.
+  * Please note that the standalone CLI interface is _not yet fully implemented_, although just minor things are missing (planned is a `JSON`-formatted output).
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
 ## Caveats
 
-If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate. You may also use other types of databases, as Git Density supports these: MsSQL2000, MsSQL2005, MsSQL2008, MsSQL2012, MySQL, Oracle10, Oracle9, PgSQL81, PgSQL82, SQLite, SQLiteTemp.
+If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate. You may also use other types of databases, as Git Density supports these: `MsSQL2000`, `MsSQL2005`, `MsSQL2008`, `MsSQL2012`, `MySQL`, `Oracle10`, `Oracle9`, `PgSQL81`, `PgSQL82`, `SQLite`, `SQLiteTemp` (temporary database that is discarded after the analysis, mainly for testing).
 
 ___
 

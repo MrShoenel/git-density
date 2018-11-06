@@ -53,9 +53,10 @@ namespace Util.Density
 		/// is guaranteed not to be longer than 32 characters and contains
 		/// sub-strings of the parent- and child-commit's SHA1-IDs.
 		/// </summary>
+		/// <see cref="Extensions.RepositoryExtensions.ShaShort(Commit, int)"/>
 		public String Id
 		{
-			get => $"{this.Parent?.Sha.Substring(0, 15) ?? "(initial)"}_{Child.Sha.Substring(0, 15)}";
+			get => $"{(this.Parent is Commit ? this.Parent.ShaShort() : "(initial)")}_{this.Child.ShaShort()}";
 		}
 
 		private Lazy<Patch> lazyPatch;
