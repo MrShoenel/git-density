@@ -55,6 +55,8 @@ namespace GitDensity.Density
 
 		public Boolean SkipMergeCommits { get; protected internal set; } = true;
 
+		public Boolean SkipGitHoursAnalysis { get; protected internal set; } = false;
+
 		public Boolean SkipGitMetricsAnalysis { get; protected internal set; } = false;
 
 		public ICollection<String> FileTypeExtensions { get; protected internal set; } = GitDensity.DefaultFileTypeExtensions;
@@ -87,7 +89,7 @@ namespace GitDensity.Density
 		/// <param name="skipGitMetrics">Whether or not to skip the metrics analysis using
 		/// GitMetrics.</param>
 		[Obsolete("This constructor is not obsolete, but should be refactored so that we e.g. use the property initializers instead of using many arguments (that would probably require removing the protected-modifier from the setters).")]
-		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null, Boolean? skipGitMetrics = null)
+		public GitDensity(GitCommitSpan gitCommitSpan, IEnumerable<ProgrammingLanguage> languages, Boolean? skipInitialCommit = null, Boolean? skipMergeCommits = null, IEnumerable<String> fileTypeExtensions = null, String tempPath = null, Boolean? skipGitHours = null, Boolean? skipGitMetrics = null)
 		{
 			this.similarityMeasures = new Dictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>();
 			this.roSimMeasures = new ReadOnlyDictionary<SimilarityMeasurementType, Tuple<PropertyInfo, INormalizedStringDistance>>(this.similarityMeasures);
@@ -116,6 +118,12 @@ namespace GitDensity.Density
 			{
 				logger.LogWarning($"Using filetype extensions: {String.Join(", ", fileTypeExtensions)}");
 				this.FileTypeExtensions = fileTypeExtensions.ToList(); // Clone the IEnumerable
+			}
+
+			if (skipGitHours.HasValue)
+			{
+				logger.LogWarning($"Skipping GitHours analysis: {(skipGitHours.Value ? "Yes" : "No")}");
+				this.SkipGitHoursAnalysis = skipGitHours.Value;
 			}
 
 			if (skipGitMetrics.HasValue)
@@ -185,6 +193,10 @@ namespace GitDensity.Density
 		public GitDensity InitializeHoursTypeEntities(ISet<HoursTypeConfiguration> hoursTypesConfigurations)
 		{
 			this.hoursTypes.Clear();
+			if (this.SkipGitHoursAnalysis)
+			{
+				return this;
+			}
 
 			foreach (var ht in hoursTypesConfigurations)
 			{
@@ -236,6 +248,13 @@ namespace GitDensity.Density
 			{
 				parallelOptions.MaxDegreeOfParallelism = 1;
 			}
+			else
+			{
+				parallelOptions.MaxDegreeOfParallelism = Environment.ProcessorCount;
+			}
+
+
+			#region Full Analysis: GitDensity (commit-pair-wise clone-detection)
 			Parallel.ForEach(pairs, parallelOptions, pair =>
 			{
 				var numDone = Interlocked.Increment(ref pairsDone);
@@ -260,56 +279,6 @@ namespace GitDensity.Density
 					return;
 				}
 
-				#region Full Analysis: GitHours (spent time per commit & developer)
-				var gitHoursAnalysesPerDeveloperAndHoursType =
-					new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
-
-				// Run all Analysis for each Hours-Type:
-				Parallel.ForEach(this.HoursTypes.Keys, parallelOptions, hoursType =>
-				{
-					var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
-						new GitHours.Hours.GitHours(
-							this.GitCommitSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
-							.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
-							.AuthorStats.ToDictionary(
-								@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
-					
-					if (!addSuccess)
-					{
-						throw new InvalidOperationException(
-							$"Cannot add Hours-Type {hoursType.ToString()}.");
-					}
-				});
-
-				foreach (var hoursType in gitHoursAnalysesPerDeveloperAndHoursType.Keys)
-				{
-					// We need this for every HoursEntity that we use; it is already saved
-					var hoursTypeEntity = this.HoursTypes[hoursType];
-					var gitHoursAnalysesPerDeveloper =
-						gitHoursAnalysesPerDeveloperAndHoursType[hoursType];
-					var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]]
-						// OK because we analyzed with HoursSpansDetailLevel.Detailed
-						.Cast<GitHoursAuthorSpanDetailed>().ToList();
-					var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
-					var hoursEntity = new HoursEntity
-					{
-						InitialCommit = commits[hoursSpan.InitialCommit.Sha],
-						CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
-						CommitUntil = commits[hoursSpan.Until.Sha],
-						Developer = developers[pair.Child.Author],
-						Hours = hoursSpan.Hours,
-						HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
-							.Select(hs => hs.Hours).Sum(),
-
-						HoursType = hoursTypeEntity,
-						IsInitial = hoursSpan.IsInitialSpan,
-						IsSessionInitial = hoursSpan.IsSessionInitialSpan
-					};
-					developers[pair.Child.Author].AddHour(hoursEntity);
-				}
-				#endregion
-
-				#region Full Analysis: GitDensity (commit-pair-wise clone-detection)
 				#region Identify relevant tree-changes
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
@@ -485,11 +454,75 @@ namespace GitDensity.Density
 					fileBlockTuples.Clear();
 				}
 				#endregion
-				#endregion
 
 				cloneSets.Clear();
 				pair.Dispose(); // also releases the expensive patches.
 			});
+			#endregion
+
+			#region Full Analysis: GitHours (spent time per commit & developer)
+			if (this.SkipGitHoursAnalysis)
+			{
+				goto SkipGitHoursAnalysis;
+			}
+
+			var gitHoursAnalysesPerDeveloperAndHoursType =
+				new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
+
+			// Run all Analysis for each Hours-Type:
+			foreach (var hoursType in this.HoursTypes.Keys)
+			{
+				logger.LogInformation($"Analyzing HoursType: MaxDiff={hoursType.MaxDiff}, FirstCommitAdd={hoursType.FirstCommitAdd}..");
+				var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
+					new GitHours.Hours.GitHours(
+						this.GitCommitSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
+						.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
+						.AuthorStats.ToDictionary(
+							@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
+
+				if (!addSuccess)
+				{
+					throw new InvalidOperationException(
+						$"Cannot add Hours-Type {hoursType.ToString()}.");
+				}
+			}
+
+			pairsDone = 0;
+			Parallel.ForEach(pairs, parallelOptions, pair =>
+			{
+				var numDone = Interlocked.Increment(ref pairsDone);
+				logger.LogInformation($"Analyzing hours for commit {pair.Child.ShaShort()}..",
+					numDone, pairs.Count, pair.Id);
+
+				foreach (var hoursType in gitHoursAnalysesPerDeveloperAndHoursType.Keys)
+				{
+					// We need this for every HoursEntity that we use; it is already saved
+					var hoursTypeEntity = this.HoursTypes[hoursType];
+					var gitHoursAnalysesPerDeveloper =
+						gitHoursAnalysesPerDeveloperAndHoursType[hoursType];
+					var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]]
+						// OK because we analyzed with HoursSpansDetailLevel.Detailed
+						.Cast<GitHoursAuthorSpanDetailed>().ToList();
+					var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
+					var hoursEntity = new HoursEntity
+					{
+						InitialCommit = commits[hoursSpan.InitialCommit.Sha],
+						CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
+						CommitUntil = commits[hoursSpan.Until.Sha],
+						Developer = developers[pair.Child.Author],
+						Hours = hoursSpan.Hours,
+						HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
+							.Select(hs => hs.Hours).Sum(),
+
+						HoursType = hoursTypeEntity,
+						IsInitial = hoursSpan.IsInitialSpan,
+						IsSessionInitial = hoursSpan.IsSessionInitialSpan
+					};
+					developers[pair.Child.Author].AddHour(hoursEntity);
+				}
+			});
+			SkipGitHoursAnalysis:
+			#endregion
 
 			#region Full Analysis: GitMetrics (project-/file-metrics per commit
 			if (this.SkipGitMetricsAnalysis)

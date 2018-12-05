@@ -216,9 +216,12 @@ namespace GitDensity
 					{
 						Directory.CreateDirectory(repoTempPath);
 					}
+
+					logger.LogInformation($"Opening repository {options.RepoPath}..");
 					using (var repo = options.RepoPath.OpenRepository(
 						repoTempPath, useRepoName: useRepoName, pullIfAlreadyExists: true))
 					{
+						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 						var span = new GitCommitSpan(repo, options.Since, options.Until);
 
 						// Instantiate the Density analysis with the selected programming
@@ -495,6 +498,9 @@ namespace GitDensity
 		[Option('w', "no-wait", Required = false, DefaultValue = false, HelpText = "Optional. If present, then the program will exit after the analysis is finished. Otherwise, it will wait for the user to press a key by default.")]
 		public Boolean NoWait { get; set; }
 
+		[Option("skip-git-hours", Required = false, DefaultValue = false, HelpText = "Optional. If present, then time spent using GitHours will not be analyzed or included in the result.")]
+		public Boolean SkipGitHoursAnalysis { get; set; } = false;
+
 		[Option("skip-git-metrics", Required = false, DefaultValue = false, HelpText = "Optional. If present, then metrics using GitMetrics will not be analyzed or included in the result.")]
 		public Boolean SkipGitMetricsAnalysis { get; set; } = false;
 
@@ -523,6 +529,7 @@ namespace GitDensity
 		/// The library cannot parse Lists of Enumeration values, so we have to
 		/// use this approach of selected languages.
 		/// </summary>
+		[JsonProperty(ItemConverterType = typeof(StringEnumConverter))]
 		public IReadOnlyCollection<ProgrammingLanguage> ProgrammingLanguages
 		{
 			get
