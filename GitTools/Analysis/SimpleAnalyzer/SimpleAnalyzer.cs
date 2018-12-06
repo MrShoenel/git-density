@@ -14,9 +14,14 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Util;
+using Util.Logging;
 
 namespace GitTools.Analysis.SimpleAnalyzer
 {
@@ -26,6 +31,9 @@ namespace GitTools.Analysis.SimpleAnalyzer
 	/// </summary>
 	public class SimpleAnalyzer : BaseAnalyzer<SimpleCommitDetails>
 	{
+		private readonly BaseLogger<SimpleAnalyzer> logger =
+			Program.CreateLogger<SimpleAnalyzer>();
+
 		/// <summary>
 		/// This is a forwarding constructor that does not do any other
 		/// initialization than <see cref="BaseAnalyzer{T}.BaseAnalyzer(string, GitCommitSpan)"/>.
@@ -43,12 +51,24 @@ namespace GitTools.Analysis.SimpleAnalyzer
 		/// <returns><see cref="IEnumerable{SimpleCommitDetails}"/></returns>
 		public override IEnumerable<SimpleCommitDetails> AnalyzeCommits()
 		{
-			var repo = this.GitCommitSpan.Repository;
+			this.logger.LogInformation("Starting analysis of commits..");
+			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
+				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
-			foreach (var commit in this.GitCommitSpan)
+			var repo = this.GitCommitSpan.Repository;
+			var bag = new ConcurrentBag<SimpleCommitDetails>();
+
+			Parallel.ForEach(this.GitCommitSpan, new ParallelOptions
 			{
-				yield return new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit);
-			}
+				MaxDegreeOfParallelism = this.ExecutionPolicy == ExecutionPolicy.Linear ? 1 : Environment.ProcessorCount
+			}, commit =>
+			{
+				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
+			});
+
+			this.logger.LogInformation("Finished analysis of commits.");
+
+			return bag.OrderBy(scd => scd.AuthorTime);
 		}
 	}
 }

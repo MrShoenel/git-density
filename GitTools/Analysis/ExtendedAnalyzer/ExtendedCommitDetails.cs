@@ -16,66 +16,93 @@
 using LibGit2Sharp;
 using LINQtoCSV;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GitTools.Analysis.ExtendedAnalyzer
 {
+	/// <summary>
+	/// Extends the <see cref="SimpleCommitDetails"/> with many more fields
+	/// and is produced by the <see cref="ExtendedAnalyzer"/>.
+	/// </summary>
 	public class ExtendedCommitDetails : SimpleCommitDetails
 	{
+		/// <summary>
+		/// Forwards constructor that only calls <see cref="SimpleCommitDetails.SimpleCommitDetails(string, Repository, Commit)"/>.
+		/// </summary>
+		/// <param name="repoPathOrUrl"></param>
+		/// <param name="repository"></param>
+		/// <param name="commit"></param>
 		public ExtendedCommitDetails(String repoPathOrUrl, Repository repository, Commit commit) : base(repoPathOrUrl, repository, commit)
 		{
 		}
 
-		[CsvColumn(FieldIndex = 7)]
-		public String Message { get; protected internal set; }
-
+		#region overridden fields
+		/// <summary>
+		/// Overridden to return the entire commit message, which is potentially multi-line.
+		/// Line-breaks are substituted with single spaces.
+		/// </summary>
 		[CsvColumn(FieldIndex = 8)]
-		public Boolean IsInitialCommit { get; protected internal set; }
+		public override string Message
+			=> RegexNewLines.Replace(base.commit.Message, " ").Trim();
+		#endregion
+
+		#region additional fields
+		/// <summary>
+		/// For initial commits (without parent), this field is null.
+		/// </summary>
+		[CsvColumn(FieldIndex = 7, CanBeNull = true)]
+		public double? MinutesSincePreviousCommit { get; protected internal set; } = null;
 
 		[CsvColumn(FieldIndex = 9)]
-		public Boolean IsMergeCommit { get; protected internal set; }
+		public String AuthorEmail => this.commit.Author.Email;
 
 		[CsvColumn(FieldIndex = 10)]
-		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
+		public String CommitterEmail => this.commit.Committer.Email;
 
 		[CsvColumn(FieldIndex = 11)]
-		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;
+		public Boolean IsInitialCommit { get; protected internal set; } = false;
 
 		[CsvColumn(FieldIndex = 12)]
-		public UInt32 NumberOfLinesAddedByAddedFilesNoComments { get; protected internal set; } = 0u;
+		public Boolean IsMergeCommit { get; protected internal set; } = false;
 
 		[CsvColumn(FieldIndex = 13)]
-		public UInt32 NumberOfLinesAddedByAddedFilesGross { get; protected internal set; } = 0u;
+		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 14)]
-		public UInt32 NumberOfFilesDeleted { get; protected internal set; } = 0u;
+		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 15)]
-		public UInt32 NumberOfLinesDeletedByDeletedFilesNoComments { get; protected internal set; } = 0u;
+		public UInt32 NumberOfLinesAddedByAddedFilesNoComments { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 16)]
+		public UInt32 NumberOfLinesAddedByAddedFilesGross { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 17)]
+		public UInt32 NumberOfFilesDeleted { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 18)]
+		public UInt32 NumberOfLinesDeletedByDeletedFilesNoComments { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 19)]
 		public UInt32 NumberOfLinesDeletedByDeletedFilesGross { get; protected internal set; } = 0u;
 
 
-		[CsvColumn(FieldIndex = 17)]
+		[CsvColumn(FieldIndex = 20)]
 		public UInt32 NumberOfFilesModified { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 18)]
+		[CsvColumn(FieldIndex = 21)]
 		public UInt32 NumberOfFilesRenamed { get; protected internal set; } = 0u;
-
-		[CsvColumn(FieldIndex = 19)]
+	
+		[CsvColumn(FieldIndex = 22)]
 		public UInt32 NumberOfLinesAddedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 20)]
+		[CsvColumn(FieldIndex = 23)]
 		public UInt32 NumberOfLinesDeletedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 21)]
+		[CsvColumn(FieldIndex = 24)]
 		public UInt32 NumberOfLinesAddedByRenamedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 22)]
+		[CsvColumn(FieldIndex = 25)]
 		public UInt32 NumberOfLinesDeletedByRenamedFiles { get; protected internal set; } = 0u;
+		#endregion
 	}
 }

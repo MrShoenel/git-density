@@ -16,10 +16,7 @@
 using LibGit2Sharp;
 using LINQtoCSV;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace GitTools.Analysis
 {
@@ -29,10 +26,29 @@ namespace GitTools.Analysis
 	/// </summary>
 	public class SimpleCommitDetails : IAnalyzedCommit
 	{
+		/// <summary>
+		/// To remove newlines from commits' messages.
+		/// </summary>
+		protected static readonly Regex RegexNewLines =
+			new Regex("\r|\n", RegexOptions.ECMAScript | RegexOptions.Compiled);
+
+		/// <summary>
+		/// Keeps a reference to the <see cref="Repository"/>.
+		/// </summary>
 		protected readonly Repository repository;
 
+		/// <summary>
+		/// Keeps a reference to the <see cref="Commit"/>.
+		/// </summary>
 		protected readonly Commit commit;
 
+		/// <summary>
+		/// Initializes a new <see cref="SimpleCommitDetails"/> from a given
+		/// <see cref="Repository"/> and <see cref="Commit"/>.
+		/// </summary>
+		/// <param name="repoPathOrUrl"></param>
+		/// <param name="repository"></param>
+		/// <param name="commit"></param>
 		public SimpleCommitDetails(String repoPathOrUrl, Repository repository, Commit commit)
 		{
 			this.RepoPathOrUrl = repoPathOrUrl;
@@ -40,6 +56,7 @@ namespace GitTools.Analysis
 			this.commit = commit;
 		}
 
+		#region fields
 		[CsvColumn(FieldIndex = 1)]
 		public String RepoPathOrUrl { get; protected set; }
 
@@ -57,5 +74,16 @@ namespace GitTools.Analysis
 
 		[CsvColumn(FieldIndex = 6)]
 		public DateTime CommitterTime => this.commit.Committer.When.DateTime;
+
+		#region virtual fields
+		/// <summary>
+		/// If using the <see cref="SimpleAnalyzer.SimpleAnalyzer"/>, this will be
+		/// the commit's short message.
+		/// </summary>
+		[CsvColumn(FieldIndex = 8)]
+		public virtual String Message =>
+			RegexNewLines.Replace(this.commit.MessageShort, " ").Trim();
+		#endregion
+		#endregion
 	}
 }

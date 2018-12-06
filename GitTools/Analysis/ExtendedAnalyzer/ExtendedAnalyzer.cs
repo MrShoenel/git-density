@@ -15,22 +15,30 @@
 ///
 using GitDensity.Density;
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Util;
 using Util.Density;
 using Util.Extensions;
+using Util.Logging;
 using Util.Metrics;
 
 namespace GitTools.Analysis.ExtendedAnalyzer
 {
+	/// <summary>
+	/// An implementation of <see cref="IAnalyzer{T}"/> that maps each
+	/// commit to an instance of <see cref="ExtendedCommitDetails"/>.
+	/// </summary>
 	public class ExtendedAnalyzer : BaseAnalyzer<ExtendedCommitDetails>
 	{
+		private readonly BaseLogger<ExtendedAnalyzer> logger =
+			Program.CreateLogger<ExtendedAnalyzer>();
+
 		/// <summary>
 		/// This is a forwarding constructor that does not do any other
 		/// initialization than <see cref="BaseAnalyzer{T}.BaseAnalyzer(string, GitCommitSpan)"/>.
@@ -49,6 +57,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// <returns></returns>
 		public override IEnumerable<ExtendedCommitDetails> AnalyzeCommits()
 		{
+			this.logger.LogInformation("Starting analysis of commits..");
+			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
+				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
+
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<ExtendedCommitDetails>();
 
@@ -69,8 +81,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 					IsInitialCommit = pair.Parent is Commit ? false : true,
 					IsMergeCommit = parents.Count > 1,
 					NumberOfParentCommits = (UInt32)parents.Count,
-					// TODO: Also incorporate ordinary, potentially multi-line message
-					Message = pair.Child.MessageShort.Trim()
+					MinutesSincePreviousCommit = parents.Count == 0 ? (double?)null :
+						Math.Round(
+						(pair.Child.Committer.When.DateTime -
+							(parents.OrderByDescending(p => p.Committer.When.DateTime).First().Committer.When.DateTime)).TotalMinutes, 4)
 				};
 
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
@@ -137,6 +151,8 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 				bag.Add(ecd);
 			});
+
+			this.logger.LogInformation("Finished analysis of commits.");
 
 			return bag.OrderBy(ecd => ecd.AuthorTime);
 		}
