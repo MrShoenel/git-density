@@ -29,7 +29,7 @@ namespace GitDensity.Density
 	/// <see cref="HunksForPatch(PatchEntryChanges, DirectoryInfo, DirectoryInfo)"/>
 	/// to obtain all hunks for a <see cref="PatchEntryChanges"/> for one file.
 	/// </summary>
-	internal class Hunk
+	public class Hunk
 	{
 		/// <summary>
 		/// Used to split and analyze a git-diff hunk.
