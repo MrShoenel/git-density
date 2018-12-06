@@ -26,8 +26,7 @@ namespace GitTools.Analysis
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	public abstract class BaseAnalyzer<T> :
-		IAnalyzer<T>,
-		ISupportsExecutionPolicy
+		IAnalyzer<T>
 		where T : IAnalyzedCommit
 	{
 		/// <summary>

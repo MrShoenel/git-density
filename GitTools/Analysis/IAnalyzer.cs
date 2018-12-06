@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using System.Collections.Generic;
+using Util;
 
 namespace GitTools.Analysis
 {
@@ -21,7 +22,8 @@ namespace GitTools.Analysis
 	/// Interface for all commit-analyzers to implement.
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
-	public interface IAnalyzer<out T> where T : IAnalyzedCommit
+	public interface IAnalyzer<out T> :
+		ISupportsExecutionPolicy where T : IAnalyzedCommit
 	{
 		/// <summary>
 		/// Yields <see cref="IAnalyzedCommit"/> entities once run.
