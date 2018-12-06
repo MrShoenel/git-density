@@ -29,6 +29,11 @@ Git Density is a solution that currently features these three applications:
   * It comes also with its own command-line interface and supports `JSON`-formatted output (like `git-hours`).
   * It is part of the full analysis of `git-density` as well.
   * Please note that the standalone CLI interface is _not yet fully implemented_, although just minor things are missing (planned is a `JSON`-formatted output).
+*	__`git-tools`__: A stand-alone application that uses some of the tools from the other projects to extract information from git repositories and stores them as __`CSV`__-files.
+	*	Has its own command-line interface and supports online/offline repos and parallelization.
+	*	Supports two methods currently: _Simple_ and _Extended_ (default) extraction.
+	*	Does not require tools for clone-detection or metrics, as these are not extracted.
+	*	Extracts __25__ features (__7__ in _Simple_-mode): `"RepoPathOrUrl","SHA1","AuthorName","CommitterName","AuthorTime","CommitterTime","MinutesSincePreviousCommit","Message","AuthorEmail","CommitterEmail","IsInitialCommit","IsMergeCommit","NumberOfParentCommits","NumberOfFilesAdded","NumberOfLinesAddedByAddedFilesNoComments","NumberOfLinesAddedByAddedFilesGross","NumberOfFilesDeleted","NumberOfLinesDeletedByDeletedFilesNoComments","NumberOfLinesDeletedByDeletedFilesGross","NumberOfFilesModified","NumberOfFilesRenamed","NumberOfLinesAddedByModifiedFiles","NumberOfLinesDeletedByModifiedFiles","NumberOfLinesAddedByRenamedFiles","NumberOfLinesDeletedByRenamedFiles"`
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
 ## Caveats
