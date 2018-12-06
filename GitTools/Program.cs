@@ -156,8 +156,17 @@ namespace GitTools
 
 							logger.LogDebug($"Using analyzer: {analyzer.GetType().Name}");
 
-							var details = analyzer.AnalyzeCommits().ToList(); 
-							csvc.Write(details, writer);
+							analyzer.ExecutionPolicy = options.ExecutionPolicy;
+							var details = analyzer.AnalyzeCommits().ToList();
+							if (options.AnalysisType == AnalysisType.Simple)
+							{
+								csvc.Write(details.Cast<SimpleCommitDetails>(), writer, outd);
+							}
+							else if (options.AnalysisType == AnalysisType.Extended)
+							{
+								csvc.Write(details.Cast<ExtendedCommitDetails>(), writer, outd);
+							}
+
 							logger.LogInformation($"Wrote {details.Count} rows to file {options.OutputFile}.");
 						}
 					}
@@ -210,16 +219,16 @@ namespace GitTools
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
 
-		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Simple, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
+		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Extended, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
 		[JsonConverter(typeof(StringEnumConverter))]
-		public AnalysisType AnalysisType { get; set; }
+		public AnalysisType AnalysisType { get; set; } = AnalysisType.Extended;
 
 		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
 		public String OutputFile { get; set; }
 
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]
-		public ExecutionPolicy ExecutionPolicy { get; set; }
+		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		[JsonConverter(typeof(StringEnumConverter))]
