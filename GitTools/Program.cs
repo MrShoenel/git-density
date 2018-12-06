@@ -17,6 +17,7 @@ using CommandLine;
 using CommandLine.Text;
 using GitTools.Analysis;
 using GitTools.Analysis.ExtendedAnalyzer;
+using GitTools.Analysis.SimpleAnalyzer;
 using LINQtoCSV;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -126,22 +127,39 @@ namespace GitTools
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 						var span = new GitCommitSpan(repo, options.Since, options.Until);
-
-						System.Diagnostics.Debugger.Launch();
-
-						// Now we extract some info and write it out later.
-						var csvc = new CsvContext();
-						var outd = new CsvFileDescription
+						
+						using (var writer = File.CreateText(options.OutputFile))
 						{
-							FirstLineHasColumnNames = true,
-							FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
-							SeparatorChar = ',',
-							QuoteAllFields = true,
-							EnforceCsvColumnAttribute = true
-						};
+							// Now we extract some info and write it out later.
+							var csvc = new CsvContext();
+							var outd = new CsvFileDescription
+							{
+								FirstLineHasColumnNames = true,
+								FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+								SeparatorChar = ',',
+								QuoteAllFields = true,
+								EnforceCsvColumnAttribute = true
+							};
 
-						var analyzer = new ExtendedAnalyzer(options.RepoPath, span);
-						csvc.Write(analyzer.AnalyzeCommits(), Console.Out);
+							IAnalyzer<IAnalyzedCommit> analyzer = null;
+							switch (options.AnalysisType)
+							{
+								case AnalysisType.Simple:
+									analyzer = new SimpleAnalyzer(options.RepoPath, span);
+									break;
+								case AnalysisType.Extended:
+									analyzer = new ExtendedAnalyzer(options.RepoPath, span);
+									break;
+								default:
+									throw new Exception($"The {nameof(AnalysisType)} '{options.AnalysisType.ToString()}' is not supported.");
+							}
+
+							logger.LogDebug($"Using analyzer: {analyzer.GetType().Name}");
+
+							var details = analyzer.AnalyzeCommits().ToList(); 
+							csvc.Write(details, writer);
+							logger.LogInformation($"Wrote {details.Count} rows to file {options.OutputFile}.");
+						}
 					}
 				}
 				catch (Exception ex)
@@ -191,6 +209,13 @@ namespace GitTools
 
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
+
+		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Simple, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public AnalysisType AnalysisType { get; set; }
+
+		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
+		public String OutputFile { get; set; }
 
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]

@@ -99,6 +99,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Analysis\AnalysisType.cs" />
     <Compile Include="Analysis\BaseAnalyzer.cs" />
     <Compile Include="Analysis\ExtendedAnalyzer\ExtendedAnalyzer.cs" />
     <Compile Include="Analysis\ExtendedAnalyzer\ExtendedCommitDetails.cs" />
