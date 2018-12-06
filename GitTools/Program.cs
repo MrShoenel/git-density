@@ -1,12 +1,32 @@
-﻿using CommandLine;
+﻿/// ---------------------------------------------------------------------------------
+///
+/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+///
+/// https://github.com/MrShoenel/git-density
+///
+/// This file is part of the project GitTools. All files in this project,
+/// if not noted otherwise, are licensed under the GPLv3-license. You will
+/// find a copy of this file in the project's root directory.
+///
+/// Note that the license changed from MIT to GPLv3. In general, the license
+/// from the latest public commit applies.
+///
+/// ---------------------------------------------------------------------------------
+///
+using CommandLine;
 using CommandLine.Text;
+using GitTools.Analysis;
+using GitTools.Analysis.ExtendedAnalyzer;
+using LINQtoCSV;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using Util;
 using Util.Extensions;
@@ -106,6 +126,22 @@ namespace GitTools
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 						var span = new GitCommitSpan(repo, options.Since, options.Until);
+
+						System.Diagnostics.Debugger.Launch();
+
+						// Now we extract some info and write it out later.
+						var csvc = new CsvContext();
+						var outd = new CsvFileDescription
+						{
+							FirstLineHasColumnNames = true,
+							FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+							SeparatorChar = ',',
+							QuoteAllFields = true,
+							EnforceCsvColumnAttribute = true
+						};
+
+						var analyzer = new ExtendedAnalyzer(options.RepoPath, span);
+						csvc.Write(analyzer.AnalyzeCommits(), Console.Out);
 					}
 				}
 				catch (Exception ex)
