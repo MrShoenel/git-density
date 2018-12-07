@@ -19,6 +19,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Util;
 using Util.Logging;
@@ -55,6 +56,9 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
+			var done = 0;
+			var total = this.GitCommitSpan.Count();
+			var report = new HashSet<Int32>(Enumerable.Range(1, 10).Select(i => i * 10));
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<SimpleCommitDetails>();
 
@@ -64,6 +68,13 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			}, commit =>
 			{
 				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
+
+				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
+				if (report.Contains(doneNow))
+				{
+					report.Remove(doneNow);
+					this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+				}
 			});
 
 			this.logger.LogInformation("Finished analysis of commits.");
