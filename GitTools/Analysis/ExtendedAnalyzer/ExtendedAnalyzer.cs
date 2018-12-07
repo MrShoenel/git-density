@@ -21,6 +21,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Util;
 using Util.Density;
@@ -61,6 +62,9 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
+			var done = 0;
+			var total = this.GitCommitSpan.Count();
+			var report = new HashSet<Int32>(Enumerable.Range(1, 10).Select(i => i * 10));
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<ExtendedCommitDetails>();
 
@@ -89,9 +93,9 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
 				{
-					return tc.Mode != Mode.GitLink &&
-					(tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
-						|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
+					return tc.Mode != Mode.GitLink && tc.OldMode != Mode.GitLink
+						&& (tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
+							|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
 				});
 
 				// We are interested in how many files were affected by this commit
@@ -103,6 +107,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 					var patchNew = pair.Patch[change.Path];
 					var patchOld = pair.Patch[change.OldPath];
+
 					var simpleLoc = new SimpleLoc((added ?
 						pair.Child[change.Path] : pair.Parent[change.OldPath]).GetLines());
 
@@ -150,6 +155,13 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 
 				bag.Add(ecd);
+
+				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
+				if (report.Contains(doneNow))
+				{
+					report.Remove(doneNow);
+					this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+				}
 			});
 
 			this.logger.LogInformation("Finished analysis of commits.");

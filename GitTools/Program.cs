@@ -158,6 +158,7 @@ namespace GitTools
 
 							analyzer.ExecutionPolicy = options.ExecutionPolicy;
 							var details = analyzer.AnalyzeCommits().ToList();
+							logger.LogInformation("Analysis done, attempting to write to CSV..");
 							if (options.AnalysisType == AnalysisType.Simple)
 							{
 								csvc.Write(details.Cast<SimpleCommitDetails>(), writer, outd);
