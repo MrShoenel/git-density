@@ -58,10 +58,10 @@ namespace GitTools.Analysis
 
 		#region fields
 		[CsvColumn(FieldIndex = 1)]
-		public String RepoPathOrUrl { get; protected set; }
+		public String SHA1 => this.commit.Sha;
 
 		[CsvColumn(FieldIndex = 2)]
-		public String SHA1 => this.commit.Sha;
+		public String RepoPathOrUrl { get; protected set; }
 
 		[CsvColumn(FieldIndex = 3)]
 		public String AuthorName => this.commit.Author.Name;
@@ -69,10 +69,10 @@ namespace GitTools.Analysis
 		[CsvColumn(FieldIndex = 4)]
 		public String CommitterName => this.commit.Committer.Name;
 
-		[CsvColumn(FieldIndex = 5)]
+		[CsvColumn(FieldIndex = 5, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
 		public DateTime AuthorTime => this.commit.Author.When.DateTime;
 
-		[CsvColumn(FieldIndex = 6)]
+		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
 		public DateTime CommitterTime => this.commit.Committer.When.DateTime;
 
 		#region virtual fields

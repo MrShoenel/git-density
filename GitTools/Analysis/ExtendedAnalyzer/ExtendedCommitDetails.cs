@@ -58,11 +58,14 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		[CsvColumn(FieldIndex = 10)]
 		public String CommitterEmail => this.commit.Committer.Email;
 
+		/// <summary>
+		/// This is a boolean field but we use 0/1 for compatibility reasons.
+		/// </summary>
 		[CsvColumn(FieldIndex = 11)]
-		public Boolean IsInitialCommit { get; protected internal set; } = false;
+		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 12)]
-		public Boolean IsMergeCommit { get; protected internal set; } = false;
+		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 13)]
 		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
