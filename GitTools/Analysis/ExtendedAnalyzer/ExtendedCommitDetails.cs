@@ -47,10 +47,11 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 		#region additional fields
 		/// <summary>
-		/// For initial commits (without parent), this field is null.
+		/// For initial commits (without parent), this field has a negative value (i.e. -.1)
+		/// to make it easier to distinguish from other commits' values.
 		/// </summary>
-		[CsvColumn(FieldIndex = 7, CanBeNull = true)]
-		public double? MinutesSincePreviousCommit { get; protected internal set; } = null;
+		[CsvColumn(FieldIndex = 7)]
+		public double MinutesSincePreviousCommit { get; protected internal set; } = -.1;
 
 		[CsvColumn(FieldIndex = 9)]
 		public String AuthorEmail => this.commit.Author.Email;
@@ -58,11 +59,14 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		[CsvColumn(FieldIndex = 10)]
 		public String CommitterEmail => this.commit.Committer.Email;
 
+		/// <summary>
+		/// This is a boolean field but we use 0/1 for compatibility reasons.
+		/// </summary>
 		[CsvColumn(FieldIndex = 11)]
-		public Boolean IsInitialCommit { get; protected internal set; } = false;
+		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 12)]
-		public Boolean IsMergeCommit { get; protected internal set; } = false;
+		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
 
 		[CsvColumn(FieldIndex = 13)]
 		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;

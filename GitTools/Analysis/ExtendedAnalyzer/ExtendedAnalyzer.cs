@@ -82,10 +82,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, repo, pair.Child)
 				{
-					IsInitialCommit = pair.Parent is Commit ? false : true,
-					IsMergeCommit = parents.Count > 1,
+					IsInitialCommit = pair.Parent is Commit ? 0u : 1u,
+					IsMergeCommit = parents.Count > 1 ? 1u : 0u,
 					NumberOfParentCommits = (UInt32)parents.Count,
-					MinutesSincePreviousCommit = parents.Count == 0 ? (double?)null :
+					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(
 						(pair.Child.Committer.When.DateTime -
 							(parents.OrderByDescending(p => p.Committer.When.DateTime).First().Committer.When.DateTime)).TotalMinutes, 4)
