@@ -281,19 +281,12 @@ namespace GitDensity.Density
 
 				#region Identify relevant tree-changes
 				// Now get all TreeChanges with Status Added, Modified, Deleted or Moved.
-				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
+				var relevantTreeChanges = pair.RelevantTreeChanges.Where(rtc =>
 				{
-					return tc.Mode != Mode.GitLink && tc.OldMode != Mode.GitLink
-						&& (tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
-							|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
-				});
-
-				// Now for each of the desired file types, get the Hunks and Diffs
-				relevantTreeChanges = relevantTreeChanges.Where(rtc =>
-				{
+					// Now for each of the desired file types, get the Hunks and Diffs
 					return this.FileTypeExtensions.Any(extension => rtc.Path.EndsWith(extension))
 					|| this.FileTypeExtensions.Any(extension => rtc.OldPath.EndsWith(extension));
-				});
+				}).ToList();
 				#endregion
 
 				#region Write out commit-pair

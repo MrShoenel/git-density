@@ -16,6 +16,7 @@
 using LibGit2Sharp;
 using LINQtoCSV;
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace GitTools.Analysis
@@ -54,6 +55,13 @@ namespace GitTools.Analysis
 			this.RepoPathOrUrl = repoPathOrUrl;
 			this.repository = repository;
 			this.commit = commit;
+
+			var parents = this.commit.Parents.ToList();
+
+			this.IsInitialCommit = parents.Count == 0 ? 1u : 0u;
+			this.IsMergeCommit = parents.Count > 1 ? 1u : 0u;
+			this.NumberOfParentCommits = (UInt32)parents.Count;
+			this.ParentCommitSHA1s = String.Join(",", parents.Select(c => c.Sha));
 		}
 
 		#region fields
@@ -74,6 +82,27 @@ namespace GitTools.Analysis
 
 		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
 		public DateTime CommitterTime => this.commit.Committer.When.DateTime;
+
+		[CsvColumn(FieldIndex = 9)]
+		public String AuthorEmail => this.commit.Author.Email;
+
+		[CsvColumn(FieldIndex = 10)]
+		public String CommitterEmail => this.commit.Committer.Email;
+
+		/// <summary>
+		/// This is a boolean field but we use 0/1 for compatibility reasons.
+		/// </summary>
+		[CsvColumn(FieldIndex = 11)]
+		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 12)]
+		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 13)]
+		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
+
+		[CsvColumn(FieldIndex = 14)]
+		public String ParentCommitSHA1s { get; protected internal set; } = String.Empty;
 
 		#region virtual fields
 		/// <summary>

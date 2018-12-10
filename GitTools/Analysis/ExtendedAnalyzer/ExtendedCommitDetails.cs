@@ -53,59 +53,41 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		[CsvColumn(FieldIndex = 7)]
 		public double MinutesSincePreviousCommit { get; protected internal set; } = -.1;
 
-		[CsvColumn(FieldIndex = 9)]
-		public String AuthorEmail => this.commit.Author.Email;
-
-		[CsvColumn(FieldIndex = 10)]
-		public String CommitterEmail => this.commit.Committer.Email;
-
-		/// <summary>
-		/// This is a boolean field but we use 0/1 for compatibility reasons.
-		/// </summary>
-		[CsvColumn(FieldIndex = 11)]
-		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
-
-		[CsvColumn(FieldIndex = 12)]
-		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
-
-		[CsvColumn(FieldIndex = 13)]
-		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
-
-		[CsvColumn(FieldIndex = 14)]
+		[CsvColumn(FieldIndex = 15)]
 		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 15)]
+		[CsvColumn(FieldIndex = 16)]
 		public UInt32 NumberOfLinesAddedByAddedFilesNoComments { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 16)]
+		[CsvColumn(FieldIndex = 17)]
 		public UInt32 NumberOfLinesAddedByAddedFilesGross { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 17)]
+		[CsvColumn(FieldIndex = 18)]
 		public UInt32 NumberOfFilesDeleted { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 18)]
+		[CsvColumn(FieldIndex = 19)]
 		public UInt32 NumberOfLinesDeletedByDeletedFilesNoComments { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 19)]
+		[CsvColumn(FieldIndex = 20)]
 		public UInt32 NumberOfLinesDeletedByDeletedFilesGross { get; protected internal set; } = 0u;
 
 
-		[CsvColumn(FieldIndex = 20)]
+		[CsvColumn(FieldIndex = 21)]
 		public UInt32 NumberOfFilesModified { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 21)]
+		[CsvColumn(FieldIndex = 22)]
 		public UInt32 NumberOfFilesRenamed { get; protected internal set; } = 0u;
 	
-		[CsvColumn(FieldIndex = 22)]
+		[CsvColumn(FieldIndex = 23)]
 		public UInt32 NumberOfLinesAddedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 23)]
+		[CsvColumn(FieldIndex = 24)]
 		public UInt32 NumberOfLinesDeletedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 24)]
+		[CsvColumn(FieldIndex = 25)]
 		public UInt32 NumberOfLinesAddedByRenamedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 25)]
+		[CsvColumn(FieldIndex = 26)]
 		public UInt32 NumberOfLinesDeletedByRenamedFiles { get; protected internal set; } = 0u;
 		#endregion
 	}

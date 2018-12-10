@@ -70,10 +70,13 @@ namespace GitTools.Analysis.SimpleAnalyzer
 				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
 
 				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
-				if (report.Contains(doneNow))
+				lock (report)
 				{
-					report.Remove(doneNow);
-					this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+					if (report.Contains(doneNow))
+					{
+						report.Remove(doneNow);
+						this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+					}
 				}
 			});
 
