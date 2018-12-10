@@ -82,9 +82,6 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, repo, pair.Child)
 				{
-					IsInitialCommit = pair.Parent is Commit ? 0u : 1u,
-					IsMergeCommit = parents.Count > 1 ? 1u : 0u,
-					NumberOfParentCommits = (UInt32)parents.Count,
 					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(
 						(pair.Child.Committer.When.DateTime -
@@ -150,10 +147,13 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				bag.Add(ecd);
 
 				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
-				if (report.Contains(doneNow))
+				lock (report)
 				{
-					report.Remove(doneNow);
-					this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+					if (report.Contains(doneNow))
+					{
+						report.Remove(doneNow);
+						this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
+					}
 				}
 			});
 
