@@ -14,12 +14,14 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Util.Extensions;
+using Util.Logging;
 
 namespace GitDensity.Density
 {
@@ -31,6 +33,8 @@ namespace GitDensity.Density
 	/// </summary>
 	public class Hunk
 	{
+		private static BaseLogger<Hunk> logger = Program.CreateLogger<Hunk>();
+
 		/// <summary>
 		/// Used to split and analyze a git-diff hunk.
 		/// </summary>
@@ -143,6 +147,9 @@ namespace GitDensity.Density
 		/// <returns></returns>
 		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec, DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory)
 		{
+			String fullSourcePath, fullTargetPath;
+			Exception hunkPathException;
+
 			// First condition is an empty patch that is usually the result from adding a new, empty file.
 			// We will only return one empty Hunk for this case.
 			// Second condition is a pure Move/Rename (then there's no real diff).
@@ -151,6 +158,15 @@ namespace GitDensity.Density
 				|| (pec.Status == ChangeKind.Renamed && pec.LinesAdded == 0 && pec.LinesDeleted == 0)
 				|| (pec.Status == ChangeKind.Deleted && pec.Mode == Mode.Nonexistent))
 			{
+				if (!Hunk.TryGetHunkPaths(
+					pairSourceDirectory, pairTargetDirectory,
+					pec.OldPath, pec.Path,
+					out fullSourcePath, out fullTargetPath, out hunkPathException))
+				{
+					Hunk.WarnAboutBrokenHunkPaths(
+						hunkPathException, pairSourceDirectory, pairTargetDirectory, pec.OldPath, pec.Path);
+				}
+
 				// This is an empty patch that is usually the result from adding a new, empty file.
 				// We will only return one empty Hunk for this case.
 				/// <see cref="RepresentsNewEmptyFile"/>
@@ -160,23 +176,91 @@ namespace GitDensity.Density
 					OldNumberOfLines = 0u,
 					NewLineStart = 0u,
 					NewNumberOfLines = 0u,
-					SourceFilePath = new DirectoryInfo(
-						Path.Combine(pairSourceDirectory.FullName, pec.OldPath)).FullName,
-					TargetFilePath = new DirectoryInfo(
-						Path.Combine(pairTargetDirectory.FullName, pec.Path)).FullName
+					SourceFilePath = fullSourcePath,
+					TargetFilePath = fullTargetPath
 				};
 				yield break;
 			}
 
 			foreach (var hunk in Hunk.SplitPatch(pec.Patch))
 			{
-				hunk.SourceFilePath = new DirectoryInfo(
-					Path.Combine(pairSourceDirectory.FullName, pec.OldPath)).FullName;
-				hunk.TargetFilePath = new DirectoryInfo(
-					Path.Combine(pairTargetDirectory.FullName, pec.Path)).FullName;
+				if (!Hunk.TryGetHunkPaths(
+					pairSourceDirectory, pairTargetDirectory,
+					pec.OldPath, pec.Path,
+					out fullSourcePath, out fullTargetPath, out hunkPathException))
+				{
+					Hunk.WarnAboutBrokenHunkPaths(
+						hunkPathException, pairSourceDirectory, pairTargetDirectory, pec.OldPath, pec.Path);
+				}
+
+				hunk.SourceFilePath = fullSourcePath;
+				hunk.TargetFilePath = fullTargetPath;
 
 				yield return hunk.ComputeLinesAddedAndDeleted(); // Important to call having set the props;
 			}
+		}
+
+		//private static readonly Regex RegexTrimDirectorySlashes =
+		//	new Regex(@"^(?:/|\)([^/\]*)(?:/|\)$", RegexOptions.Compiled | RegexOptions.ECMAScript);
+
+		/// <summary>
+		/// Returns a string that does neither end nor start with a slash or backslash.
+		/// </summary>
+		/// <param name="orgPath"></param>
+		/// <returns></returns>
+		private static String trimPathSep(String orgPath) => orgPath.Trim('/', '\\');
+
+		/// <summary>
+		/// Attempts to obtain paths to a <see cref="Hunk"/>'s source/target files by combining
+		/// directories and filenames. However, sometimes these contain invalid chars. In that
+		/// case, this method will resort to manually concatenating these and return false; true,
+		/// otherwise.
+		/// A warning is logged using the <see cref="Hunk"/>'s logger.
+		/// </summary>
+		/// <param name="pairSourceDirectory"></param>
+		/// <param name="pairTargetDirectory"></param>
+		/// <param name="hunkSourcePath"></param>
+		/// <param name="hunkTargetPath"></param>
+		/// <param name="fullSourcePath"></param>
+		/// <param name="fullTargetPath"></param>
+		/// <param name="ex"></param>
+		/// <returns></returns>
+		protected static Boolean TryGetHunkPaths(
+			DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory,
+			String hunkSourcePath, String hunkTargetPath,
+			out String fullSourcePath, out String fullTargetPath,
+			out Exception ex)
+		{
+			try
+			{
+				fullSourcePath = new DirectoryInfo(
+					Path.Combine(pairSourceDirectory.FullName, hunkSourcePath)).FullName;
+				fullTargetPath = new DirectoryInfo(
+					Path.Combine(pairTargetDirectory.FullName, hunkTargetPath)).FullName;
+
+				ex = null;
+				return true;
+			}
+			catch (Exception tempEx)
+			{
+				fullSourcePath = trimPathSep(pairSourceDirectory.FullName)
+					+ Path.DirectorySeparatorChar
+					+ trimPathSep(hunkSourcePath);
+				fullTargetPath = trimPathSep(pairTargetDirectory.FullName)
+					+ Path.DirectorySeparatorChar
+					+ trimPathSep(hunkTargetPath);
+
+				ex = tempEx;
+				return false;
+			}
+		}
+
+		protected static void WarnAboutBrokenHunkPaths(
+			Exception ex,
+			DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory,
+			String hunkSourcePath, String hunkTargetPath)
+		{
+			logger.LogWarning(ex, $"Obtaining the paths for a Hunk failed, returning manually concatenated paths. {nameof(pairSourceDirectory)}: {pairSourceDirectory.FullName}, {nameof(pairTargetDirectory)}: {pairTargetDirectory.FullName}, {nameof(hunkSourcePath)}: {hunkSourcePath}, {nameof(hunkTargetPath)}: {hunkTargetPath}");
 		}
 
 		/// <summary>
