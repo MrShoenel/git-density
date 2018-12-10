@@ -91,17 +91,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 							(parents.OrderByDescending(p => p.Committer.When.DateTime).First().Committer.When.DateTime)).TotalMinutes, 4)
 				};
 
-				var relevantTreeChanges = pair.TreeChanges.Where(tc =>
-				{
-					return tc.Mode != Mode.GitLink && tc.OldMode != Mode.GitLink
-						&& (tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
-							|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
-				});
-
 				// We are interested in how many files were affected by this commit
 				// for the kinds added, deleted, modified, renamed
 				#region added/deleted
-				foreach (var change in relevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Deleted))
+				foreach (var change in pair.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Deleted))
 				{
 					var added = change.Status == ChangeKind.Added;
 
@@ -131,7 +124,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				// The following block concerns all changes that represent modifications to
 				// two different versions of the same file. The file may have been renamed
 				// or moved as well (a so-called non-pure modification).
-				foreach (var change in relevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Modified || rtc.Status == ChangeKind.Renamed))
+				foreach (var change in pair.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Modified || rtc.Status == ChangeKind.Renamed))
 				{
 					var modified = change.Status == ChangeKind.Modified;
 					var patchNew = pair.Patch[change.Path];

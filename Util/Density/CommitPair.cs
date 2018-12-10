@@ -76,6 +76,17 @@ namespace Util.Density
 		/// </summary>
 		public TreeChanges TreeChanges => this.lazyTree.Value;
 
+		private Lazy<IReadOnlyList<TreeEntryChanges>> lazyRelevantTreeChanges;
+
+		/// <summary>
+		/// Returns those <see cref="TreeChanges"/> that are relevant to
+		/// the Density- and Tools- analyses. Relevant are all changes that
+		/// we can read into files, i.e. <see cref="Mode.GitLink"/> is not a
+		/// relevant change. Also, we are always only dealing with added,
+		/// modified, renamed and deleted files.
+		/// </summary>
+		public IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => this.lazyRelevantTreeChanges.Value;
+
 		/// <summary>
 		/// Set the <see cref="ExecutionPolicy"/> for parallel operations. Currently
 		/// supported within <see cref="WriteOutTree(IEnumerable{TreeEntryChanges}, DirectoryInfo, bool, string, string)"/>.
@@ -101,6 +112,16 @@ namespace Util.Density
 			this.lazyTree = new Lazy<TreeChanges>(() =>
 			{
 				return this.Repository.Diff.Compare<TreeChanges>(this.Parent?.Tree, this.Child.Tree);
+			});
+
+			this.lazyRelevantTreeChanges = new Lazy<IReadOnlyList<TreeEntryChanges>>(() =>
+			{
+				return this.TreeChanges.Where(tc =>
+				{
+					return tc.Mode != Mode.GitLink && tc.OldMode != Mode.GitLink
+						&& (tc.Status == ChangeKind.Added || tc.Status == ChangeKind.Modified
+							|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
+				}).ToList().AsReadOnly();
 			});
 		}
 
