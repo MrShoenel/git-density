@@ -63,10 +63,13 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			var bag = new ConcurrentBag<SimpleCommitDetails>();
 			var reporter = new SimpleProgressReporter<SimpleAnalyzer>(this.logger);
 
-			Parallel.ForEach(this.GitCommitSpan, new ParallelOptions
+			var po = new ParallelOptions();
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
-				MaxDegreeOfParallelism = this.ExecutionPolicy == ExecutionPolicy.Linear ? 1 : Environment.ProcessorCount
-			}, commit =>
+				po.MaxDegreeOfParallelism = 1;
+			}
+
+			Parallel.ForEach(this.GitCommitSpan, po, commit =>
 			{
 				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);

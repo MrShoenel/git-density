@@ -73,10 +73,13 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				skipInitialCommit: false,
 				skipMergeCommits: false);
 
-			Parallel.ForEach(pairs, new ParallelOptions
+			var po = new ParallelOptions();
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
-				MaxDegreeOfParallelism = this.ExecutionPolicy == ExecutionPolicy.Linear ? 1 : Environment.ProcessorCount
-			}, pair =>
+				po.MaxDegreeOfParallelism = 1;
+			}
+
+			Parallel.ForEach(pairs, po, pair =>
 			{
 				pair.ExecutionPolicy = ExecutionPolicy.Linear; // As we're probably running parallel in outer scope already
 				var parents = pair.Child.Parents.ToList();
