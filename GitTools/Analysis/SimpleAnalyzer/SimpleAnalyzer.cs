@@ -58,7 +58,6 @@ namespace GitTools.Analysis.SimpleAnalyzer
 
 			var done = 0;
 			var total = this.GitCommitSpan.Count();
-			var report = new HashSet<Int32>(Enumerable.Range(1, 10).Select(i => i * 10));
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<SimpleCommitDetails>();
 			var reporter = new SimpleProgressReporter<SimpleAnalyzer>(this.logger);
