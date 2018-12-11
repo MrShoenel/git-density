@@ -85,4 +85,36 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			return bag.OrderBy(scd => scd.AuthorTime);
 		}
 	}
+
+	internal class SimpleProgressReporter<T> where T: IAnalyzer<IAnalyzedCommit>
+	{
+		public static readonly ISet<Int32> DefaultSteps
+			= new HashSet<Int32>(Enumerable.Range(1, 20).Select(i => i * 5));
+
+		protected readonly BaseLogger<T> logger;
+
+		protected readonly ISet<Int32> steps;
+
+		protected readonly SemaphoreSlim semaphoreSlim;
+
+		public SimpleProgressReporter(BaseLogger<T> logger, ISet<Int32> stepsToProgress = null)
+		{
+			this.logger = logger;
+			this.steps = stepsToProgress ?? DefaultSteps;
+			this.semaphoreSlim = new SemaphoreSlim(1, 1);
+		}
+
+		public void ReportProgress(int numDone, int numTotal)
+		{
+			var doneNow = (int)Math.Floor((double)numDone / (double)numTotal * 100d);
+
+			this.semaphoreSlim.Wait();
+			if (this.steps.Contains(doneNow))
+			{
+				this.steps.Remove(doneNow);
+				this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({numDone.ToString().PadLeft(numTotal.ToString().Length)}/{numTotal} commits)");
+			}
+			this.semaphoreSlim.Release();
+		}
+	}
 }
