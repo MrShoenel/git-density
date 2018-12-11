@@ -67,15 +67,19 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			var report = new HashSet<Int32>(Enumerable.Range(1, 10).Select(i => i * 10));
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<ExtendedCommitDetails>();
+			var reporter = new SimpleAnalyzer.SimpleProgressReporter<ExtendedAnalyzer>(this.logger);
 
 			var pairs = this.GitCommitSpan.CommitPairs(
 				skipInitialCommit: false,
 				skipMergeCommits: false);
 
-			Parallel.ForEach(pairs, new ParallelOptions
+			var po = new ParallelOptions();
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
-				MaxDegreeOfParallelism = this.ExecutionPolicy == ExecutionPolicy.Linear ? 1 : Environment.ProcessorCount
-			}, pair =>
+				po.MaxDegreeOfParallelism = 1;
+			}
+
+			Parallel.ForEach(pairs, po, pair =>
 			{
 				pair.ExecutionPolicy = ExecutionPolicy.Linear; // As we're probably running parallel in outer scope already
 				var parents = pair.Child.Parents.ToList();
@@ -145,16 +149,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 
 				bag.Add(ecd);
-
-				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
-				lock (report)
-				{
-					if (report.Contains(doneNow))
-					{
-						report.Remove(doneNow);
-						this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
-					}
-				}
+				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 
 			this.logger.LogInformation("Finished analysis of commits.");

@@ -61,28 +61,55 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			var report = new HashSet<Int32>(Enumerable.Range(1, 10).Select(i => i * 10));
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<SimpleCommitDetails>();
+			var reporter = new SimpleProgressReporter<SimpleAnalyzer>(this.logger);
 
-			Parallel.ForEach(this.GitCommitSpan, new ParallelOptions
+			var po = new ParallelOptions();
+			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
 			{
-				MaxDegreeOfParallelism = this.ExecutionPolicy == ExecutionPolicy.Linear ? 1 : Environment.ProcessorCount
-			}, commit =>
+				po.MaxDegreeOfParallelism = 1;
+			}
+
+			Parallel.ForEach(this.GitCommitSpan, po, commit =>
 			{
 				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
-
-				var doneNow = (int)Math.Floor((double)Interlocked.Increment(ref done) / total * 100);
-				lock (report)
-				{
-					if (report.Contains(doneNow))
-					{
-						report.Remove(doneNow);
-						this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({done.ToString().PadLeft(total.ToString().Length)}/{total} commits)");
-					}
-				}
+				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 
 			this.logger.LogInformation("Finished analysis of commits.");
 
 			return bag.OrderBy(scd => scd.AuthorTime);
+		}
+	}
+
+	internal class SimpleProgressReporter<T> where T: IAnalyzer<IAnalyzedCommit>
+	{
+		public static readonly ISet<Int32> DefaultSteps
+			= new HashSet<Int32>(Enumerable.Range(1, 20).Select(i => i * 5));
+
+		protected readonly BaseLogger<T> logger;
+
+		protected readonly ISet<Int32> steps;
+
+		protected readonly SemaphoreSlim semaphoreSlim;
+
+		public SimpleProgressReporter(BaseLogger<T> logger, ISet<Int32> stepsToProgress = null)
+		{
+			this.logger = logger;
+			this.steps = stepsToProgress ?? DefaultSteps;
+			this.semaphoreSlim = new SemaphoreSlim(1, 1);
+		}
+
+		public void ReportProgress(int numDone, int numTotal)
+		{
+			var doneNow = (int)Math.Floor((double)numDone / (double)numTotal * 100d);
+
+			this.semaphoreSlim.Wait();
+			if (this.steps.Contains(doneNow))
+			{
+				this.steps.Remove(doneNow);
+				this.logger.LogInformation($"Progress is {doneNow.ToString().PadLeft(3)}% ({numDone.ToString().PadLeft(numTotal.ToString().Length)}/{numTotal} commits)");
+			}
+			this.semaphoreSlim.Release();
 		}
 	}
 }
