@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Util;
+using Util.Data;
 using Util.Extensions;
 using Util.Logging;
 
@@ -221,6 +222,60 @@ namespace GitTools
 			}
 
 			Environment.Exit((int)ExitCodes.OK);
+		}
+
+		/// <summary>
+		/// This method was temporarily added and used to correct a value.
+		/// It is no longer referenced or used anymore, but kept in code
+		/// for reference.
+		/// </summary>
+		/// <param name="options"></param>
+		[Obsolete("Do not use. This method only corrected the field 'MinutesSincePreviousCommit' which was not calculated correctly as it was not using UTC DateTimes before.")]
+		public static void FixedMinutesSincePrevCommit(CommandLineOptions options)
+		{
+			var projects = new[] {
+				"https://github.com/apache/camel.git",
+				"https://github.com/apache/hbase.git",
+				"https://github.com/elastic/elasticsearch.git",
+				"https://github.com/JetBrains/kotlin.git",
+				"https://github.com/kiegroup/drools.git",
+				"https://github.com/orientechnologies/orientdb.git",
+				"https://github.com/ReactiveX/RxJava.git",
+				"https://github.com/restlet/restlet-framework-java.git",
+				"https://github.com/spring-projects/spring-framework.git"
+			};
+
+			var config = Util.Configuration.ReadDefault();
+			DataFactory.Configure(config,
+				Program.CreateLogger<DataFactory>(), new DirectoryInfo(options.TempDirectory).Parent.FullName);
+			using (var tempSess = DataFactory.Instance.OpenSession())
+			{
+				logger.LogDebug("Successfully probed the configured database.");
+			}
+
+			foreach (var p in projects)
+			{
+				using (var repo = p.OpenRepository(options.TempDirectory, null, true))
+				{
+					var span = new GitCommitSpan(repo, options.Since, options.Until);
+					var analyzer = new ExtendedAnalyzer(options.RepoPath, span, true);
+					analyzer.ExecutionPolicy = ExecutionPolicy.Parallel;
+
+					var commits = new HashSet<ExtendedCommitDetails>(analyzer.AnalyzeCommits());
+
+					using (var sess = DataFactory.Instance.OpenSession())
+					{
+						var q = sess.CreateSQLQuery("UPDATE gtools_ex SET MinutesSincePreviousCommit = :prev where SHA1 = :sha");
+
+						foreach (var c in commits)
+						{
+							q.SetParameter("prev", c.MinutesSincePreviousCommit);
+							q.SetParameter("sha", c.SHA1);
+							q.ExecuteUpdate();
+						}
+					}
+				}
+			}
 		}
 	}
 
