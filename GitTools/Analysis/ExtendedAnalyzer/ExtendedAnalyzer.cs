@@ -94,8 +94,8 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				{
 					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(
-						(pair.Child.Committer.When.DateTime -
-							(parents.OrderByDescending(p => p.Committer.When.DateTime).First().Committer.When.DateTime)).TotalMinutes, 4)
+						(pair.Child.Committer.When.UtcDateTime -
+							(parents.OrderByDescending(p => p.Committer.When.UtcDateTime).First().Committer.When.UtcDateTime)).TotalMinutes, 4)
 				};
 
 				// We are interested in how many files were affected by this commit
