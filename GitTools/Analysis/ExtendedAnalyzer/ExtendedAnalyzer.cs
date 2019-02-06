@@ -41,14 +41,21 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			Program.CreateLogger<ExtendedAnalyzer>();
 
 		/// <summary>
+		/// Can be set to true in the constructor.
+		/// </summary>
+		public Boolean SkipSizeAnalysis { get; protected set; }
+
+		/// <summary>
 		/// This is a forwarding constructor that does not do any other
 		/// initialization than <see cref="BaseAnalyzer{T}.BaseAnalyzer(string, GitCommitSpan)"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
 		/// <param name="span"></param>
-		public ExtendedAnalyzer(String repoPathOrUrl, GitCommitSpan span)
+		/// <param name="skipSizeAnalysis"></param>
+		public ExtendedAnalyzer(String repoPathOrUrl, GitCommitSpan span, Boolean skipSizeAnalysis)
 			: base(repoPathOrUrl, span)
 		{
+			this.SkipSizeAnalysis = skipSizeAnalysis;
 		}
 
 		/// <summary>
@@ -93,6 +100,11 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 				// We are interested in how many files were affected by this commit
 				// for the kinds added, deleted, modified, renamed
+				if (this.SkipSizeAnalysis)
+				{
+					goto AfterSizes;
+				}
+
 				#region added/deleted
 				foreach (var change in pair.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Deleted))
 				{
@@ -146,6 +158,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				}
 				#endregion
 
+			AfterSizes:
 
 				bag.Add(ecd);
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);

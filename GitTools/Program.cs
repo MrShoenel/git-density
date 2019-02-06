@@ -148,7 +148,7 @@ namespace GitTools
 									analyzer = new SimpleAnalyzer(options.RepoPath, span);
 									break;
 								case AnalysisType.Extended:
-									analyzer = new ExtendedAnalyzer(options.RepoPath, span);
+									analyzer = new ExtendedAnalyzer(options.RepoPath, span, options.SkipSizeInExtendedAnalysis);
 									break;
 								default:
 									throw new Exception($"The {nameof(AnalysisType)} '{options.AnalysisType.ToString()}' is not supported.");
@@ -226,6 +226,9 @@ namespace GitTools
 
 		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
 		public String OutputFile { get; set; }
+
+		[Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
+		public Boolean SkipSizeInExtendedAnalysis { get; set; }
 
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]
