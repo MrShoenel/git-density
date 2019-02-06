@@ -30,6 +30,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Util;
+using Util.Data;
 using Util.Extensions;
 using Util.Logging;
 
@@ -127,7 +128,30 @@ namespace GitTools
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 						var span = new GitCommitSpan(repo, options.Since, options.Until);
-						
+
+						#region Check for commands
+						if (options.CmdCountCommits)
+						{
+							System.Diagnostics.Debugger.Launch();
+							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
+
+							var commits = span.OrderBy(c => c.Author.When.DateTime).ToList();
+
+							var json = JsonConvert.SerializeObject(new {
+								Count = commits.Count,
+								SHA1s = commits.Select(c => c.ShaShort())
+							});
+
+							using (var writer = File.CreateText(options.OutputFile))
+							{
+								writer.Write(json);
+							}
+
+							logger.LogInformation($"Wrote JSON to {options.OutputFile}");
+							Environment.Exit((int)ExitCodes.OK);
+						}
+						#endregion
+
 						using (var writer = File.CreateText(options.OutputFile))
 						{
 							// Now we extract some info and write it out later.
@@ -148,7 +172,7 @@ namespace GitTools
 									analyzer = new SimpleAnalyzer(options.RepoPath, span);
 									break;
 								case AnalysisType.Extended:
-									analyzer = new ExtendedAnalyzer(options.RepoPath, span);
+									analyzer = new ExtendedAnalyzer(options.RepoPath, span, options.SkipSizeInExtendedAnalysis);
 									break;
 								default:
 									throw new Exception($"The {nameof(AnalysisType)} '{options.AnalysisType.ToString()}' is not supported.");
@@ -199,6 +223,60 @@ namespace GitTools
 
 			Environment.Exit((int)ExitCodes.OK);
 		}
+
+		/// <summary>
+		/// This method was temporarily added and used to correct a value.
+		/// It is no longer referenced or used anymore, but kept in code
+		/// for reference.
+		/// </summary>
+		/// <param name="options"></param>
+		[Obsolete("Do not use. This method only corrected the field 'MinutesSincePreviousCommit' which was not calculated correctly as it was not using UTC DateTimes before.")]
+		public static void FixedMinutesSincePrevCommit(CommandLineOptions options)
+		{
+			var projects = new[] {
+				"https://github.com/apache/camel.git",
+				"https://github.com/apache/hbase.git",
+				"https://github.com/elastic/elasticsearch.git",
+				"https://github.com/JetBrains/kotlin.git",
+				"https://github.com/kiegroup/drools.git",
+				"https://github.com/orientechnologies/orientdb.git",
+				"https://github.com/ReactiveX/RxJava.git",
+				"https://github.com/restlet/restlet-framework-java.git",
+				"https://github.com/spring-projects/spring-framework.git"
+			};
+
+			var config = Util.Configuration.ReadDefault();
+			DataFactory.Configure(config,
+				Program.CreateLogger<DataFactory>(), new DirectoryInfo(options.TempDirectory).Parent.FullName);
+			using (var tempSess = DataFactory.Instance.OpenSession())
+			{
+				logger.LogDebug("Successfully probed the configured database.");
+			}
+
+			foreach (var p in projects)
+			{
+				using (var repo = p.OpenRepository(options.TempDirectory, null, true))
+				{
+					var span = new GitCommitSpan(repo, options.Since, options.Until);
+					var analyzer = new ExtendedAnalyzer(options.RepoPath, span, true);
+					analyzer.ExecutionPolicy = ExecutionPolicy.Parallel;
+
+					var commits = new HashSet<ExtendedCommitDetails>(analyzer.AnalyzeCommits());
+
+					using (var sess = DataFactory.Instance.OpenSession())
+					{
+						var q = sess.CreateSQLQuery("UPDATE gtools_ex SET MinutesSincePreviousCommit = :prev where SHA1 = :sha");
+
+						foreach (var c in commits)
+						{
+							q.SetParameter("prev", c.MinutesSincePreviousCommit);
+							q.SetParameter("sha", c.SHA1);
+							q.ExecuteUpdate();
+						}
+					}
+				}
+			}
+		}
 	}
 
 
@@ -227,6 +305,9 @@ namespace GitTools
 		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
 		public String OutputFile { get; set; }
 
+		[Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
+		public Boolean SkipSizeInExtendedAnalysis { get; set; }
+
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
@@ -234,6 +315,11 @@ namespace GitTools
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
+
+		#region Command-Options
+		[Option("cmd-count-commits", Required = false, DefaultValue = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
+		public Boolean CmdCountCommits { get; set; }
+		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
 		public Boolean ShowHelp { get; set; }
