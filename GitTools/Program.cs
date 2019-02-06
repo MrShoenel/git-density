@@ -127,7 +127,30 @@ namespace GitTools
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 						var span = new GitCommitSpan(repo, options.Since, options.Until);
-						
+
+						#region Check for commands
+						if (options.CmdCountCommits)
+						{
+							System.Diagnostics.Debugger.Launch();
+							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
+
+							var commits = span.OrderBy(c => c.Author.When.DateTime).ToList();
+
+							var json = JsonConvert.SerializeObject(new {
+								Count = commits.Count,
+								SHA1s = commits.Select(c => c.ShaShort())
+							});
+
+							using (var writer = File.CreateText(options.OutputFile))
+							{
+								writer.Write(json);
+							}
+
+							logger.LogInformation($"Wrote JSON to {options.OutputFile}");
+							Environment.Exit((int)ExitCodes.OK);
+						}
+						#endregion
+
 						using (var writer = File.CreateText(options.OutputFile))
 						{
 							// Now we extract some info and write it out later.
@@ -237,6 +260,11 @@ namespace GitTools
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
+
+		#region Command-Options
+		[Option("cmd-count-commits", Required = false, DefaultValue = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
+		public Boolean CmdCountCommits { get; set; }
+		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
 		public Boolean ShowHelp { get; set; }
