@@ -82,7 +82,7 @@ namespace GitHours.Hours
 				commitsSorted[0], null, commitsSorted[0], 0d, true, true);
 
 			estimator(
-				commitsSorted.Select(commit => commit.Committer.When.DateTime).ToArray(),
+				commitsSorted.Select(commit => commit.Committer.When.UtcDateTime).ToArray(),
 				out EstimateHelper[] estimates);
 
 			for (int i = 0; i < commitsSorted.Count - 1; i++)

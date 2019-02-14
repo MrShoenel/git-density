@@ -121,7 +121,7 @@ namespace Util
 				}
 				else
 				{
-					this.SinceDateTime = DateTime.ParseExact(sinceDateTimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic);
+					this.SinceDateTime = DateTime.ParseExact(sinceDateTimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic).ToUniversalTime();
 				}
 			}
 
@@ -138,18 +138,18 @@ namespace Util
 				}
 				else
 				{
-					this.UntilDateTime = DateTime.ParseExact(untilDatetimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic);
+					this.UntilDateTime = DateTime.ParseExact(untilDatetimeOrCommitSha, GitCommitSpan.DateTimeFormat, ic).ToUniversalTime();
 				}
 			}
 
 			this.lazyFilteredCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
-				var orderedOldToNew = this.Repository.GetAllCommits().OrderBy(commit => commit.Committer.When).ToList();
+				var orderedOldToNew = this.Repository.GetAllCommits().OrderBy(commit => commit.Committer.When.UtcDateTime).ToList();
 				var idxSince = orderedOldToNew.FindIndex(commit =>
 				{
 					if (this.SinceDateTime.HasValue)
 					{
-						return commit.Committer.When.DateTime >= this.SinceDateTime;
+						return commit.Committer.When.UtcDateTime >= this.SinceDateTime;
 					}
 					else if (this.SinceCommitSha != null)
 					{
@@ -160,7 +160,7 @@ namespace Util
 				});
 
 				var idxUntil = this.UntilDateTime.HasValue ?
-					orderedOldToNew.TakeWhile(commit => commit.Committer.When.DateTime <= this.UntilDateTime).Count() - 1
+					orderedOldToNew.TakeWhile(commit => commit.Committer.When.UtcDateTime <= this.UntilDateTime).Count() - 1
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
 

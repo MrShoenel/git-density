@@ -78,10 +78,10 @@ namespace GitTools.Analysis
 		public String CommitterName => this.commit.Committer.Name;
 
 		[CsvColumn(FieldIndex = 5, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime AuthorTime => this.commit.Author.When.DateTime;
+		public DateTime AuthorTime => this.commit.Author.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime CommitterTime => this.commit.Committer.When.DateTime;
+		public DateTime CommitterTime => this.commit.Committer.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 9)]
 		public String AuthorEmail => this.commit.Author.Email;

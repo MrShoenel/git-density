@@ -97,7 +97,7 @@ namespace GitHours.Hours
 			for (var take = 2; take <= commitsSorted.Count; take++)
 			{
 				hoursUntilCommit[take] = Tuple.Create(
-					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Committer.When.DateTime).ToArray()));
+					commitsSorted[take - 1], estimator(commitsSorted.Take(take).Select(commit => commit.Committer.When.UtcDateTime).ToArray()));
 			}
 
 			foreach (var kv in hoursUntilCommit)
