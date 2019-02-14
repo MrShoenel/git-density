@@ -14,9 +14,16 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Util;
+using Util.Data.Entities;
+using Util.Extensions;
+using static Util.Extensions.RepositoryExtensions;
+using Signature = LibGit2Sharp.Signature;
 
 namespace GitTools.Analysis
 {
@@ -29,6 +36,8 @@ namespace GitTools.Analysis
 		IAnalyzer<T>
 		where T : IAnalyzedCommit
 	{
+		protected abstract ILogger<IAnalyzer<T>> Logger { get; }
+
 		/// <summary>
 		/// A path or URL to the <see cref="Repository"/> that is being
 		/// analyzed.

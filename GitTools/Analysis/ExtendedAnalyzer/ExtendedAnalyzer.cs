@@ -41,6 +41,11 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			Program.CreateLogger<ExtendedAnalyzer>();
 
 		/// <summary>
+		/// Concrete logger of type <see cref="BaseLogger{ExtendedAnalyzer}"/>.
+		/// </summary>
+		protected override ILogger<IAnalyzer<ExtendedCommitDetails>> Logger => this.logger;
+
+		/// <summary>
 		/// Can be set to true in the constructor.
 		/// </summary>
 		public Boolean SkipSizeAnalysis { get; protected set; }
@@ -65,15 +70,15 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// <returns></returns>
 		public override IEnumerable<ExtendedCommitDetails> AnalyzeCommits()
 		{
-			this.logger.LogInformation("Starting analysis of commits..");
-			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
+			this.Logger.LogInformation("Starting analysis of commits..");
+			this.Logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
 			var done = 0;
 			var total = this.GitCommitSpan.Count();
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<ExtendedCommitDetails>();
-			var reporter = new SimpleAnalyzer.SimpleProgressReporter<ExtendedAnalyzer>(this.logger);
+			var reporter = new SimpleAnalyzer.SimpleProgressReporter<ExtendedAnalyzer>(this.Logger);
 
 			var pairs = this.GitCommitSpan.CommitPairs(
 				skipInitialCommit: false,
@@ -164,7 +169,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 
-			this.logger.LogInformation("Finished analysis of commits.");
+			this.Logger.LogInformation("Finished analysis of commits.");
 
 			return bag.OrderBy(ecd => ecd.AuthorTime);
 		}
