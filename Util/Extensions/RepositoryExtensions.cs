@@ -182,7 +182,7 @@ namespace Util.Extensions
 		/// sometimes uses (slightly) different names or email addresses. Also, sometimes
 		/// either of these is missing.
 		/// </summary>
-		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity
+		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity, IEquatable<DeveloperWithAlternativeNamesAndEmails>
 		{
 			private ISet<String> altNames;
 			public virtual IReadOnlyCollection<String> AlternativeNames {
@@ -213,6 +213,66 @@ namespace Util.Extensions
 					this.altEmails.Add(email);
 				}
 			}
+
+			/// <summary>
+			/// Concatenates this name, email and alternative names and emails to one big string.
+			/// Then returns the SHA256 hash of it (<see cref="StringExtensions.SHA256hex(string)"/>).
+			/// </summary>
+			public String SHA256Hash
+			{
+				get
+				{
+					var nameEmail = this.Name.AsEnumerable().Concat(this.Email.AsEnumerable());
+
+					var allNamesAndAddresses = String.Join(",",
+						nameEmail.Concat(this.AlternativeNames).Concat(this.AlternativeEmails)
+							.Select(n => n ?? String.Empty)
+							.OrderBy(n => n, StringComparer.OrdinalIgnoreCase));
+
+					return allNamesAndAddresses.SHA256hex();
+				}
+			}
+
+			#region equality, hashing etc.
+			/// <summary>
+			/// Returns <see cref="DeveloperEntity.GetHashCode"/> xor'red with the sha256-hash
+			/// of this object, using <see cref="SHA256Hash"/>.
+			/// </summary>
+			/// <returns></returns>
+			public override int GetHashCode()
+			{
+				return base.GetHashCode() ^ this.SHA256Hash.GetHashCode();
+			}
+
+			/// <summary>
+			/// First checks <see cref="DeveloperEntity.Equals(DeveloperEntity)"/> and conditionally
+			/// continues to compare the sets of alternative names and emails (whether they contain
+			/// the same strings or not).
+			/// </summary>
+			/// <param name="other"></param>
+			/// <returns></returns>
+			public bool Equals(DeveloperWithAlternativeNamesAndEmails other)
+			{
+				if (!base.Equals(other))
+				{
+					return false;
+				}
+
+				return ((HashSet<String>)this.altNames).SetEquals(other.AlternativeNames)
+					&& ((HashSet<String>)this.altEmails).SetEquals(other.AlternativeEmails);
+			}
+
+			/// <summary>
+			/// Overridden to work explicitly with objects of type <see cref="DeveloperWithAlternativeNamesAndEmails"/>.
+			/// </summary>
+			/// <param name="obj"></param>
+			/// <returns></returns>
+			public override bool Equals(object obj)
+			{
+				return obj is DeveloperWithAlternativeNamesAndEmails
+					&& this.Equals(obj as DeveloperWithAlternativeNamesAndEmails);
+			}
+			#endregion
 		}
 
 		/// <summary>
