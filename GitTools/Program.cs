@@ -135,7 +135,7 @@ namespace GitTools
 							System.Diagnostics.Debugger.Launch();
 							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
 
-							var commits = span.OrderBy(c => c.Author.When.DateTime).ToList();
+							var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
 
 							var json = JsonConvert.SerializeObject(new {
 								Count = commits.Count,

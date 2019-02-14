@@ -467,7 +467,7 @@ namespace Util.Extensions
 		public static Repository CheckoutLatestCommit(this Repository repository)
 		{
 			Commands.Checkout(repository,
-				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.DateTime).First());
+				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.UtcDateTime).First());
 
 			return repository;
 		}

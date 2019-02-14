@@ -152,7 +152,7 @@ namespace Util.Extensions
 			var entity = new CommitEntity
 			{
 				BaseObject = commit,
-				CommitDate = commit.Committer.When.DateTime,
+				CommitDate = commit.Committer.When.UtcDateTime,
 				HashSHA1 = commit.Sha,
 				IsMergeCommit = commit.Parents.Count() > 1,
 				Repository = repositoryEntity,
