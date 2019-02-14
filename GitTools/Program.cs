@@ -68,7 +68,9 @@ namespace GitTools
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))
@@ -132,7 +134,6 @@ namespace GitTools
 						#region Check for commands
 						if (options.CmdCountCommits)
 						{
-							System.Diagnostics.Debugger.Launch();
 							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
 
 							var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
@@ -231,7 +232,7 @@ namespace GitTools
 		/// </summary>
 		/// <param name="options"></param>
 		[Obsolete("Do not use. This method only corrected the field 'MinutesSincePreviousCommit' which was not calculated correctly as it was not using UTC DateTimes before.")]
-		public static void FixedMinutesSincePrevCommit(CommandLineOptions options)
+		public static void FixMinutesSincePrevCommit(CommandLineOptions options)
 		{
 			var projects = new[] {
 				"https://github.com/apache/camel.git",

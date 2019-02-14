@@ -26,6 +26,7 @@ using Util.Metrics;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
+using Signature = LibGit2Sharp.Signature;
 
 namespace Util.Extensions
 {
@@ -50,7 +51,9 @@ namespace Util.Extensions
 		/// <param name="skipMergeCommits">If true, then merge-commits (commits with more than
 		/// one parent) will be ignored as children, however, they will appear as parents to
 		/// subsequent commits. This setting can be useful to ignore changesets that have already
-		/// been analyzed using prior commits.</param>
+		/// been analyzed using prior commits. If this is set to false and a commit has more
+		/// than one parent, then the first parent is used to return a pair. Even if set to true,
+		/// this method will NOT return a separate pair for each parent.</param>
 		/// <param name="sortOrder">If <see cref="SortOrder.OldestFirst"/>, the first pair returned
 		/// contains the initial commit (if not skipped) and null as a parent.</param>
 		/// <returns>An <see cref="IEnumerable{CommitPair}"/> of pairs of commits.</returns>
@@ -148,7 +151,7 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity)"/>.
+		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity, bool)"/>.
 		/// </summary>
 		private class CommitGroupingByDeveloper : IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>
 		{
