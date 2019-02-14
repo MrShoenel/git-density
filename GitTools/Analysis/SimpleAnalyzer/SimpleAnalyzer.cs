@@ -75,7 +75,15 @@ namespace GitTools.Analysis.SimpleAnalyzer
 
 			Parallel.ForEach(this.GitCommitSpan, po, commit =>
 			{
-				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
+				String authorLabel, committerLabel;
+				this.AuthorAndCommitterNominalForCommit(
+					commit, out authorLabel, out committerLabel);
+
+				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit)
+				{
+					AuthorNominalLabel = authorLabel,
+					CommitterNominalLabel = committerLabel
+				});
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 

@@ -95,12 +95,18 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				pair.ExecutionPolicy = ExecutionPolicy.Linear; // As we're probably running parallel in outer scope already
 				var parents = pair.Child.Parents.ToList();
 
+				String authorLabel, committerLabel;
+				this.AuthorAndCommitterNominalForCommit(
+					pair.Child, out authorLabel, out committerLabel);
+
 				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, repo, pair.Child)
 				{
 					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(
 						(pair.Child.Committer.When.UtcDateTime -
-							(parents.OrderByDescending(p => p.Committer.When.UtcDateTime).First().Committer.When.UtcDateTime)).TotalMinutes, 4)
+							(parents.OrderByDescending(p => p.Committer.When.UtcDateTime).First().Committer.When.UtcDateTime)).TotalMinutes, 4),
+					AuthorNominalLabel = authorLabel,
+					CommitterNominalLabel = committerLabel,
 				};
 
 				// We are interested in how many files were affected by this commit
