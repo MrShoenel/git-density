@@ -46,14 +46,15 @@ ___
 # Citing
 Please use the following BibTeX to cite __`GitDensity`__:
 <pre>
-@article{mrshoenel2019gitdensity,
-  title={MrShoenel/git-density: Release 2019.1; Analyze git-repositories to detect the Source Code Density},
+@article{honel2019gitdensity,
+  title={Git Density: Analyze git repositories to extract the Source Code Density and other Commit Properties},
   DOI={10.5281/zenodo.2565239},
   url={http://doi.org/10.5281/zenodo.2565239},
   publisher={Zenodo},
   author={Sebastian Hönel},
   year={2019},
-  month={Feb}
+  month={Feb},
+  abstractNote={Git Density (<code>git-density</code>) is a tool to analyze <code>git</code>-repositories with the goal of detecting the source code density. It was developed during the research phase of the short technical paper and poster &quot;<em>A changeset-based approach to assess source code density and developer efficacy</em>&quot; and has since been extended to support extended analyses.},
 }
 </pre>
 
