@@ -1,6 +1,6 @@
 /// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2018 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -22,7 +22,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GitDensityTests")]
-[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2018")]
+[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
