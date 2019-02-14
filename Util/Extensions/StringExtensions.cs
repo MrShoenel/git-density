@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -161,6 +162,21 @@ namespace Util.Extensions
 		public static string ToSimpleUnderscoreCase(this string str)
 		{
 			return string.Concat(str.Select((x, i) => i > 0 && Char.IsUpper(x) ? $"_{x}" : $"{x}"));
+		}
+
+		/// <summary>
+		/// Hashes this <see cref="String"/> using <see cref="SHA256Managed"/> to a
+		/// lowercase hex-representation (string of length 64).
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static String SHA256hex(this String value)
+		{
+			using (SHA256 hash = SHA256Managed.Create())
+			{
+				var result = hash.ComputeHash(Encoding.UTF8.GetBytes(value));
+				return String.Join(String.Empty, result.Select(b => b.ToString("x2")));
+			}
 		}
 	}
 }
