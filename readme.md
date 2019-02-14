@@ -47,13 +47,13 @@ ___
 Please use the following BibTeX to cite __`GitDensity`__:
 <pre>
 @article{mrshoenel2019gitdensity,
-	title={MrShoenel/git-density: Release 2019.1; Analyze git-repositories to detect the source code density},
-	DOI={10.5281/zenodo.2565239},
-	url={http://doi.org/10.5281/zenodo.2565239},
-	publisher={Zenodo},
-	author={Sebastian Hönel},
-	year={2019},
-	month={Feb}
+  title={MrShoenel/git-density: Release 2019.1; Analyze git-repositories to detect the Source Code Density},
+  DOI={10.5281/zenodo.2565239},
+  url={http://doi.org/10.5281/zenodo.2565239},
+  publisher={Zenodo},
+  author={Sebastian Hönel},
+  year={2019},
+  month={Feb}
 }
 </pre>
 
