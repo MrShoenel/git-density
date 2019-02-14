@@ -68,7 +68,9 @@ namespace GitTools
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))
@@ -132,10 +134,9 @@ namespace GitTools
 						#region Check for commands
 						if (options.CmdCountCommits)
 						{
-							System.Diagnostics.Debugger.Launch();
 							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
 
-							var commits = span.OrderBy(c => c.Author.When.DateTime).ToList();
+							var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
 
 							var json = JsonConvert.SerializeObject(new {
 								Count = commits.Count,
@@ -225,13 +226,67 @@ namespace GitTools
 		}
 
 		/// <summary>
+		/// Temporary method used to initialize two new, previously just
+		/// set to null, fields.
+		/// </summary>
+		/// <param name="options"></param>
+		[Obsolete("Do not use. This method only initialized the additional fields 'AuthorNominalLabel' and 'CommitterNominalLabel' in an already imported/exported DB.")]
+		public static void FixDeveloperNominalLabels(CommandLineOptions options)
+		{
+			var projects = new[] {
+				"https://github.com/apache/camel.git",
+				"https://github.com/apache/hbase.git",
+				"https://github.com/elastic/elasticsearch.git",
+				"https://github.com/JetBrains/kotlin.git",
+				"https://github.com/kiegroup/drools.git",
+				"https://github.com/orientechnologies/orientdb.git",
+				"https://github.com/ReactiveX/RxJava.git",
+				"https://github.com/restlet/restlet-framework-java.git",
+				"https://github.com/spring-projects/spring-framework.git"
+			};
+
+			var config = Util.Configuration.ReadDefault();
+			DataFactory.Configure(config,
+				Program.CreateLogger<DataFactory>(), new DirectoryInfo(options.TempDirectory).Parent.FullName);
+			using (var tempSess = DataFactory.Instance.OpenSession())
+			{
+				logger.LogDebug("Successfully probed the configured database.");
+			}
+
+			foreach (var p in projects)
+			{
+				using (var repo = p.OpenRepository(options.TempDirectory, null, true))
+				{
+					var span = new GitCommitSpan(repo, options.Since, options.Until);
+					var analyzer = new SimpleAnalyzer(options.RepoPath, span);
+					analyzer.ExecutionPolicy = ExecutionPolicy.Parallel;
+
+					var commits = new HashSet<SimpleCommitDetails>(analyzer.AnalyzeCommits());
+
+					using (var sess = DataFactory.Instance.OpenSession())
+					{
+						var q = sess.CreateSQLQuery("UPDATE gtools_ex SET AuthorNominalLabel = :authorNom, CommitterNominalLabel = :committerNom where SHA1 = :sha");
+
+						foreach (var c in commits)
+						{
+							q.SetParameter("authorNom", c.AuthorNominalLabel);
+							q.SetParameter("committerNom", c.CommitterNominalLabel);
+							q.SetParameter("sha", c.SHA1);
+							q.ExecuteUpdate();
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
 		/// This method was temporarily added and used to correct a value.
 		/// It is no longer referenced or used anymore, but kept in code
 		/// for reference.
 		/// </summary>
 		/// <param name="options"></param>
 		[Obsolete("Do not use. This method only corrected the field 'MinutesSincePreviousCommit' which was not calculated correctly as it was not using UTC DateTimes before.")]
-		public static void FixedMinutesSincePrevCommit(CommandLineOptions options)
+		public static void FixMinutesSincePrevCommit(CommandLineOptions options)
 		{
 			var projects = new[] {
 				"https://github.com/apache/camel.git",

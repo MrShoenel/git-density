@@ -67,6 +67,7 @@ namespace GitMetrics
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
 			var options = new CommandLineOptions();

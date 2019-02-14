@@ -19,8 +19,10 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
@@ -64,6 +66,9 @@ namespace GitHours
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
+			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+
 			var options = new CommandLineOptions();
 
 			if (Parser.Default.ParseArguments(args, options))

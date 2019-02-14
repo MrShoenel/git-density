@@ -110,11 +110,22 @@ namespace Util.Data.Entities
 			return other is DeveloperEntity && this.Name == other.Name && this.Email == other.Email;
 		}
 
+		/// <summary>
+		/// Calls <see cref="DeveloperEntity.Equals(DeveloperEntity)"/> by
+		/// previously attempting to cast the object to an instance of it.
+		/// </summary>
+		/// <param name="obj"></param>
+		/// <returns></returns>
 		public override bool Equals(object obj)
 		{
 			return this.Equals(obj as DeveloperEntity);
 		}
 
+		/// <summary>
+		/// Returns a hashcode based on the name and the email. If either of them is null,
+		/// will use <see cref="String.Empty"/> for them.
+		/// </summary>
+		/// <returns></returns>
 		public override int GetHashCode()
 		{
 			return 31 * (this.Name ?? String.Empty).GetHashCode() ^ (this.Email ?? String.Empty).GetHashCode();

@@ -78,10 +78,10 @@ namespace GitTools.Analysis
 		public String CommitterName => this.commit.Committer.Name;
 
 		[CsvColumn(FieldIndex = 5, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime AuthorTime => this.commit.Author.When.DateTime;
+		public DateTime AuthorTime => this.commit.Author.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime CommitterTime => this.commit.Committer.When.DateTime;
+		public DateTime CommitterTime => this.commit.Committer.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 9)]
 		public String AuthorEmail => this.commit.Author.Email;
@@ -89,19 +89,25 @@ namespace GitTools.Analysis
 		[CsvColumn(FieldIndex = 10)]
 		public String CommitterEmail => this.commit.Committer.Email;
 
+		[CsvColumn(FieldIndex = 11)]
+		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
+
+		[CsvColumn(FieldIndex = 12)]
+		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
+
 		/// <summary>
 		/// This is a boolean field but we use 0/1 for compatibility reasons.
 		/// </summary>
-		[CsvColumn(FieldIndex = 11)]
+		[CsvColumn(FieldIndex = 13)]
 		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 12)]
+		[CsvColumn(FieldIndex = 14)]
 		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 13)]
+		[CsvColumn(FieldIndex = 15)]
 		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 14)]
+		[CsvColumn(FieldIndex = 16)]
 		public String ParentCommitSHA1s { get; protected internal set; } = String.Empty;
 
 		#region virtual fields

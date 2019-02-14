@@ -104,7 +104,7 @@ namespace GitHours.Hours
 			{
 				var stats = new GitHoursAuthorStat(commitGroup.Key)
 				{
-					HoursTotal = this.Estimate(commitGroup.Select(commit => commit.Committer.When.DateTime).ToArray()),
+					HoursTotal = this.Estimate(commitGroup.Select(commit => commit.Committer.When.UtcDateTime).ToArray()),
 					NumCommits = (UInt32)commitGroup.Count()
 				};
 

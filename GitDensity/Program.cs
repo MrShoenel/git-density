@@ -75,6 +75,7 @@ namespace GitDensity
 		/// <param name="args"></param>
 		static void Main(string[] args)
 		{
+			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 			var options = new CommandLineOptions();
 
@@ -363,7 +364,6 @@ namespace GitDensity
 						var developers = developersRaw.ToDictionary(
 							kv => kv.Key, kv =>
 							{
-								var foo = repoEntity.Developers.Count(dev => dev.Equals(kv.Value));
 								return repoEntity.Developers.Where(dev => dev.Equals(kv.Value)).Single();
 							});
 

@@ -26,6 +26,7 @@ using Util.Metrics;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
+using Signature = LibGit2Sharp.Signature;
 
 namespace Util.Extensions
 {
@@ -50,7 +51,9 @@ namespace Util.Extensions
 		/// <param name="skipMergeCommits">If true, then merge-commits (commits with more than
 		/// one parent) will be ignored as children, however, they will appear as parents to
 		/// subsequent commits. This setting can be useful to ignore changesets that have already
-		/// been analyzed using prior commits.</param>
+		/// been analyzed using prior commits. If this is set to false and a commit has more
+		/// than one parent, then the first parent is used to return a pair. Even if set to true,
+		/// this method will NOT return a separate pair for each parent.</param>
 		/// <param name="sortOrder">If <see cref="SortOrder.OldestFirst"/>, the first pair returned
 		/// contains the initial commit (if not skipped) and null as a parent.</param>
 		/// <returns>An <see cref="IEnumerable{CommitPair}"/> of pairs of commits.</returns>
@@ -148,7 +151,7 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity)"/>.
+		/// Only used in <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity, bool)"/>.
 		/// </summary>
 		private class CommitGroupingByDeveloper : IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>
 		{
@@ -179,7 +182,7 @@ namespace Util.Extensions
 		/// sometimes uses (slightly) different names or email addresses. Also, sometimes
 		/// either of these is missing.
 		/// </summary>
-		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity
+		public class DeveloperWithAlternativeNamesAndEmails : DeveloperEntity, IEquatable<DeveloperWithAlternativeNamesAndEmails>
 		{
 			private ISet<String> altNames;
 			public virtual IReadOnlyCollection<String> AlternativeNames {
@@ -210,6 +213,66 @@ namespace Util.Extensions
 					this.altEmails.Add(email);
 				}
 			}
+
+			/// <summary>
+			/// Concatenates this name, email and alternative names and emails to one big string.
+			/// Then returns the SHA256 hash of it (<see cref="StringExtensions.SHA256hex(string)"/>).
+			/// </summary>
+			public String SHA256Hash
+			{
+				get
+				{
+					var nameEmail = this.Name.AsEnumerable().Concat(this.Email.AsEnumerable());
+
+					var allNamesAndAddresses = String.Join(",",
+						nameEmail.Concat(this.AlternativeNames).Concat(this.AlternativeEmails)
+							.Select(n => n ?? String.Empty)
+							.OrderBy(n => n, StringComparer.OrdinalIgnoreCase));
+
+					return allNamesAndAddresses.SHA256hex();
+				}
+			}
+
+			#region equality, hashing etc.
+			/// <summary>
+			/// Returns <see cref="DeveloperEntity.GetHashCode"/> xor'red with the sha256-hash
+			/// of this object, using <see cref="SHA256Hash"/>.
+			/// </summary>
+			/// <returns></returns>
+			public override int GetHashCode()
+			{
+				return base.GetHashCode() ^ this.SHA256Hash.GetHashCode();
+			}
+
+			/// <summary>
+			/// First checks <see cref="DeveloperEntity.Equals(DeveloperEntity)"/> and conditionally
+			/// continues to compare the sets of alternative names and emails (whether they contain
+			/// the same strings or not).
+			/// </summary>
+			/// <param name="other"></param>
+			/// <returns></returns>
+			public bool Equals(DeveloperWithAlternativeNamesAndEmails other)
+			{
+				if (!base.Equals(other))
+				{
+					return false;
+				}
+
+				return ((HashSet<String>)this.altNames).SetEquals(other.AlternativeNames)
+					&& ((HashSet<String>)this.altEmails).SetEquals(other.AlternativeEmails);
+			}
+
+			/// <summary>
+			/// Overridden to work explicitly with objects of type <see cref="DeveloperWithAlternativeNamesAndEmails"/>.
+			/// </summary>
+			/// <param name="obj"></param>
+			/// <returns></returns>
+			public override bool Equals(object obj)
+			{
+				return obj is DeveloperWithAlternativeNamesAndEmails
+					&& this.Equals(obj as DeveloperWithAlternativeNamesAndEmails);
+			}
+			#endregion
 		}
 
 		/// <summary>
@@ -221,25 +284,33 @@ namespace Util.Extensions
 		/// used identities and the alternatives are those that had been used later).
 		/// </summary>
 		/// <param name="commits"></param>
+		/// <param name="repository">Used to initialize the DeveloperEntity.</param>
+		/// <param name="useAuthorAndNotCommitter">Defaults to true. If true, will use
+		/// the <see cref="Commit"/>'s <see cref="Commit.Author"/> to create the groups.
+		/// Otherwise, the <see cref="Commit.Committer"/> is used. Historically, the
+		/// behavior of this function used the Author as the developer.</param>
 		/// <returns>Enumerables of groups, where the key is the developer and the enumerable
 		/// group itself represents their commits.</returns>
-		public static IEnumerable<IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>> GroupByDeveloper(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
+		public static IEnumerable<IGrouping<DeveloperWithAlternativeNamesAndEmails, Commit>> GroupByDeveloper(this IEnumerable<Commit> commits, RepositoryEntity repository = null, bool useAuthorAndNotCommitter = true)
 		{
-			var byNameDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
-			var byMailDict = new Dictionary<String, DeveloperWithAlternativeNamesAndEmails>();
+			var byNameDict = new Dictionary<String, DeveloperEntity>();
+			var byMailDict = new Dictionary<String, DeveloperEntity>();
+			var authorOrCommiterSelector = new Func<Commit, Signature>(
+				c => useAuthorAndNotCommitter ? c.Author : c.Committer);
 
-			var emptyDev = new DeveloperWithAlternativeNamesAndEmails {
+			var emptyDev = new DeveloperEntity {
 				Name = String.Empty, Email = String.Empty, Repository = repository };
-			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ICollection<Signature>>();
+			var dict = new Dictionary<DeveloperEntity, ICollection<Signature>>();
+			var dictAlts = new Dictionary<DeveloperEntity, Tuple<HashSet<String>, HashSet<String>>>();
 
-			foreach (var signature in commits.Select(c => c.Author).Where(sig => sig is Signature).OrderBy(c => c.When))
+			foreach (var signature in commits.Select(authorOrCommiterSelector).Where(sig => sig is Signature).OrderBy(sig => sig.When.UtcDateTime))
 			{
 				var name = String.IsNullOrEmpty(signature.Name) ? String.Empty :
 					signature.Name.Trim().ToLowerInvariant();
 				var mail = String.IsNullOrEmpty(signature.Email) ? String.Empty :
 					signature.Email.Trim().ToLowerInvariant();
 
-				DeveloperWithAlternativeNamesAndEmails devEntity;
+				DeveloperEntity devEntity;
 
 				if (name == String.Empty && mail == String.Empty)
 				{
@@ -253,8 +324,8 @@ namespace Util.Extensions
 					}
 					else
 					{
-						devEntity = byMailDict[mail] = new DeveloperWithAlternativeNamesAndEmails
-							{ BaseObject = signature, Name = String.Empty, Email = signature.Email, Repository = repository };
+						devEntity = byMailDict[mail] = new DeveloperEntity
+						{ BaseObject = signature, Name = String.Empty, Email = signature.Email, Repository = repository };
 					}
 				}
 				else if (mail == String.Empty)
@@ -265,8 +336,8 @@ namespace Util.Extensions
 					}
 					else
 					{
-						devEntity = byNameDict[name] = new DeveloperWithAlternativeNamesAndEmails
-							{ BaseObject = signature, Name = signature.Name, Email = String.Empty, Repository = repository };
+						devEntity = byNameDict[name] = new DeveloperEntity
+						{ BaseObject = signature, Name = signature.Name, Email = String.Empty, Repository = repository };
 					}
 				}
 				else
@@ -283,8 +354,8 @@ namespace Util.Extensions
 					else
 					{
 						// new entity, add to both dictionaries
-						devEntity = new DeveloperWithAlternativeNamesAndEmails
-							{ BaseObject = signature, Name = signature.Name, Email = signature.Email, Repository = repository };
+						devEntity = new DeveloperEntity
+						{ BaseObject = signature, Name = signature.Name, Email = signature.Email, Repository = repository };
 						byMailDict[mail] = devEntity;
 						byNameDict[name] = devEntity;
 					}
@@ -293,43 +364,58 @@ namespace Util.Extensions
 				if (!dict.ContainsKey(devEntity))
 				{
 					dict[devEntity] = new List<Signature>();
+					dictAlts[devEntity] = Tuple.Create(new HashSet<String>(), new HashSet<String>());
 				}
 
 				dict[devEntity].Add(signature);
 				if (name != String.Empty)
 				{
-					devEntity.AddName(signature.Name);
+					dictAlts[devEntity].Item1.Add(signature.Name);
 				}
 				if (mail != String.Empty)
 				{
-					devEntity.AddEmail(signature.Email);
+					dictAlts[devEntity].Item2.Add(signature.Email);
 				}
 			}
 
-
 			foreach (var devEntityKv in dict)
 			{
-				yield return new CommitGroupingByDeveloper(devEntityKv.Key,
-					commits.Where(c => dict[devEntityKv.Key].Contains(c.Author)));
+				// We can only construct the DeveloperWithAlternativeNamesAndEmails now, as its
+				// hashcode would have changed by adding more names or emails to it. That is why
+				// those were kept in separate collections in the dictAlts-dictionary.
+				var devWithAlts = new DeveloperWithAlternativeNamesAndEmails()
+				{
+					Name = devEntityKv.Key.Name,
+					Email = devEntityKv.Key.Email
+				};
+				dictAlts[devEntityKv.Key].Item1.ToList().ForEach(name => devWithAlts.AddName(name));
+				dictAlts[devEntityKv.Key].Item2.ToList().ForEach(mail => devWithAlts.AddEmail(mail));
+
+				var devCommits = commits.Where(c => dict[devEntityKv.Key].Contains(
+					useAuthorAndNotCommitter ? c.Author : c.Committer));
+
+				yield return new CommitGroupingByDeveloper(devWithAlts, devCommits);
 			}
 		}
 
 		/// <summary>
-		/// Similar to and based on <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity)"/>, this
-		/// method returns a collection of <see cref="Signature"/>s for each unified developer
+		/// Similar to and based on <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity, bool)"/>,
+		/// this method returns a collection of <see cref="Signature"/>s for each unified developer
 		/// represented as <see cref="DeveloperWithAlternativeNamesAndEmails"/>.
 		/// </summary>
 		/// <param name="commits"></param>
 		/// <param name="repository"></param>
+		/// <param name="useAuthorAndNotCommitter">See documentation at <see cref="GroupByDeveloper(IEnumerable{Commit}, RepositoryEntity, bool)"/></param>
 		/// <returns>A dictionary where each developer has a set of signatures used.</returns>
-		public static IDictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>> GroupByDeveloperToSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
+		public static IDictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>> GroupByDeveloperToSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null, bool useAuthorAndNotCommitter = true)
 		{
 			var dict = new Dictionary<DeveloperWithAlternativeNamesAndEmails, ISet<Signature>>();
 
-			foreach (var group in commits.GroupByDeveloper(repository))
+			foreach (var group in commits.GroupByDeveloper(repository, useAuthorAndNotCommitter))
 			{
 				group.Key.Repository = repository;
-				dict[group.Key] = new HashSet<Signature>(group.Select(commit => commit.Author));
+				dict[group.Key] = new HashSet<Signature>(group.Select(commit =>
+					useAuthorAndNotCommitter ? commit.Author : commit.Committer));
 			}
 
 			return dict;
@@ -343,11 +429,12 @@ namespace Util.Extensions
 		/// </summary>
 		/// <param name="commits"></param>
 		/// <param name="repository"></param>
+		/// <param name="useAuthorAndNotCommitter">See documentation at <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit}, RepositoryEntity, bool)"/></param>
 		/// <returns></returns>
-		public static IDictionary<Signature, DeveloperEntity> GroupByDeveloperAsSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null)
+		public static IDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> GroupByDeveloperAsSignatures(this IEnumerable<Commit> commits, RepositoryEntity repository = null, bool useAuthorAndNotCommitter = true)
 		{
-			var fromDict = commits.GroupByDeveloperToSignatures(repository);
-			var toDict = new Dictionary<Signature, DeveloperEntity>();
+			var fromDict = commits.GroupByDeveloperToSignatures(repository, useAuthorAndNotCommitter);
+			var toDict = new Dictionary<Signature, DeveloperWithAlternativeNamesAndEmails>();
 
 			foreach (var fromKv in fromDict)
 			{
@@ -467,7 +554,7 @@ namespace Util.Extensions
 		public static Repository CheckoutLatestCommit(this Repository repository)
 		{
 			Commands.Checkout(repository,
-				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.DateTime).First());
+				repository.GetAllCommits().OrderByDescending(c => c.Committer.When.UtcDateTime).First());
 
 			return repository;
 		}

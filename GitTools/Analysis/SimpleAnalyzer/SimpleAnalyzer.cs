@@ -36,6 +36,11 @@ namespace GitTools.Analysis.SimpleAnalyzer
 			Program.CreateLogger<SimpleAnalyzer>();
 
 		/// <summary>
+		/// Returns a concrete <see cref="BaseLogger{SimpleAnalyzer}"/> for this analyzer.
+		/// </summary>
+		protected override ILogger<IAnalyzer<SimpleCommitDetails>> Logger => this.logger;
+
+		/// <summary>
 		/// This is a forwarding constructor that does not do any other
 		/// initialization than <see cref="BaseAnalyzer{T}.BaseAnalyzer(string, GitCommitSpan)"/>.
 		/// </summary>
@@ -52,15 +57,15 @@ namespace GitTools.Analysis.SimpleAnalyzer
 		/// <returns><see cref="IEnumerable{SimpleCommitDetails}"/></returns>
 		public override IEnumerable<SimpleCommitDetails> AnalyzeCommits()
 		{
-			this.logger.LogInformation("Starting analysis of commits..");
-			this.logger.LogWarning("Parallel Analysis is: {0}ABLED!",
+			this.Logger.LogInformation("Starting analysis of commits..");
+			this.Logger.LogWarning("Parallel Analysis is: {0}ABLED!",
 				this.ExecutionPolicy == ExecutionPolicy.Parallel ? "EN" : "DIS");
 
 			var done = 0;
 			var total = this.GitCommitSpan.Count();
 			var repo = this.GitCommitSpan.Repository;
 			var bag = new ConcurrentBag<SimpleCommitDetails>();
-			var reporter = new SimpleProgressReporter<SimpleAnalyzer>(this.logger);
+			var reporter = new SimpleProgressReporter<SimpleAnalyzer>(this.Logger);
 
 			var po = new ParallelOptions();
 			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
@@ -70,11 +75,19 @@ namespace GitTools.Analysis.SimpleAnalyzer
 
 			Parallel.ForEach(this.GitCommitSpan, po, commit =>
 			{
-				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit));
+				String authorLabel, committerLabel;
+				this.AuthorAndCommitterNominalForCommit(
+					commit, out authorLabel, out committerLabel);
+
+				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit)
+				{
+					AuthorNominalLabel = authorLabel,
+					CommitterNominalLabel = committerLabel
+				});
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 
-			this.logger.LogInformation("Finished analysis of commits.");
+			this.Logger.LogInformation("Finished analysis of commits.");
 
 			return bag.OrderBy(scd => scd.AuthorTime);
 		}
@@ -85,13 +98,13 @@ namespace GitTools.Analysis.SimpleAnalyzer
 		public static readonly ISet<Int32> DefaultSteps
 			= new HashSet<Int32>(Enumerable.Range(1, 20).Select(i => i * 5));
 
-		protected readonly BaseLogger<T> logger;
+		protected readonly ILogger<IAnalyzer<SimpleCommitDetails>> logger;
 
 		protected readonly ISet<Int32> steps;
 
 		protected readonly SemaphoreSlim semaphoreSlim;
 
-		public SimpleProgressReporter(BaseLogger<T> logger, ISet<Int32> stepsToProgress = null)
+		public SimpleProgressReporter(ILogger<IAnalyzer<SimpleCommitDetails>> logger, ISet<Int32> stepsToProgress = null)
 		{
 			this.logger = logger;
 			this.steps = stepsToProgress ?? DefaultSteps;
