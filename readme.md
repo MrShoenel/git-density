@@ -1,4 +1,4 @@
-# Git Density
+# Git Density [![DOI](https://zenodo.org/badge/125856964.svg)](https://zenodo.org/badge/latestdoi/125856964)
 
 Git Density (`git-density`) is a tool to analyze `git`-repositories with the goal of detecting the source code density.
 
@@ -44,15 +44,16 @@ ___
 
 
 # Citing
-Please use the following BibTeX to cite this:
+Please use the following BibTeX to cite __`GitDensity`__:
 <pre>
-@inproceedings{honel2018changeset,
-  title={A changeset-based approach to assess source code density and developer efficacy},
-  author={H{\"o}nel, Sebastian and Ericsson, Morgan and L{\"o}we, Welf and Wingkvist, Anna},
-  booktitle={Proceedings of the 40th International Conference on Software Engineering: Companion Proceeedings},
-  pages={220--221},
-  year={2018},
-  organization={ACM}
+@article{mrshoenel2019gitdensity,
+	title={MrShoenel/git-density: Release 2019.1; Analyze git-repositories to detect the source code density},
+	DOI={10.5281/zenodo.2565239},
+	url={http://doi.org/10.5281/zenodo.2565239},
+	publisher={Zenodo},
+	author={Sebastian Hönel},
+	year={2019},
+	month={Feb}
 }
 </pre>
 
