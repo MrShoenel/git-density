@@ -143,6 +143,20 @@ namespace Util.Density
 			return new CommitPair(repository, childCommit, parentCommit);
 		}
 
+		/// <summary>
+		/// Retrieves a new <see cref="CommitPair"/> by using a given child-
+		/// commit and its <see cref="LibGit2Sharp.Repository"/>. This method
+		/// requires the child to have exactly one parent (i.e. it must not be
+		/// a merge-commit), otherwise this method will throw.
+		/// </summary>
+		/// <param name="child"></param>
+		/// <param name="repository"></param>
+		/// <returns></returns>
+		public static CommitPair FromChild(Commit child, Repository repository)
+		{
+			return new CommitPair(repository, child, child.Parents.Single());
+		}
+
 		#region CommitPair specific methods
 		/// <summary>
 		/// Writes out all changes of a <see cref="Tree"/>. A change is obtained as a result

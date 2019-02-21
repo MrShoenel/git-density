@@ -218,7 +218,7 @@ namespace Util.Extensions
 			/// Concatenates this name, email and alternative names and emails to one big string.
 			/// Then returns the SHA256 hash of it (<see cref="StringExtensions.SHA256hex(string)"/>).
 			/// </summary>
-			public String SHA256Hash
+			public virtual String SHA256Hash
 			{
 				get
 				{
@@ -251,7 +251,7 @@ namespace Util.Extensions
 			/// </summary>
 			/// <param name="other"></param>
 			/// <returns></returns>
-			public bool Equals(DeveloperWithAlternativeNamesAndEmails other)
+			public virtual bool Equals(DeveloperWithAlternativeNamesAndEmails other)
 			{
 				if (!base.Equals(other))
 				{

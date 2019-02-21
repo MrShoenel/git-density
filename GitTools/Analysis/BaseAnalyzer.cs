@@ -54,8 +54,6 @@ namespace GitTools.Analysis
 
 		private IReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> committerSignatures;
 
-		private IReadOnlyDictionary<DeveloperEntity, String> developerNominals;
-
 		/// <summary>
 		/// Base constructor that initalizes the repo-path and commits-span.
 		/// </summary>
@@ -78,8 +76,6 @@ namespace GitTools.Analysis
 		{
 			this.Logger.LogInformation("Initializing developer identities for repository..");
 
-			this.developerNominals = new Dictionary<DeveloperEntity, String>();
-
 			this.authorSignatures = new ReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails>(
 				this.GitCommitSpan.GroupByDeveloperAsSignatures(
 					repository: null, useAuthorAndNotCommitter: true));
@@ -87,44 +83,27 @@ namespace GitTools.Analysis
 				this.GitCommitSpan.GroupByDeveloperAsSignatures(
 					repository: null, useAuthorAndNotCommitter: false));
 
-			Func<Int32, String> excelColumnFromNumber = num =>
-			{
-				var colLetters = new LinkedList<Char>();
-				while (num > 0)
-				{
-					var currentLetterNum = (num - 1) % 26;
-					var currentLetter = (char)(currentLetterNum + 65);
-					colLetters.AddLast(currentLetter);
-					num = (num - (currentLetterNum + 1)) / 26;
-				}
-				return new string(colLetters.Reverse().ToArray()).ToUpper();
-			};
-
 			var set = new HashSet<DeveloperEntity>(this.authorSignatures.Select(kv => kv.Value)
 				.Concat(this.committerSignatures.Select(kv => kv.Value)));
 
-			this.developerNominals = new ReadOnlyDictionary<DeveloperEntity, String>(
-				set.Select((dev, idx) => new {
-					Dev = dev,
-					Id = idx + 1
-				}).ToDictionary(kv => kv.Dev, kv => excelColumnFromNumber(kv.Id))
-			);
-
-			this.Logger.LogInformation($"Found {String.Format("{0:n0}", this.authorSignatures.Count + this.committerSignatures.Count)} signatures and mapped them to {String.Format("{0:n0}", this.developerNominals.Count)} distinct developer identities.");
+			this.Logger.LogInformation($"Found {String.Format("{0:n0}", this.authorSignatures.Count + this.committerSignatures.Count)} signatures and mapped them to {String.Format("{0:n0}", set.Count)} distinct developer identities.");
 		}
 
 		/// <summary>
 		/// Returns a unique nominal ID for a <see cref="Commit.Author"/> and
-		/// <see cref="Commit.Committer"/> (<see cref="InitializeNominalSignatures"/>).
+		/// <see cref="Commit.Committer"/> based on <see cref="DeveloperWithAlternativeNamesAndEmails.SHA256Hash"/>.
+		/// The label is guaranteed to start with a letter and to never be longer
+		/// than 16 characters.
 		/// </summary>
 		/// <param name="commit"></param>
 		/// <param name="authorNominal"></param>
 		/// <param name="committerNominal"></param>
 		protected void AuthorAndCommitterNominalForCommit(Commit commit, out string authorNominal, out string committerNominal)
 		{
-			// TODO: Refactor this to use the SHA256 and remove obsolete code in InitializeNominalSignatures
-			authorNominal = this.developerNominals[this.authorSignatures[commit.Author]];
-			committerNominal = this.developerNominals[this.committerSignatures[commit.Committer]];
+			authorNominal =
+				$"L{this.authorSignatures[commit.Author].SHA256Hash.Substring(0, 15)}";
+			committerNominal =
+				$"L{this.committerSignatures[commit.Committer].SHA256Hash.Substring(0, 15)}";
 		}
 		#endregion
 

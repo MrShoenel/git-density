@@ -117,7 +117,7 @@ namespace GitTools.Analysis
 		/// </summary>
 		[CsvColumn(FieldIndex = 8)]
 		public virtual String Message =>
-			RegexNewLines.Replace(this.commit.MessageShort, " ").Trim();
+			RegexNewLines.Replace(this.commit.MessageShort, " ").Replace('"', ' ').Trim();
 		#endregion
 		#endregion
 	}
