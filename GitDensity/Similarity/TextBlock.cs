@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using GitDensity.Density;
+using LibGit2Sharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -38,7 +39,7 @@ namespace GitDensity.Similarity
 	/// Represents a block of text where the block consists of lines and their
 	/// line numbers.
 	/// </summary>
-	internal class TextBlock : IEquatable<TextBlock>, ICloneable
+	public class TextBlock : IEquatable<TextBlock>, ICloneable
 	{
 		protected IDictionary<UInt32, Line> linesWithLineNumber;
 
@@ -350,6 +351,72 @@ namespace GitDensity.Similarity
 			var tb = new TextBlock();
 			tb.AddLines(this.LinesWithNumber.Select(kv => kv.Value.Clone() as Line));
 			return tb;
+		}
+
+		/// <summary>
+		/// Using <see cref="TextBlock"/>s, this method counts the net- and gross-amount
+		/// of lines added and deleted across all <see cref="Hunk"/>s of a <see cref="PatchEntryChanges"/> entity.
+		/// Uses <see cref="RemoveEmptyLinesAndComments()"/> to count the net-affected lines.
+		/// </summary>
+		/// <param name="pec"></param>
+		/// <param name="linesAddedGross">Amount of lines added across all hunks.</param>
+		/// <param name="linesDeletedGross">Amount of lines deleted across all hunks.</param>
+		/// <param name="linesAddedWithoutEmptyOrComments">Amount of lines added net across
+		/// all hunks. This count is equal to or lower than linesAddedGross, as empty lines
+		/// and comments are removed.</param>
+		/// <param name="linesDeletedWithoutEmptyOrComments">Amount of lines deleted net
+		/// across all hunks. This count is equal to or lower than linesDeletedGross, as empty
+		/// lines and comments are not considered in the deleted lines.</param>
+		public static void CountLinesInPatch(PatchEntryChanges pec,
+			out UInt32 linesAddedGross,
+			out UInt32 linesDeletedGross,
+			out UInt32 linesAddedWithoutEmptyOrComments,
+			out UInt32 linesDeletedWithoutEmptyOrComments)
+		{
+			var hunks = Hunk.HunksForPatch(pec);
+
+			var tbsAdded = hunks.Select(hunk => new TextBlock(hunk, TextBlockType.New)).ToList();
+			var tbsDeleted = hunks.Select(hunk => new TextBlock(hunk, TextBlockType.Old)).ToList();
+
+			linesAddedGross = (UInt32)tbsAdded.Sum(tb => tb.LinesAdded);
+			linesDeletedGross = (UInt32)tbsDeleted.Sum(tb => tb.LinesDeleted);
+
+			linesAddedWithoutEmptyOrComments = (UInt32)tbsAdded
+				.Select(tb => tb.RemoveEmptyLinesAndComments())
+				.Sum(tb => tb.LinesAdded);
+			linesDeletedWithoutEmptyOrComments = (UInt32)tbsDeleted
+				.Select(tb => tb.RemoveEmptyLinesAndComments())
+				.Sum(tb => tb.LinesDeleted);
+		}
+
+		/// <summary>
+		/// Uses <see cref="CountLinesInPatch(PatchEntryChanges, out uint, out uint, out uint, out uint)"/> to aggregate the line-counts for a list of <see cref="PatchEntryChanges"/>.
+		/// This is useful if multiple changes are to be considered. This is the case for
+		/// e.g. counting all lines across all modified/renamed files. Please see the documentation
+		/// for the referenced method.
+		/// </summary>
+		/// <param name="pecs"></param>
+		/// <param name="linesAddedGross"></param>
+		/// <param name="linesDeletedGross"></param>
+		/// <param name="linesAddedWithoutEmptyOrComments"></param>
+		/// <param name="linesDeletedWithoutEmptyOrComments"></param>
+		public static void CountLinesInAllPatches(IEnumerable<PatchEntryChanges> pecs,
+			out UInt32 linesAddedGross,
+			out UInt32 linesDeletedGross,
+			out UInt32 linesAddedWithoutEmptyOrComments,
+			out UInt32 linesDeletedWithoutEmptyOrComments)
+		{
+			linesAddedGross = linesDeletedGross = linesAddedWithoutEmptyOrComments = linesDeletedWithoutEmptyOrComments = 0u;
+
+			foreach (var pec in pecs)
+			{
+				TextBlock.CountLinesInPatch(
+					pec, out uint add, out uint del, out uint addNoC, out uint delNoC);
+				linesAddedGross += add;
+				linesDeletedGross += del;
+				linesAddedWithoutEmptyOrComments += addNoC;
+				linesDeletedWithoutEmptyOrComments += delNoC;
+			}
 		}
 	}
 }
