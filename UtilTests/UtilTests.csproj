@@ -83,6 +83,7 @@
     <Reference Include="System.Transactions" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataFactoryTests.cs" />
     <Compile Include="SimpleLocTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
