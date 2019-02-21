@@ -215,7 +215,7 @@ namespace GitDensity.Density
 		/// directories and filenames. However, sometimes these contain invalid chars. In that
 		/// case, this method will resort to manually concatenating these and return false; true,
 		/// otherwise.
-		/// A warning is logged using the <see cref="Hunk"/>'s logger.
+		/// A warning is logged using the <see cref="Hunk"/>'s <see cref="logger"/>.
 		/// </summary>
 		/// <param name="pairSourceDirectory"></param>
 		/// <param name="pairTargetDirectory"></param>
@@ -255,6 +255,15 @@ namespace GitDensity.Density
 			}
 		}
 
+		/// <summary>
+		/// Issues a warning using the <see cref="logger"/>, when, for some reason,
+		/// the method <see cref="TryGetHunkPaths(DirectoryInfo, DirectoryInfo, string, string, out string, out string, out Exception)"/> fails to obtain the <see cref="Hunk"/>'s paths.
+		/// </summary>
+		/// <param name="ex"></param>
+		/// <param name="pairSourceDirectory"></param>
+		/// <param name="pairTargetDirectory"></param>
+		/// <param name="hunkSourcePath"></param>
+		/// <param name="hunkTargetPath"></param>
 		protected static void WarnAboutBrokenHunkPaths(
 			Exception ex,
 			DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory,

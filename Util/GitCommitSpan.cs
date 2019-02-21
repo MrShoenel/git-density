@@ -99,10 +99,12 @@ namespace Util
 		/// <param name="repository"></param>
 		/// <param name="sinceDateTimeOrCommitSha">(Partial) SHA1 of commit or parseable
 		/// date/time (according to <see cref="DateTimeFormat"/>). This offset is the
-		/// inclusive start of the span.</param>
+		/// inclusive start of the span. Defaults to null. If null, will assume
+		/// <see cref="DateTime.MinValue"/> for <see cref="SinceDateTime"/>.</param>
 		/// <param name="untilDatetimeOrCommitSha">(Partial) SHA1 of commit or parseable
 		/// date/time (according to <see cref="DateTimeFormat"/>). This offset is the
-		/// inclusive end of the span.</param>
+		/// inclusive end of the span. Defaults to null. If null, will assume
+		/// <see cref="DateTime.MaxValue"/> for <see cref="UntilDateTime"/>.</param>
 		public GitCommitSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null)
 		{
 			this.Repository = repository;
