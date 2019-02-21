@@ -48,8 +48,8 @@ Please use the following BibTeX to cite __`GitDensity`__:
 <pre>
 @article{honel2019gitdensity,
   title={Git Density: Analyze git repositories to extract the Source Code Density and other Commit Properties},
-  DOI={10.5281/zenodo.2574611},
-  url={http://doi.org/10.5281/zenodo.2574611},
+  DOI={10.5281/zenodo.2565238},
+  url={https://doi.org/10.5281/zenodo.2565238},
   publisher={Zenodo},
   author={Sebastian Hönel},
   version={2019.2}
