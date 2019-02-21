@@ -1,4 +1,4 @@
-# Git Density [![DOI](https://zenodo.org/badge/125856964.svg)](https://zenodo.org/badge/latestdoi/125856964)
+# Git Density [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2565238.svg)](https://doi.org/10.5281/zenodo.2565238)
 
 Git Density (`git-density`) is a tool to analyze `git`-repositories with the goal of detecting the source code density.
 
