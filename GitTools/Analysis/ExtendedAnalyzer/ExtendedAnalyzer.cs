@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using GitDensity.Density;
+using GitDensity.Similarity;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
@@ -116,57 +117,65 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 					goto AfterSizes;
 				}
 
-				#region added/deleted
+				#region check each file
+				// One change corresponds to one affected file in the commit.
+				#region added & deleted
 				foreach (var change in pair.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Deleted))
 				{
 					var added = change.Status == ChangeKind.Added;
-
-					var patchNew = pair.Patch[change.Path];
-					var patchOld = pair.Patch[change.OldPath];
-
-					var simpleLoc = new SimpleLoc((added ?
-						pair.Child[change.Path] : pair.Parent[change.OldPath]).GetLines());
+					var patch = pair.Patch[added ? change.Path : change.OldPath];
+					TextBlock.CountLinesInPatch(patch,
+						out var add, out var del, out var addNoC, out var delNoC);
 
 					if (added)
 					{
 						ecd.NumberOfFilesAdded++;
-						ecd.NumberOfLinesAddedByAddedFilesGross += simpleLoc.LocGross;
-						ecd.NumberOfLinesAddedByAddedFilesNoComments += simpleLoc.LocNoComments;
+						if (addNoC > 0u) { ecd.NumberOfFilesAddedNet++; }
+						ecd.NumberOfLinesAddedByAddedFiles += add;
+						ecd.NumberOfLinesAddedByAddedFilesNet += addNoC;
 					}
 					else
 					{
 						ecd.NumberOfFilesDeleted++;
-						ecd.NumberOfLinesDeletedByDeletedFilesGross += simpleLoc.LocGross;
-						ecd.NumberOfLinesDeletedByDeletedFilesNoComments += simpleLoc.LocNoComments;
+						if (delNoC > 0u) { ecd.NumberOfFilesDeletedNet++; }
+						ecd.NumberOfLinesDeletedByDeletedFiles += del;
+						ecd.NumberOfLinesDeletedByDeletedFilesNet += delNoC;
 					}
 				}
 				#endregion
 
-				#region modified/renamed
-
+				#region modified & renamed
 				// The following block concerns all changes that represent modifications to
 				// two different versions of the same file. The file may have been renamed
 				// or moved as well (a so-called non-pure modification).
 				foreach (var change in pair.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Modified || rtc.Status == ChangeKind.Renamed))
 				{
 					var modified = change.Status == ChangeKind.Modified;
-					var patchNew = pair.Patch[change.Path];
-					var dummyDirectory = new DirectoryInfo(Path.GetTempPath());
-					var hunks = Hunk.HunksForPatch(patchNew, dummyDirectory, dummyDirectory).ToList();
-					
+					var patch = pair.Patch[change.Path];
+					TextBlock.CountLinesInPatch(patch,
+						out var add, out var del, out var addNoC, out var delNoC);
+					var fileAffected = addNoC > 0u || delNoC > 0u;
+
 					if (modified)
 					{
 						ecd.NumberOfFilesModified++;
-						ecd.NumberOfLinesAddedByModifiedFiles += (UInt32)hunks.Sum(h => h.NumberOfLinesAdded);
-						ecd.NumberOfLinesDeletedByModifiedFiles += (UInt32)hunks.Sum(h => h.NumberOfLinesDeleted);
+						if (fileAffected) { ecd.NumberOfFilesModifiedNet++; }
+						ecd.NumberOfLinesAddedByModifiedFiles += add;
+						ecd.NumberOfLinesAddedByModifiedFilesNet += addNoC;
+						ecd.NumberOfLinesDeletedByModifiedFiles += del;
+						ecd.NumberOfLinesDeletedByModifiedFilesNet += delNoC;
 					}
 					else
 					{
 						ecd.NumberOfFilesRenamed++;
-						ecd.NumberOfLinesAddedByRenamedFiles += (UInt32)hunks.Sum(h => h.NumberOfLinesAdded);
-						ecd.NumberOfLinesDeletedByRenamedFiles += (UInt32)hunks.Sum(h => h.NumberOfLinesDeleted);
+						if (fileAffected) { ecd.NumberOfFilesRenamedNet++; }
+						ecd.NumberOfLinesAddedByRenamedFiles += add;
+						ecd.NumberOfLinesAddedByRenamedFilesNet += addNoC;
+						ecd.NumberOfLinesDeletedByRenamedFiles += del;
+						ecd.NumberOfLinesDeletedByRenamedFilesNet += delNoC;
 					}
 				}
+				#endregion
 				#endregion
 
 			AfterSizes:

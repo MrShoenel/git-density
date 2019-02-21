@@ -138,6 +138,21 @@ namespace GitDensity.Density
 			this.OldLineStart == 0u && this.OldNumberOfLines == 0u && this.NewLineStart == 0u && this.NewNumberOfLines == 0u && this.Patch == String.Empty;
 
 		/// <summary>
+		/// An override for <see cref="HunksForPatch(PatchEntryChanges, DirectoryInfo, DirectoryInfo)"/>
+		/// that uses a dummy directory. Use this method only when you do not have any
+		/// reason to access or rely on a valid <see cref="Hunk.SourceFilePath"/> or
+		/// <see cref="Hunk.TargetFilePath"/> (useful for purely virtual use-cases when
+		/// no access to the underlying file is needed).
+		/// </summary>
+		/// <param name="pec"></param>
+		/// <returns></returns>
+		public static IEnumerable<Hunk> HunksForPatch(PatchEntryChanges pec)
+		{
+			var dummyDir = new DirectoryInfo(Path.GetTempPath());
+			return Hunk.HunksForPatch(pec, dummyDir, dummyDir);
+		}
+
+		/// <summary>
 		/// Returns an <see cref="IEnumerable{Hunk}"/> containing all hunks
 		/// for the given <see cref="PatchEntryChanges"/>.
 		/// </summary>
@@ -150,13 +165,15 @@ namespace GitDensity.Density
 			String fullSourcePath, fullTargetPath;
 			Exception hunkPathException;
 
-			// First condition is an empty patch that is usually the result from adding a new, empty file.
-			// We will only return one empty Hunk for this case.
-			// Second condition is a pure Move/Rename (then there's no real diff).
-			// Third condition is a deletion of a whole file.
+			// First condition is an empty patch that is usually the result from adding a new, empty, diffable file.
+			// Second condition is a pure Move/Rename (then there's no real diff, i.e. no added/del'd lines).
+			// Third condition is a deletion of a whole, empty, diffable file.
+			//
+			// We will only return one empty Hunk for this case. This is important as all methods expect
+			// at least one Hunk from this enumeration, even if it's empty (check references).
 			if ((pec.Mode == Mode.NonExecutableFile && pec.OldMode == Mode.Nonexistent && pec.LinesAdded == 0)
 				|| (pec.Status == ChangeKind.Renamed && pec.LinesAdded == 0 && pec.LinesDeleted == 0)
-				|| (pec.Status == ChangeKind.Deleted && pec.Mode == Mode.Nonexistent))
+				|| (pec.Status == ChangeKind.Deleted && pec.Mode == Mode.Nonexistent && pec.LinesDeleted == 0))
 			{
 				if (!Hunk.TryGetHunkPaths(
 					pairSourceDirectory, pairTargetDirectory,
@@ -215,7 +232,7 @@ namespace GitDensity.Density
 		/// directories and filenames. However, sometimes these contain invalid chars. In that
 		/// case, this method will resort to manually concatenating these and return false; true,
 		/// otherwise.
-		/// A warning is logged using the <see cref="Hunk"/>'s logger.
+		/// A warning is logged using the <see cref="Hunk"/>'s <see cref="logger"/>.
 		/// </summary>
 		/// <param name="pairSourceDirectory"></param>
 		/// <param name="pairTargetDirectory"></param>
@@ -255,6 +272,15 @@ namespace GitDensity.Density
 			}
 		}
 
+		/// <summary>
+		/// Issues a warning using the <see cref="logger"/>, when, for some reason,
+		/// the method <see cref="TryGetHunkPaths(DirectoryInfo, DirectoryInfo, string, string, out string, out string, out Exception)"/> fails to obtain the <see cref="Hunk"/>'s paths.
+		/// </summary>
+		/// <param name="ex"></param>
+		/// <param name="pairSourceDirectory"></param>
+		/// <param name="pairTargetDirectory"></param>
+		/// <param name="hunkSourcePath"></param>
+		/// <param name="hunkTargetPath"></param>
 		protected static void WarnAboutBrokenHunkPaths(
 			Exception ex,
 			DirectoryInfo pairSourceDirectory, DirectoryInfo pairTargetDirectory,
