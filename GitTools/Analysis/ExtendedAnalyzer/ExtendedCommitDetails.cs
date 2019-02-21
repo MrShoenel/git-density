@@ -43,7 +43,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// </summary>
 		[CsvColumn(FieldIndex = 8)]
 		public override string Message
-			=> RegexNewLines.Replace(base.commit.Message, " ").Trim();
+			=> RegexNewLines.Replace(base.commit.Message, " ").Replace('"', ' ').Trim();
 		#endregion
 
 		#region additional fields
