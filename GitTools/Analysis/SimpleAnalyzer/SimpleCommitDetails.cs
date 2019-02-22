@@ -34,11 +34,6 @@ namespace GitTools.Analysis
 			new Regex("\r|\n", RegexOptions.ECMAScript | RegexOptions.Compiled);
 
 		/// <summary>
-		/// Keeps a reference to the <see cref="Repository"/>.
-		/// </summary>
-		protected readonly Repository repository;
-
-		/// <summary>
 		/// Keeps a reference to the <see cref="Commit"/>.
 		/// </summary>
 		protected readonly Commit commit;
@@ -48,12 +43,10 @@ namespace GitTools.Analysis
 		/// <see cref="Repository"/> and <see cref="Commit"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
-		/// <param name="repository"></param>
 		/// <param name="commit"></param>
-		public SimpleCommitDetails(String repoPathOrUrl, Repository repository, Commit commit)
+		public SimpleCommitDetails(String repoPathOrUrl, Commit commit)
 		{
 			this.RepoPathOrUrl = repoPathOrUrl;
-			this.repository = repository;
 			this.commit = commit;
 
 			var parents = this.commit.Parents.ToList();

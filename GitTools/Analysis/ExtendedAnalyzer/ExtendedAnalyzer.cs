@@ -102,11 +102,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 				pair.ExecutionPolicy = ExecutionPolicy.Linear; // As we're probably running parallel in outer scope already
 				var parents = pair.Child.Parents.ToList();
 
-				String authorLabel, committerLabel;
 				this.AuthorAndCommitterNominalForCommit(
-					pair.Child, out authorLabel, out committerLabel);
+					pair.Child, out var authorLabel, out var committerLabel);
 
-				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, repo, pair.Child)
+				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, pair.Child)
 				{
 					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(

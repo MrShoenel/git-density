@@ -26,13 +26,12 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 	public class ExtendedCommitDetails : SimpleCommitDetails
 	{
 		/// <summary>
-		/// Forwards constructor that only calls <see cref="SimpleCommitDetails.SimpleCommitDetails(string, Repository, Commit)"/>.
+		/// Forwards constructor that only calls <see cref="SimpleCommitDetails.SimpleCommitDetails(string, Commit)"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
-		/// <param name="repository"></param>
 		/// <param name="commit"></param>
-		public ExtendedCommitDetails(String repoPathOrUrl, Repository repository, Commit commit)
-			: base(repoPathOrUrl, repository, commit)
+		public ExtendedCommitDetails(String repoPathOrUrl, Commit commit)
+			: base(repoPathOrUrl, commit)
 		{
 		}
 

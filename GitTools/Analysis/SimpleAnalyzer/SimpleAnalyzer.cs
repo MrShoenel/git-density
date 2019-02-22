@@ -79,7 +79,7 @@ namespace GitTools.Analysis.SimpleAnalyzer
 				this.AuthorAndCommitterNominalForCommit(
 					commit, out authorLabel, out committerLabel);
 
-				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, repo, commit)
+				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, commit)
 				{
 					AuthorNominalLabel = authorLabel,
 					CommitterNominalLabel = committerLabel
@@ -96,7 +96,7 @@ namespace GitTools.Analysis.SimpleAnalyzer
 	internal class SimpleProgressReporter<T> where T: IAnalyzer<IAnalyzedCommit>
 	{
 		public static readonly ISet<Int32> DefaultSteps
-			= new HashSet<Int32>(Enumerable.Range(1, 20).Select(i => i * 5));
+			= new HashSet<Int32>(Enumerable.Range(1, 50).Select(i => i * 2));
 
 		protected readonly ILogger<IAnalyzer<SimpleCommitDetails>> logger;
 
