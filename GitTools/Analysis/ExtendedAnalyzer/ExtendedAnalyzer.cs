@@ -90,6 +90,12 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			{
 				po.MaxDegreeOfParallelism = 1;
 			}
+			else
+			{
+				// We do this to avoid thread-congestion while still achieving
+				// a respectable CPU usage, as the loop-callback is IO-bound.
+				po.MaxDegreeOfParallelism = Environment.ProcessorCount * 32;
+			}
 
 			Parallel.ForEach(pairs, po, pair =>
 			{
