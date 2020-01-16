@@ -82,12 +82,6 @@ namespace GitTools.Analysis
 		[CsvColumn(FieldIndex = 10)]
 		public String CommitterEmail => this.commit.Committer.Email;
 
-		[CsvColumn(FieldIndex = 11)]
-		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
-
-		[CsvColumn(FieldIndex = 12)]
-		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
-
 		/// <summary>
 		/// This is a boolean field but we use 0/1 for compatibility reasons.
 		/// </summary>

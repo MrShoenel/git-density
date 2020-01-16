@@ -53,6 +53,12 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		[CsvColumn(FieldIndex = 7)]
 		public double MinutesSincePreviousCommit { get; protected internal set; } = -.1;
 
+		[CsvColumn(FieldIndex = 11)]
+		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
+
+		[CsvColumn(FieldIndex = 12)]
+		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
+
 		[CsvColumn(FieldIndex = 17)]
 		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;
 

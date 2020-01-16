@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Util;
 using Util.Data;
@@ -129,7 +128,20 @@ namespace GitTools
 						repoTempPath, pullIfAlreadyExists: true))
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
-						var span = new GitCommitSpan(repo, options.Since, options.Until);
+
+						ISet<String> sha1IDs = null;
+						if (!String.IsNullOrEmpty(options.InputCommitIDs))
+						{
+							sha1IDs = new HashSet<String>(
+								File.ReadAllLines(Path.GetFullPath(options.InputCommitIDs)).Where(l => l.Length >= 40));
+						}
+
+						var span = new GitCommitSpan(
+							repo, options.Since, options.Until, options.Limit, sha1IDs);
+						if (span.SHA1Filter.Count > 0)
+						{
+							logger.LogTrace($"Using the following commit-IDs for the {nameof(GitCommitSpan)}: {String.Join(", ", span.SHA1Filter)}");
+						}
 
 						#region Check for commands
 						if (options.CmdCountCommits)
@@ -139,7 +151,7 @@ namespace GitTools
 							var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
 
 							var json = JsonConvert.SerializeObject(new {
-								Count = commits.Count,
+								commits.Count,
 								SHA1s = commits.Select(c => c.ShaShort())
 							});
 
@@ -258,10 +270,10 @@ namespace GitTools
 				using (var repo = p.OpenRepository(options.TempDirectory, null, true))
 				{
 					var span = new GitCommitSpan(repo, options.Since, options.Until);
-					var analyzer = new SimpleAnalyzer(options.RepoPath, span);
+					var analyzer = new ExtendedAnalyzer(options.RepoPath, span, skipSizeAnalysis: true);
 					analyzer.ExecutionPolicy = ExecutionPolicy.Parallel;
 
-					var commits = new HashSet<SimpleCommitDetails>(analyzer.AnalyzeCommits());
+					var commits = new HashSet<ExtendedCommitDetails>(analyzer.AnalyzeCommits());
 
 					using (var sess = DataFactory.Instance.OpenSession())
 					{
@@ -366,6 +378,12 @@ namespace GitTools
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
+
+		[Option('i', "input-ids", Required = false, DefaultValue = null, HelpText = "Optional. A path to a file with SHA1's of commits to analyze (one SHA1 per line). If given, then only those commits will be analyzed and all others will be skipped. Can be used in conjunction with --limit.")]
+		public String InputCommitIDs { get; set; }
+
+		[Option("limit", Required = false, DefaultValue = null, HelpText = "Optional. A positive integer to limit the amount of commits analyzed. Can be used in conjunction with any other options (such as -i).")]
+		public UInt32? Limit { get; set; }
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		[JsonConverter(typeof(StringEnumConverter))]

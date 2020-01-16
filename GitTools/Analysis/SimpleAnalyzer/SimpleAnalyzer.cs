@@ -29,6 +29,9 @@ namespace GitTools.Analysis.SimpleAnalyzer
 	/// <summary>
 	/// An implementation of <see cref="IAnalyzer{T}"/> that maps each
 	/// commit to an instance of <see cref="SimpleCommitDetails"/>.
+	/// The <see cref="SimpleAnalyzer"/> is very fast, as it does not
+	/// compute any properties or gather information by taking one or
+	/// more parents of a commit into account.
 	/// </summary>
 	public class SimpleAnalyzer : BaseAnalyzer<SimpleCommitDetails>
 	{
@@ -75,15 +78,7 @@ namespace GitTools.Analysis.SimpleAnalyzer
 
 			Parallel.ForEach(this.GitCommitSpan, po, commit =>
 			{
-				String authorLabel, committerLabel;
-				this.AuthorAndCommitterNominalForCommit(
-					commit, out authorLabel, out committerLabel);
-
-				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, commit)
-				{
-					AuthorNominalLabel = authorLabel,
-					CommitterNominalLabel = committerLabel
-				});
+				bag.Add(new SimpleCommitDetails(this.RepoPathOrUrl, commit));
 				reporter.ReportProgress(Interlocked.Increment(ref done), total);
 			});
 

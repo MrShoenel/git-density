@@ -17,13 +17,7 @@ using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
 using Util;
-using Util.Data.Entities;
-using Util.Extensions;
-using static Util.Extensions.RepositoryExtensions;
-using Signature = LibGit2Sharp.Signature;
 
 namespace GitTools.Analysis
 {
@@ -50,10 +44,6 @@ namespace GitTools.Analysis
 		/// </summary>
 		public GitCommitSpan GitCommitSpan { get; protected set; }
 
-		private IReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> authorSignatures;
-
-		private IReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> committerSignatures;
-
 		/// <summary>
 		/// Base constructor that initalizes the repo-path and commits-span.
 		/// </summary>
@@ -63,49 +53,7 @@ namespace GitTools.Analysis
 		{
 			this.RepoPathOrUrl = repoPathOrUrl;
 			this.GitCommitSpan = span;
-			this.InitializeNominalSignatures();
 		}
-
-		#region Nominal Signatures
-		/// <summary>
-		/// Will map each <see cref="Signature"/> uniquely to a <see cref="DeveloperEntity"/>.
-		/// Then, for each entity, a unique ID (within the current repository) is assigned. The
-		/// IDs look like Excel columns.
-		/// </summary>
-		private void InitializeNominalSignatures()
-		{
-			this.Logger.LogInformation("Initializing developer identities for repository..");
-
-			this.authorSignatures = new ReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails>(
-				this.GitCommitSpan.GroupByDeveloperAsSignatures(
-					repository: null, useAuthorAndNotCommitter: true));
-			this.committerSignatures = new ReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails>(
-				this.GitCommitSpan.GroupByDeveloperAsSignatures(
-					repository: null, useAuthorAndNotCommitter: false));
-
-			var set = new HashSet<DeveloperEntity>(this.authorSignatures.Select(kv => kv.Value)
-				.Concat(this.committerSignatures.Select(kv => kv.Value)));
-
-			this.Logger.LogInformation($"Found {String.Format("{0:n0}", this.authorSignatures.Count + this.committerSignatures.Count)} signatures and mapped them to {String.Format("{0:n0}", set.Count)} distinct developer identities.");
-		}
-
-		/// <summary>
-		/// Returns a unique nominal ID for a <see cref="Commit.Author"/> and
-		/// <see cref="Commit.Committer"/> based on <see cref="DeveloperWithAlternativeNamesAndEmails.SHA256Hash"/>.
-		/// The label is guaranteed to start with a letter and to never be longer
-		/// than 16 characters.
-		/// </summary>
-		/// <param name="commit"></param>
-		/// <param name="authorNominal"></param>
-		/// <param name="committerNominal"></param>
-		protected void AuthorAndCommitterNominalForCommit(Commit commit, out string authorNominal, out string committerNominal)
-		{
-			authorNominal =
-				$"L{this.authorSignatures[commit.Author].SHA256Hash.Substring(0, 15)}";
-			committerNominal =
-				$"L{this.committerSignatures[commit.Committer].SHA256Hash.Substring(0, 15)}";
-		}
-		#endregion
 
 		#region ISupportsExecutionPolicy
 		/// <summary>
