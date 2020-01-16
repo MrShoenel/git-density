@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -34,7 +34,7 @@ namespace GitDensityTests
 	public class HunkTests
 	{
 		public static DirectoryInfo SolutionDirectory
-			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent.Parent;
+			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent;
 
 
 		[TestMethod]

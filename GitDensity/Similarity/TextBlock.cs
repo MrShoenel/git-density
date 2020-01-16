@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -373,7 +373,7 @@ namespace GitDensity.Similarity
 			out UInt32 linesAddedWithoutEmptyOrComments,
 			out UInt32 linesDeletedWithoutEmptyOrComments)
 		{
-			var hunks = Hunk.HunksForPatch(pec);
+			var hunks = Hunk.HunksForPatch(pec).ToList();
 
 			var tbsAdded = hunks.Select(hunk => new TextBlock(hunk, TextBlockType.New)).ToList();
 			var tbsDeleted = hunks.Select(hunk => new TextBlock(hunk, TextBlockType.Old)).ToList();
@@ -387,6 +387,8 @@ namespace GitDensity.Similarity
 			linesDeletedWithoutEmptyOrComments = (UInt32)tbsDeleted
 				.Select(tb => tb.RemoveEmptyLinesAndComments())
 				.Sum(tb => tb.LinesDeleted);
+
+			hunks.ForEach(hunk => hunk.Clear());
 		}
 
 		/// <summary>

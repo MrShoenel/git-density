@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -233,6 +233,7 @@ namespace GitDensity
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
 							options.TempDirectory,
+							options.SkipGitHoursAnalysis,
 							options.SkipGitMetricsAnalysis))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;

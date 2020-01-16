@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -13,22 +13,22 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
-using GitDensity.Density;
 using GitDensity.Similarity;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Util;
+using Util.Data.Entities;
 using Util.Density;
 using Util.Extensions;
 using Util.Logging;
-using Util.Metrics;
+using static Util.Extensions.RepositoryExtensions;
 
 namespace GitTools.Analysis.ExtendedAnalyzer
 {
@@ -51,6 +51,10 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// </summary>
 		public Boolean SkipSizeAnalysis { get; protected set; }
 
+		private IReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> authorSignatures;
+
+		private IReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails> committerSignatures;
+
 		/// <summary>
 		/// This is a forwarding constructor that does not do any other
 		/// initialization than <see cref="BaseAnalyzer{T}.BaseAnalyzer(string, GitCommitSpan)"/>.
@@ -62,7 +66,49 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			: base(repoPathOrUrl, span)
 		{
 			this.SkipSizeAnalysis = skipSizeAnalysis;
+			this.InitializeNominalSignatures();
 		}
+
+		#region Nominal Signatures
+		/// <summary>
+		/// Will map each <see cref="Signature"/> uniquely to a <see cref="DeveloperEntity"/>.
+		/// Then, for each entity, a unique ID (within the current repository) is assigned. The
+		/// IDs look like Excel columns.
+		/// </summary>
+		private void InitializeNominalSignatures()
+		{
+			this.Logger.LogInformation("Initializing developer identities for repository..");
+
+			this.authorSignatures = new ReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails>(
+				this.GitCommitSpan.GroupByDeveloperAsSignatures(
+					repository: null, useAuthorAndNotCommitter: true));
+			this.committerSignatures = new ReadOnlyDictionary<Signature, DeveloperWithAlternativeNamesAndEmails>(
+				this.GitCommitSpan.GroupByDeveloperAsSignatures(
+					repository: null, useAuthorAndNotCommitter: false));
+
+			var set = new HashSet<DeveloperEntity>(this.authorSignatures.Select(kv => kv.Value)
+				.Concat(this.committerSignatures.Select(kv => kv.Value)));
+
+			this.Logger.LogInformation($"Found {String.Format("{0:n0}", this.authorSignatures.Count + this.committerSignatures.Count)} signatures and mapped them to {String.Format("{0:n0}", set.Count)} distinct developer identities.");
+		}
+
+		/// <summary>
+		/// Returns a unique nominal ID for a <see cref="Commit.Author"/> and
+		/// <see cref="Commit.Committer"/> based on <see cref="DeveloperWithAlternativeNamesAndEmails.SHA256Hash"/>.
+		/// The label is guaranteed to start with a letter and to never be longer
+		/// than 16 characters.
+		/// </summary>
+		/// <param name="commit"></param>
+		/// <param name="authorNominal"></param>
+		/// <param name="committerNominal"></param>
+		protected void AuthorAndCommitterNominalForCommit(Commit commit, out string authorNominal, out string committerNominal)
+		{
+			authorNominal =
+				$"L{this.authorSignatures[commit.Author].SHA256Hash.Substring(0, 15)}";
+			committerNominal =
+				$"L{this.committerSignatures[commit.Committer].SHA256Hash.Substring(0, 15)}";
+		}
+		#endregion
 
 		/// <summary>
 		/// This method will use <see cref="CommitPair"/>s for extracting
@@ -90,17 +136,23 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 			{
 				po.MaxDegreeOfParallelism = 1;
 			}
+			else
+			{
+				// We do this to avoid thread-congestion while still achieving
+				// a respectable CPU usage, as the loop-callback is IO-bound.
+				po.MaxDegreeOfParallelism = Environment.ProcessorCount * 64;
+				this.Logger.LogDebug($"Using maximum degree of parallelism = {po.MaxDegreeOfParallelism} in {nameof(ExtendedAnalyzer)}.");
+			}
 
 			Parallel.ForEach(pairs, po, pair =>
 			{
 				pair.ExecutionPolicy = ExecutionPolicy.Linear; // As we're probably running parallel in outer scope already
 				var parents = pair.Child.Parents.ToList();
 
-				String authorLabel, committerLabel;
 				this.AuthorAndCommitterNominalForCommit(
-					pair.Child, out authorLabel, out committerLabel);
+					pair.Child, out var authorLabel, out var committerLabel);
 
-				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, repo, pair.Child)
+				var ecd = new ExtendedCommitDetails(this.RepoPathOrUrl, pair.Child)
 				{
 					MinutesSincePreviousCommit = parents.Count == 0 ? -.1 :
 						Math.Round(
@@ -126,6 +178,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 					var patch = pair.Patch[added ? change.Path : change.OldPath];
 					TextBlock.CountLinesInPatch(patch,
 						out var add, out var del, out var addNoC, out var delNoC);
+					patch.Clear(setStringBuilderNull: true);
 
 					if (added)
 					{
@@ -154,6 +207,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 					var patch = pair.Patch[change.Path];
 					TextBlock.CountLinesInPatch(patch,
 						out var add, out var del, out var addNoC, out var delNoC);
+					patch.Clear(setStringBuilderNull: true);
 					var fileAffected = addNoC > 0u || delNoC > 0u;
 
 					if (modified)

@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -34,11 +34,6 @@ namespace GitTools.Analysis
 			new Regex("\r|\n", RegexOptions.ECMAScript | RegexOptions.Compiled);
 
 		/// <summary>
-		/// Keeps a reference to the <see cref="Repository"/>.
-		/// </summary>
-		protected readonly Repository repository;
-
-		/// <summary>
 		/// Keeps a reference to the <see cref="Commit"/>.
 		/// </summary>
 		protected readonly Commit commit;
@@ -48,12 +43,10 @@ namespace GitTools.Analysis
 		/// <see cref="Repository"/> and <see cref="Commit"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
-		/// <param name="repository"></param>
 		/// <param name="commit"></param>
-		public SimpleCommitDetails(String repoPathOrUrl, Repository repository, Commit commit)
+		public SimpleCommitDetails(String repoPathOrUrl, Commit commit)
 		{
 			this.RepoPathOrUrl = repoPathOrUrl;
-			this.repository = repository;
 			this.commit = commit;
 
 			var parents = this.commit.Parents.ToList();
@@ -88,12 +81,6 @@ namespace GitTools.Analysis
 
 		[CsvColumn(FieldIndex = 10)]
 		public String CommitterEmail => this.commit.Committer.Email;
-
-		[CsvColumn(FieldIndex = 11)]
-		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
-
-		[CsvColumn(FieldIndex = 12)]
-		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
 
 		/// <summary>
 		/// This is a boolean field but we use 0/1 for compatibility reasons.

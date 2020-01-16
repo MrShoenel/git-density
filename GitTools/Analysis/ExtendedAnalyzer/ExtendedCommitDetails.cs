@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -26,13 +26,12 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 	public class ExtendedCommitDetails : SimpleCommitDetails
 	{
 		/// <summary>
-		/// Forwards constructor that only calls <see cref="SimpleCommitDetails.SimpleCommitDetails(string, Repository, Commit)"/>.
+		/// Forwards constructor that only calls <see cref="SimpleCommitDetails.SimpleCommitDetails(string, Commit)"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
-		/// <param name="repository"></param>
 		/// <param name="commit"></param>
-		public ExtendedCommitDetails(String repoPathOrUrl, Repository repository, Commit commit)
-			: base(repoPathOrUrl, repository, commit)
+		public ExtendedCommitDetails(String repoPathOrUrl, Commit commit)
+			: base(repoPathOrUrl, commit)
 		{
 		}
 
@@ -53,6 +52,12 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// </summary>
 		[CsvColumn(FieldIndex = 7)]
 		public double MinutesSincePreviousCommit { get; protected internal set; } = -.1;
+
+		[CsvColumn(FieldIndex = 11)]
+		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
+
+		[CsvColumn(FieldIndex = 12)]
+		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
 
 		[CsvColumn(FieldIndex = 17)]
 		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;

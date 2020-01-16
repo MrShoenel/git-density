@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2019 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -232,7 +232,7 @@ namespace GitDensity.Density
 			var dirOld = "old";
 			var dirNew = "new";
 			var repoEntity = this.Repository.AsEntity(this.GitCommitSpan);
-			var developers = this.GitCommitSpan.FilteredCommits.GroupByDeveloperAsSignatures(repoEntity);
+			var developers = this.GitCommitSpan.GroupByDeveloperAsSignatures(repoEntity);
 			repoEntity.AddDevelopers(new HashSet<DeveloperEntity>(developers.Values));
 			var commits = this.GitCommitSpan.FilteredCommits.Select(commit =>
 				commit.AsEntity(repoEntity, developers[commit.Author]))
@@ -308,6 +308,7 @@ namespace GitDensity.Density
 					var patchNew = pair.Patch[change.Path];
 					var patchOld = pair.Patch[change.OldPath];
 					var treeChangeEntity = change.AsEntity(pairEntity);
+					// As this is either a new (added) or old (deleted) file, there is only one Hunk.
 					var hunk = Hunk.HunksForPatch(added ? patchNew : patchOld,
 						oldDirectory, newDirectory).Single();
 					// We explicitly pass an empty enumerable for the clone-sets, as there possibly
