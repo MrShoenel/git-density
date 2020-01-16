@@ -29,7 +29,7 @@ namespace GitHoursTests
 	public class GitHoursAuthorSpanTests
 	{
 		public static DirectoryInfo SolutionDirectory
-			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent.Parent;
+			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent;
 
 		[TestMethod]
 		public void TestAggregateHoursStats()

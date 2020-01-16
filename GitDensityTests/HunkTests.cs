@@ -34,7 +34,7 @@ namespace GitDensityTests
 	public class HunkTests
 	{
 		public static DirectoryInfo SolutionDirectory
-			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent.Parent;
+			=> new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent;
 
 
 		[TestMethod]
