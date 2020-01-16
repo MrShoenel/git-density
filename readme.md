@@ -33,12 +33,12 @@ Git Density is a solution that currently features these three applications:
 	*	Has its own command-line interface and supports online/offline repos and parallelization.
 	*	Supports two methods currently: _Simple_ and _Extended_ (default) extraction.
 	*	Does not require tools for clone-detection or metrics, as these are not extracted.
-	*	Extracts __26__ features (__13__ in _Simple_-mode): `"SHA1","RepoPathOrUrl","AuthorName","CommitterName","AuthorTime","CommitterTime","MinutesSincePreviousCommit","Message","AuthorEmail","CommitterEmail","IsInitialCommit","IsMergeCommit","NumberOfParentCommits","ParentCommitSHA1s","NumberOfFilesAdded","NumberOfLinesAddedByAddedFilesNoComments","NumberOfLinesAddedByAddedFilesGross","NumberOfFilesDeleted","NumberOfLinesDeletedByDeletedFilesNoComments","NumberOfLinesDeletedByDeletedFilesGross","NumberOfFilesModified","NumberOfFilesRenamed","NumberOfLinesAddedByModifiedFiles","NumberOfLinesDeletedByModifiedFiles","NumberOfLinesAddedByRenamedFiles","NumberOfLinesDeletedByRenamedFiles"`
+	*	Extracts __38__ features (__13__ in _Simple_-mode): `"SHA1", "RepoPathOrUrl", "AuthorName", "CommitterName", "AuthorTime", "CommitterTime", "Message", "AuthorEmail", "CommitterEmail", "IsInitialCommit", "IsMergeCommit", "NumberOfParentCommits", "ParentCommitSHA1s"` __plus 25 in extended:__ `"MinutesSincePreviousCommit", "AuthorNominalLabel", "CommitterNominalLabel", "NumberOfFilesAdded", "NumberOfFilesAddedNet", "NumberOfLinesAddedByAddedFiles", "NumberOfLinesAddedByAddedFilesNet", "NumberOfFilesDeleted", "NumberOfFilesDeletedNet", "NumberOfLinesDeletedByDeletedFiles", "NumberOfLinesDeletedByDeletedFilesNet", "NumberOfFilesModified", "NumberOfFilesModifiedNet", "NumberOfFilesRenamed", "NumberOfFilesRenamedNet", "NumberOfLinesAddedByModifiedFiles", "NumberOfLinesAddedByModifiedFilesNet", "NumberOfLinesDeletedByModifiedFiles", "NumberOfLinesDeletedByModifiedFilesNet", "NumberOfLinesAddedByRenamedFiles", "NumberOfLinesAddedByRenamedFilesNet", "NumberOfLinesDeletedByRenamedFiles", "NumberOfLinesDeletedByRenamedFilesNet", "Density", "AffectedFilesRatioNet"`
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
 ## Caveats
 
-If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate. You may also use other types of databases, as Git Density supports these: `MsSQL2000`, `MsSQL2005`, `MsSQL2008`, `MsSQL2012`, `MySQL`, `Oracle10`, `Oracle9`, `PgSQL81`, `PgSQL82`, `SQLite`, `SQLiteTemp` (temporary database that is discarded after the analysis, mainly for testing).
+If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate (this should be fixed in version 2020.1). You may also use other types of databases, as Git Density supports these: `MsSQL2000`, `MsSQL2005`, `MsSQL2008`, `MsSQL2012`, `MySQL`, `Oracle10`, `Oracle9`, `PgSQL81`, `PgSQL82`, `SQLite`, `SQLiteTemp` (temporary database that is discarded after the analysis, mainly for testing).
 
 ___
 
@@ -46,14 +46,14 @@ ___
 # Citing
 Please use the following BibTeX to cite __`GitDensity`__:
 <pre>
-@article{honel2019gitdensity,
-  title={Git Density (2019.1): Analyze git repositories to extract the Source Code Density and other Commit Properties},
-  DOI={10.5281/zenodo.2565239},
-  url={http://doi.org/10.5281/zenodo.2565239},
+@article{honel2020gitdensity,
+  title={Git Density (2020.1): Analyze git repositories to extract the Source Code Density and other Commit Properties},
+  DOI={10.5281/zenodo.2565238},
+  url={https://doi.org/10.5281/zenodo.2565238},
   publisher={Zenodo},
   author={Sebastian Hönel},
-  year={2019},
-  month={Feb},
+  year={2020},
+  month={Jan},
   abstractNote={Git Density (<code>git-density</code>) is a tool to analyze <code>git</code>-repositories with the goal of detecting the source code density. It was developed during the research phase of the short technical paper and poster &quot;<em>A changeset-based approach to assess source code density and developer efficacy</em>&quot; and has since been extended to support extended analyses.},
 }
 </pre>
@@ -67,3 +67,5 @@ ___
 [2] Git hours. "Estimate time spent on a Git repository." https://github.com/kimmobrunfeldt/git-hours
 
 [3] QTools Clone Detection. http://qtools.se/
+
+[4] Hönel, S., Ericsson, M., Löwe, W. and Wingkvist, A., 2019. Importance and Aptitude of Source code Density for Commit Classification into Maintenance Activities. In The 19th IEEE International Conference on Software Quality, Reliability, and Security.
