@@ -233,6 +233,7 @@ namespace GitDensity
 								.Where(kv => options.ProgrammingLanguages.Contains(kv.Key))
 								.SelectMany(kv => kv.Value),
 							options.TempDirectory,
+							options.SkipGitHoursAnalysis,
 							options.SkipGitMetricsAnalysis))
 						{
 							density.ExecutionPolicy = options.ExecutionPolicy;
