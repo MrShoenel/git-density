@@ -68,19 +68,24 @@ namespace Util.Data.Entities
 
 		private const double lookupEpsilonAccuracy = 1e-12;
 
+		private static readonly Object padlock = new Object();
+
 		private static ISet<MetricTypeEntity> cache = new HashSet<MetricTypeEntity>();
 
 		private static Boolean TryCache(out MetricTypeEntity mte, String name, Boolean isScore, Boolean isRoot, Boolean isPublic, Double accuracy, Boolean forceLookupAccuary = false)
 		{
-			mte = default(MetricTypeEntity);
-			if (cache.Count == 0)
+			lock (padlock)
 			{
-				return false;
+				mte = default(MetricTypeEntity);
+				if (cache.Count == 0)
+				{
+					return false;
+				}
+
+				mte = cache.Where(x => x.MetricName.Equals(name, StringComparison.InvariantCultureIgnoreCase) && x.IsScore == isScore && x.IsRoot == isRoot && x.IsPublic == isPublic && (!forceLookupAccuary || Math.Abs(x.Accuracy - accuracy) < lookupEpsilonAccuracy)).SingleOrDefault();
+
+				return mte is MetricTypeEntity;
 			}
-
-			mte = cache.Where(x => x.MetricName.Equals(name, StringComparison.InvariantCultureIgnoreCase) && x.IsScore == isScore && x.IsRoot == isRoot && x.IsPublic == isPublic && (!forceLookupAccuary || Math.Abs(x.Accuracy - accuracy) < lookupEpsilonAccuracy)).SingleOrDefault();
-
-			return mte is MetricTypeEntity;
 		}
 
 		/// <summary>
@@ -170,7 +175,10 @@ namespace Util.Data.Entities
 					mutex.ReleaseMutex();
 				}
 
-				cache.Add(mte);
+				lock (padlock)
+				{
+					cache.Add(mte);
+				}
 				return mte;
 			}
 		}
