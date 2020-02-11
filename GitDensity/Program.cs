@@ -119,7 +119,17 @@ namespace GitDensity
 
 					try
 					{
-						Program.Configuration = Configuration.ReadDefault();
+						if (!StringExtensions.IsNullOrEmptyOrWhiteSpace(options.ConfigFile))
+						{
+							logger.LogWarning($"Using a separate config-file located at {options.ConfigFile}");
+							Program.Configuration = Configuration.ReadFromFile(
+								Path.GetFullPath(options.ConfigFile));
+						}
+						else
+						{
+							Program.Configuration = Configuration.ReadDefault();
+						}
+
 						logger.LogDebug("Read the following configuration:\n{0}",
 							JsonConvert.SerializeObject(Program.Configuration, Formatting.Indented));
 					}
@@ -465,6 +475,9 @@ namespace GitDensity
 	{
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
+
+		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitDensity) + ".exe.")]
+		public String ConfigFile { get; set; }
 
 		/// <summary>
 		/// To obtains the actual <see cref="ICollection{ProgrammingLanguage}"/>s, use the

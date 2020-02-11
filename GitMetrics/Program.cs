@@ -33,6 +33,9 @@ using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using Configuration = Util.Configuration;
 using GitMetrics.QualityAnalyzer;
+using Util.Data;
+using Newtonsoft.Json.Converters;
+using LINQtoCSV;
 
 namespace GitMetrics
 {
@@ -87,20 +90,32 @@ namespace GitMetrics
 				// First let's create an actual temp-directory in the folder specified:
 				Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
 					options.TempDirectory ?? Path.GetTempPath(), nameof(GitMetrics)));
-				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
 				Configuration.TempDirectory.Create();
 				options.TempDirectory = Configuration.TempDirectory.FullName;
 				logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
 
 				Configuration configuration = null;
-				try {
-					configuration = Configuration.ReadDefault();
+				try
+				{
+					if (!StringExtensions.IsNullOrEmptyOrWhiteSpace(options.ConfigFile))
+					{
+						logger.LogWarning($"Using a separate config-file located at {options.ConfigFile}");
+						configuration = Configuration.ReadFromFile(
+							Path.GetFullPath(options.ConfigFile));
+					}
+					else
+					{
+						configuration = Configuration.ReadDefault();
+					}
+
 					logger.LogDebug("Read the following configuration:\n{0}",
 						JsonConvert.SerializeObject(configuration, Formatting.Indented));
 				}
-				catch (Exception ex)
+				catch
 				{
-					throw new IOException("Error reading the configuration. Perhaps try to generate and derive an example configuration (use '--help')", ex);
+					logger.LogError("Error reading the configuration. Perhaps try to generate and derive an example configuration (use 'GitDensity --help')");
+					Environment.Exit((int)ExitCodes.ConfigError);
 				}
 
 				Repository repository = null;
@@ -216,7 +231,10 @@ namespace GitMetrics
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
 		public String RepoPath { get; set; }
 
-		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
+		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitMetrics) + ".exe.")]
+		public String ConfigFile { get; set; }
+
+		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If the filename ends in 'csv', a CSV-file is produced. If it ends in 'json', a JSON-file is produced. If inconclusive, warns and writes CSV. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
 		public String OutputFile { get; set; }
 
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
