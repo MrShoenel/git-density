@@ -132,10 +132,24 @@ namespace GitMetrics
 				}
 
 
+				Boolean writeCsv = false, writeJson = false;
 				var outputToConsole = String.IsNullOrEmpty(options.OutputFile);
 				if (!outputToConsole)
 				{
 					logger.LogWarning($"Hello, this is {nameof(GitMetrics)}.");
+					writeCsv = options.OutputFile
+						.EndsWith("csv", StringComparison.OrdinalIgnoreCase);
+					writeJson = options.OutputFile
+						.EndsWith("json", StringComparison.OrdinalIgnoreCase);
+
+					if (!writeCsv && !writeJson)
+					{
+						logger.LogWarning("Outputfile specified, but no format. Assuming CSV.");
+					}
+					else
+					{
+						logger.LogInformation($"Writing output using {(writeCsv ? "CSV" : "JSON")} format.");
+					}
 				}
 				logger.LogDebug("You supplied the following arguments: {0}",
 					String.Join(", ", args.Select(a => $"'{a}'")));
@@ -153,22 +167,25 @@ namespace GitMetrics
 						ra.Analyze();
 						var foo = ra.Results.ToList();
 
+						var pathToWrite = outputToConsole ? Path.GetTempFileName() : options.OutputFile;
 
-
-						var start = DateTime.Now;
-						logger.LogDebug("Starting Analysis..");
-						var obj = JsonConvert.SerializeObject(new Object(), Formatting.Indented); /* JsonConvert.SerializeObject(gitHours.Analyze(
-							hoursSpansDetailLevel: options.IncludeHoursSpans ? Hours.HoursSpansDetailLevel.Standard : Hours.HoursSpansDetailLevel.None), Formatting.Indented);*/
-						if (outputToConsole)
+						if (writeCsv)
 						{
-							Console.Write(obj);
+							results.WriteCsv(pathToWrite);
 						}
 						else
 						{
-							File.WriteAllText(options.OutputFile, obj);
+							results.WriteJson(pathToWrite);
+						}
+
+						if (outputToConsole)
+						{
+							Console.Write(File.ReadAllText(pathToWrite));
+						}
+						else
+						{
 							logger.LogInformation("Wrote the result to file: {0}", options.OutputFile);
 						}
-						logger.LogDebug("Analysis took {0}", DateTime.Now - start);
 					}
 				}
 				catch (Exception ex)
