@@ -246,6 +246,10 @@ namespace GitMetrics
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]
 		public String TempDirectory { get; set; }
 
+		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public ExecutionPolicy ExecutionPolicy { get; set; }
+
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
@@ -270,6 +274,8 @@ namespace GitMetrics
 				AddDashesToOption = true,
 				MaximumDisplayWidth = ColoredConsole.WindowWidthSafe
 			};
+
+			ht.AddPreOptionsLine($"\nWelcome to {nameof(GitMetrics)} (standalone). This utility will help you to extract software metrics of a repository on a per-commit basis. If you need metrics on a per-file, per-commit basis, you need to run GitDensity with the metrics analysis enabled. This is because this standalone utility does not inspect each commit's affected files, but rather clones the target-repository for each commit, and then runs the metrics analysis.");
 
 			if (wasHelpRequested)
 			{
