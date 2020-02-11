@@ -184,8 +184,18 @@ namespace Util
 		/// <returns>An instance of <see cref="Configuration"/>.</returns>
 		public static Configuration ReadDefault()
 		{
+			return Configuration.ReadFromFile(DefaultConfigFilePath);
+		}
+
+		/// <summary>
+		/// Attempts to read a configuration from a given file.
+		/// </summary>
+		/// <param name="file"></param>
+		/// <returns>An instance of <see cref="Configuration"/>.</returns>
+		public static Configuration ReadFromFile(String file)
+		{
 			return JsonConvert.DeserializeObject<Configuration>(
-				File.ReadAllText(DefaultConfigFilePath));
+				File.ReadAllText(file));
 		}
 
 		/// <summary>

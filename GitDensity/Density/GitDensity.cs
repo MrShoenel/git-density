@@ -531,7 +531,9 @@ namespace GitDensity.Density
 				// We can go for parallelism here, but obtaining metrics is very expensive.
 				ExecutionPolicy = ExecutionPolicy.Parallel
 			};
+			metricsRepoAnalyzer.SelectAnalyzerImplementation();
 
+			logger.LogInformation($"Analyzing metrics for all commits.");
 			metricsRepoAnalyzer.Analyze();
 			foreach (var result in metricsRepoAnalyzer.Results)
 			{

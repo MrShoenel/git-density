@@ -13,8 +13,14 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using LINQtoCSV;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 
 namespace Util.Extensions
 {
@@ -76,6 +82,47 @@ namespace Util.Extensions
 				coll.Add(item);
 			}
 			return coll;
+		}
+
+		/// <summary>
+		/// Writes the items as JSON file, each item will become an entry in the
+		/// resulting array. The items in question should ideally use annotations,
+		/// such as <see cref="JsonArrayAttribute"/> or <see cref="JsonIgnoreAttribute"/>.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="items"></param>
+		/// <param name="outputFile"></param>
+		public static void WriteJson<T>(this IEnumerable<T> items, String outputFile)
+		{
+			using (var writer = File.CreateText(outputFile))
+			{
+				writer.Write(JsonConvert.SerializeObject(items, Formatting.Indented));
+			}
+		}
+
+		/// <summary>
+		/// Writes the items as CSV file, each item as a row. The items in question
+		/// should ideally use annotations, such as <see cref="CsvColumnAttribute"/>.
+		/// </summary>
+		/// <param name="items"></param>
+		/// <param name="outputFile"></param>
+		public static void WriteCsv<T>(this IEnumerable<T> items, String outputFile)
+		{
+			using (var writer = File.CreateText(outputFile))
+			{
+				// Now we extract some info and write it out later.
+				var csvc = new CsvContext();
+				var outd = new CsvFileDescription
+				{
+					FirstLineHasColumnNames = true,
+					FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+					SeparatorChar = ',',
+					QuoteAllFields = true,
+					EnforceCsvColumnAttribute = true
+				};
+
+				csvc.Write(items, writer, outd);
+			}
 		}
 	}
 }

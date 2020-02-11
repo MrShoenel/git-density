@@ -14,8 +14,13 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using LINQtoCSV;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Util.Data.Entities;
+using Util.Extensions;
 
 namespace GitMetrics.QualityAnalyzer
 {
@@ -59,5 +64,78 @@ namespace GitMetrics.QualityAnalyzer
 		/// </summary>
 		public IList<MetricEntity> Metrics { get; set; }
 			= new List<MetricEntity>();
+
+		#region As serializable
+		public class MetricsAnalysisResultSerializable
+		{
+			[JsonIgnore]
+			private readonly MetricsAnalysisResult mar;
+
+			[JsonIgnore]
+			private readonly MetricEntity metric;
+			protected internal MetricsAnalysisResultSerializable(
+				MetricsAnalysisResult mar, MetricEntity metric = null)
+			{
+				this.mar = mar;
+				this.metric = metric;
+			}
+
+			[CsvColumn(FieldIndex = 1)]
+			[JsonProperty(Required = Required.Always, PropertyName = "commitId", Order = 1)]
+			public String CommitId => this.mar.Commit.BaseObject.ShaShort(10);
+
+			[CsvColumn(FieldIndex = 2)]
+			[JsonProperty(Required = Required.Always, PropertyName = "status", Order = 2)]
+			public String Status => this.mar.CommitMetricsStatus.ToString();
+
+			[CsvColumn(FieldIndex = 3, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "scope", Order = 3)]
+			public String Scope => this.metric?.OutputEntityType.ToString();
+
+			[CsvColumn(FieldIndex = 4, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "metricName", Order = 4)]
+			public String MetricName => this.metric?.MetricType.MetricName;
+
+			[CsvColumn(FieldIndex = 5, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "metricValue", Order = 5)]
+			public Double? MetricValue => this.metric?.MetricValue;
+
+			[CsvColumn(FieldIndex = 6, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "isPublic", Order = 6)]
+			public Boolean? IsPublic => this.metric?.MetricType.IsPublic;
+
+			[CsvColumn(FieldIndex = 7, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "isRequired", Order = 7)]
+			public Boolean? IsScore => this.metric?.MetricType.IsScore;
+
+			[CsvColumn(FieldIndex = 8, CanBeNull = true)]
+			[JsonProperty(Required = Required.AllowNull, PropertyName = "isRoot", Order = 8)]
+			public Boolean? IsRoot => this.metric?.MetricType.IsRoot;
+		}
+
+		protected readonly Lazy<IEnumerable<MetricsAnalysisResultSerializable>> asSerializable;
+		public Lazy<IEnumerable<MetricsAnalysisResultSerializable>> AsSerializable =>
+			new Lazy<IEnumerable<MetricsAnalysisResultSerializable>>(() => this.asSerializable.Value);
+
+		public MetricsAnalysisResult()
+		{
+			this.asSerializable = new Lazy<IEnumerable<MetricsAnalysisResultSerializable>>(() =>
+			{
+				if (this.CommitMetricsStatus == CommitMetricsStatus.OK)
+				{
+					return this.Metrics.Select(metric =>
+					{
+						return new MetricsAnalysisResultSerializable(this, metric);
+					});
+				}
+				else
+				{
+					// If the metrics could not be obtained, return an entity that
+					// shows the commit-ID and the status at least.
+					return new MetricsAnalysisResultSerializable(this, null).AsEnumerable();
+				}
+			});
+		}
+		#endregion
 	}
 }

@@ -33,6 +33,9 @@ using Util.Logging;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using Configuration = Util.Configuration;
 using GitMetrics.QualityAnalyzer;
+using Util.Data;
+using Newtonsoft.Json.Converters;
+using LINQtoCSV;
 
 namespace GitMetrics
 {
@@ -87,20 +90,32 @@ namespace GitMetrics
 				// First let's create an actual temp-directory in the folder specified:
 				Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
 					options.TempDirectory ?? Path.GetTempPath(), nameof(GitMetrics)));
-				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.Delete(true); }
+				if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
 				Configuration.TempDirectory.Create();
 				options.TempDirectory = Configuration.TempDirectory.FullName;
 				logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
 
 				Configuration configuration = null;
-				try {
-					configuration = Configuration.ReadDefault();
+				try
+				{
+					if (!StringExtensions.IsNullOrEmptyOrWhiteSpace(options.ConfigFile))
+					{
+						logger.LogWarning($"Using a separate config-file located at {options.ConfigFile}");
+						configuration = Configuration.ReadFromFile(
+							Path.GetFullPath(options.ConfigFile));
+					}
+					else
+					{
+						configuration = Configuration.ReadDefault();
+					}
+
 					logger.LogDebug("Read the following configuration:\n{0}",
 						JsonConvert.SerializeObject(configuration, Formatting.Indented));
 				}
-				catch (Exception ex)
+				catch
 				{
-					throw new IOException("Error reading the configuration. Perhaps try to generate and derive an example configuration (use '--help')", ex);
+					logger.LogError("Error reading the configuration. Perhaps try to generate and derive an example configuration (use 'GitDensity --help')");
+					Environment.Exit((int)ExitCodes.ConfigError);
 				}
 
 				Repository repository = null;
@@ -132,10 +147,24 @@ namespace GitMetrics
 				}
 
 
+				Boolean writeCsv = false, writeJson = false;
 				var outputToConsole = String.IsNullOrEmpty(options.OutputFile);
 				if (!outputToConsole)
 				{
 					logger.LogWarning($"Hello, this is {nameof(GitMetrics)}.");
+					writeCsv = options.OutputFile
+						.EndsWith("csv", StringComparison.OrdinalIgnoreCase);
+					writeJson = options.OutputFile
+						.EndsWith("json", StringComparison.OrdinalIgnoreCase);
+
+					if (!writeCsv && !writeJson)
+					{
+						logger.LogWarning("Outputfile specified, but no format. Assuming CSV.");
+					}
+					else
+					{
+						logger.LogInformation($"Writing output using {(writeCsv ? "CSV" : "JSON")} format.");
+					}
 				}
 				logger.LogDebug("You supplied the following arguments: {0}",
 					String.Join(", ", args.Select(a => $"'{a}'")));
@@ -143,32 +172,54 @@ namespace GitMetrics
 
 				try
 				{
+					// We need to initialize a temporary database if GitMetrics
+					// is used standalone.
+					configuration.DatabaseType = DatabaseType.SQLiteTemp;
+					DataFactory.Configure(configuration,
+						Program.CreateLogger<DataFactory>(),
+						new DirectoryInfo(options.TempDirectory).FullName);
+					using (var tempSess = DataFactory.Instance.OpenSession())
+					{
+						logger.LogDebug("Successfully probed the temporary database.");
+					}
+
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
 						var repoEntity = repository.AsEntity(span);
 						var commitEntities = span.Select(commit => commit.AsEntity(repoEntity)).ToList();
-						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities);
-						ra.ExecutionPolicy = ExecutionPolicy.Linear;
-						ra.Analyze();
-						var foo = ra.Results.ToList();
-
-
+						logger.LogInformation($"Initializing Metrics Analyzer..");
+						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities)
+						{
+							ExecutionPolicy = options.ExecutionPolicy
+						};
+						ra.SelectAnalyzerImplementation();
 
 						var start = DateTime.Now;
 						logger.LogDebug("Starting Analysis..");
-						var obj = JsonConvert.SerializeObject(new Object(), Formatting.Indented); /* JsonConvert.SerializeObject(gitHours.Analyze(
-							hoursSpansDetailLevel: options.IncludeHoursSpans ? Hours.HoursSpansDetailLevel.Standard : Hours.HoursSpansDetailLevel.None), Formatting.Indented);*/
-						if (outputToConsole)
+						ra.Analyze();
+						logger.LogDebug("Analysis took {0}", DateTime.Now - start);
+
+						var results = ra.Results.SelectMany(r => r.AsSerializable.Value).ToList();
+						var pathToWrite = outputToConsole ? Path.GetTempFileName() : options.OutputFile;
+
+						if (writeCsv)
 						{
-							Console.Write(obj);
+							results.WriteCsv(pathToWrite);
 						}
 						else
 						{
-							File.WriteAllText(options.OutputFile, obj);
+							results.WriteJson(pathToWrite);
+						}
+
+						if (outputToConsole)
+						{
+							Console.Write(File.ReadAllText(pathToWrite));
+						}
+						else
+						{
 							logger.LogInformation("Wrote the result to file: {0}", options.OutputFile);
 						}
-						logger.LogDebug("Analysis took {0}", DateTime.Now - start);
 					}
 				}
 				catch (Exception ex)
@@ -199,7 +250,10 @@ namespace GitMetrics
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch.")]
 		public String RepoPath { get; set; }
 
-		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
+		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitMetrics) + ".exe.")]
+		public String ConfigFile { get; set; }
+
+		[Option('o', "output-file", Required = false, HelpText = "Optional. Path to write the result to. If the filename ends in 'csv', a CSV-file is produced. If it ends in 'json', a JSON-file is produced. If inconclusive, warns and writes CSV. If not specified, the result will be printed to std-out (and can be piped to a file manually).")]
 		public String OutputFile { get; set; }
 
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
@@ -210,6 +264,10 @@ namespace GitMetrics
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]
 		public String TempDirectory { get; set; }
+
+		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public ExecutionPolicy ExecutionPolicy { get; set; }
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
@@ -235,6 +293,8 @@ namespace GitMetrics
 				AddDashesToOption = true,
 				MaximumDisplayWidth = ColoredConsole.WindowWidthSafe
 			};
+
+			ht.AddPreOptionsLine($"\nWelcome to {nameof(GitMetrics)} (standalone). This utility will help you to extract software metrics of a repository on a per-commit basis. If you need metrics on a per-file, per-commit basis, you need to run GitDensity with the metrics analysis enabled. This is because this standalone utility does not inspect each commit's affected files, but rather clones the target-repository for each commit, and then runs the metrics analysis.");
 
 			if (wasHelpRequested)
 			{

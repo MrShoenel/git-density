@@ -119,7 +119,17 @@ namespace GitDensity
 
 					try
 					{
-						Program.Configuration = Configuration.ReadDefault();
+						if (!StringExtensions.IsNullOrEmptyOrWhiteSpace(options.ConfigFile))
+						{
+							logger.LogWarning($"Using a separate config-file located at {options.ConfigFile}");
+							Program.Configuration = Configuration.ReadFromFile(
+								Path.GetFullPath(options.ConfigFile));
+						}
+						else
+						{
+							Program.Configuration = Configuration.ReadDefault();
+						}
+
 						logger.LogDebug("Read the following configuration:\n{0}",
 							JsonConvert.SerializeObject(Program.Configuration, Formatting.Indented));
 					}
@@ -155,20 +165,6 @@ namespace GitDensity
 					{
 						logger.LogError(ex, ex.Message);
 						Environment.Exit((int)ExitCodes.RepoInvalid);
-					}
-				}
-
-				if (options.CmdRecomputeGitHours)
-				{
-					try
-					{
-						Program.RecomputeGitHours(options);
-						Environment.Exit((int)ExitCodes.OK);
-					}
-					catch (Exception ex)
-					{
-						logger.LogError(ex, ex.Message);
-						Environment.Exit((int)ExitCodes.CmdError);
 					}
 				}
 				#endregion
@@ -291,169 +287,6 @@ namespace GitDensity
 
 			Environment.Exit((int)ExitCodes.OK);
 		}
-
-
-		/// <summary>
-		/// This methods purpose was/is to recompute all configured git-hours for already analyzed
-		/// repositories. Currently, this method recomputes all repositories' git-hours. This method
-		/// should not be used anymore, unless there are manual changes to the database and new/other
-		/// types of configured git-hours (hours-types) and one needs to (re-)compute the hours for
-		/// the already analyzed repositories.
-		/// </summary>
-		/// <param name="options"></param>
-		[Obsolete]
-		protected internal static void RecomputeGitHours(CommandLineOptions options)
-		{
-			var parallelOptions = new ParallelOptions();
-			if (options.ExecutionPolicy == ExecutionPolicy.Linear)
-			{
-				parallelOptions.MaxDegreeOfParallelism = 1;
-			}
-
-			var toRepoName = new Func<RepositoryEntity, String>(re => $"{re.Project.Name}_{re.Project.Owner}");
-			var checkoutPath = $"R:\\{nameof(GitDensity)}_repos";
-			var hoursTypesEntities = Configuration.HoursTypes.ToDictionary(
-				htc => htc, htc =>
-				{
-					return HoursTypeEntity.ForSettings(htc.MaxDiff, htc.FirstCommitAdd);
-				});
-
-			List<UInt32> repoEntityIds;
-			using (var session = DataFactory.Instance.OpenSession())
-			{
-				repoEntityIds = session.QueryOver<RepositoryEntity>()
-					.Where(re => re.Project != null).List().Select(re => re.ID).ToList();
-			}
-
-			Parallel.ForEach(repoEntityIds, parallelOptions, repoEntityId =>
-			{
-				using (var session = DataFactory.Instance.OpenSession())
-				{
-					var start = DateTime.Now;
-					var repoEntity = session.QueryOver<RepositoryEntity>()
-						.Where(re => re.ID == repoEntityId).List()[0];
-
-					var useRepoName = toRepoName(repoEntity);
-					var checkoutDir = Path.Combine(checkoutPath, useRepoName);
-
-					try
-					{
-						#region conditional clone
-						if (Directory.Exists(checkoutDir))
-						{
-							logger.LogWarning($"Directory exists, skipping: {checkoutDir}");
-						}
-						else
-						{
-							logger.LogInformation("Cloning repository from {0}", repoEntity.Project.CloneUrl);
-							LibGit2Sharp.Repository.Clone(repoEntity.Project.CloneUrl, checkoutDir);
-						}
-
-						var repo = checkoutDir.OpenRepository(pullIfAlreadyExists: true,
-							useRepoName: useRepoName, tempDirectory: checkoutPath);
-						#endregion
-
-						#region compute git-hours
-						var gitCommitSpan = new GitCommitSpan(repo,
-							sinceDateTimeOrCommitSha: repoEntity.SinceCommitSha1,
-							untilDatetimeOrCommitSha: repoEntity.UntilCommitSha1);
-						var pairs = gitCommitSpan.CommitPairs().ToList();
-						var commits = repoEntity.Commits.ToDictionary(c => c.HashSHA1, c => c);
-
-						var developersRaw = gitCommitSpan.FilteredCommits
-							.GroupByDeveloperAsSignatures(repoEntity);
-						var developers = developersRaw.ToDictionary(
-							kv => kv.Key, kv =>
-							{
-								return repoEntity.Developers.Where(dev => dev.Equals(kv.Value)).Single();
-							});
-
-
-						foreach (var pair in pairs)
-						{
-							var gitHoursAnalysesPerDeveloperAndHoursType =
-								new ConcurrentDictionary<HoursTypeConfiguration, Dictionary<DeveloperEntity, IList<GitHoursAuthorSpan>>>();
-
-							// Run all Analysis for each Hours-Type:
-							Parallel.ForEach(Program.Configuration.HoursTypes, parallelOptions, hoursType =>
-							{
-								var addSuccess = gitHoursAnalysesPerDeveloperAndHoursType.TryAdd(hoursType,
-									new GitHours.Hours.GitHours(
-										gitCommitSpan, hoursType.MaxDiff, hoursType.FirstCommitAdd)
-											.Analyze(repoEntity, HoursSpansDetailLevel.Detailed)
-											.AuthorStats.ToDictionary(
-												@as => @as.Developer as DeveloperEntity, @as => @as.HourSpans));
-
-								if (!addSuccess)
-								{
-									throw new InvalidOperationException(
-										$"Cannot add Hours-Type {hoursType.ToString()}.");
-								}
-							});
-
-
-							// Check if Hours-type is already computed:
-							var numComputed = session.QueryOver<HoursEntity>()
-								.Where(he => he.Developer == developers[pair.Child.Author] && he.CommitUntil == commits[pair.Child.Sha]).RowCount();
-							if (numComputed == gitHoursAnalysesPerDeveloperAndHoursType.Keys.Count)
-							{
-								return; // nothing to do
-							}
-
-
-							foreach (var hoursType in gitHoursAnalysesPerDeveloperAndHoursType.Keys)
-							{
-								// We need this for every HoursEntity that we use; it is already saved
-								var hoursTypeEntity = hoursTypesEntities[hoursType];
-
-								var gitHoursAnalysesPerDeveloper =
-									gitHoursAnalysesPerDeveloperAndHoursType[hoursType];
-								var developerSpans = gitHoursAnalysesPerDeveloper[developers[pair.Child.Author]]
-									// OK because we analyzed with HoursSpansDetailLevel.Detailed
-									.Cast<GitHoursAuthorSpanDetailed>().ToList();
-								var hoursSpan = developerSpans.Where(hs => hs.Until == pair.Child).Single();
-
-
-								var hoursEntity = new HoursEntity
-								{
-									InitialCommit = commits[hoursSpan.InitialCommit.Sha],
-									CommitSince = hoursSpan.Since == null ? null : commits[hoursSpan.Since.Sha],
-									CommitUntil = commits[hoursSpan.Until.Sha],
-									Developer = developers[pair.Child.Author],
-									Hours = hoursSpan.Hours,
-									HoursTotal = developerSpans.Take(1 + developerSpans.IndexOf(hoursSpan))
-										.Select(hs => hs.Hours).Sum(),
-
-									HoursType = hoursTypeEntity,
-									IsInitial = hoursSpan.IsInitialSpan,
-									IsSessionInitial = hoursSpan.IsSessionInitialSpan
-								};
-								developers[pair.Child.Author].AddHour(hoursEntity);
-							}
-
-							using (var trans = session.BeginTransaction())
-							{
-								var hoursTemp = developers[pair.Child.Author].Hours.ToList();
-								foreach (var hour in hoursTemp)
-								{
-									session.Save(hour);
-								}
-								trans.Commit();
-							}
-						}
-						#endregion
-					}
-					catch (Exception)
-					{
-						File.AppendAllText(@"c:\users\admin\desktop\failed.txt", $"Repo failed: {repoEntity.ID} (Project: {repoEntity.Project.InternalId})\n");
-						logger.LogError($"Repo failed: {repoEntity.ID} (Project: {repoEntity.Project.InternalId})");
-					}
-
-					logger.LogInformation("Finished repo in {0}: {1}",
-						(DateTime.Now - start).ToString(), checkoutDir);
-				}
-			});
-		}
 	}
 
 
@@ -465,6 +298,9 @@ namespace GitDensity
 	{
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
+
+		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitDensity) + ".exe.")]
+		public String ConfigFile { get; set; }
 
 		/// <summary>
 		/// To obtains the actual <see cref="ICollection{ProgrammingLanguage}"/>s, use the
@@ -515,9 +351,6 @@ namespace GitDensity
 		#region Command-Options
 		[Option("cmd-delete-repo-id", Required = false, HelpText = "Command. Removes analysis results for an entire RepositoryEntity and all of its associated entities, then terminates the program.")]
 		public UInt32 DeleteRepoId { get; set; }
-
-		[Option("cmd-recompute-githours", Required = false, DefaultValue = false, HelpText = "Command. Run the method " + nameof(Program.RecomputeGitHours) + "(). If called, the application will only run this and ignore/do nothing else. This method was intended to recompute git-hours of already analyzed repos and should not be used anymore.")]
-		public Boolean CmdRecomputeGitHours { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
