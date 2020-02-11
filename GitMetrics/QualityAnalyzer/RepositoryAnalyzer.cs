@@ -56,6 +56,8 @@ namespace GitMetrics.QualityAnalyzer
 
 		public ConcurrentBag<MetricsAnalysisResult> Results { get; protected internal set; }
 
+		public String SelectedAnalyzerImplementation { get; protected internal set; }
+
 		public RepositoryAnalyzer(Configuration configuration, RepositoryEntity repository, IEnumerable<CommitEntity> commits)
 		{
 			this.Configuration = configuration;
@@ -64,7 +66,11 @@ namespace GitMetrics.QualityAnalyzer
 			this.Results = new ConcurrentBag<MetricsAnalysisResult>();
 		}
 
-		public void Analyze()
+		/// <summary>
+		/// Needs to be called before the Analysis using <see cref="Analyze"/>
+		/// is started.
+		/// </summary>
+		public void SelectAnalyzerImplementation()
 		{
 			String analyzerTypeName = null;
 
@@ -82,6 +88,19 @@ namespace GitMetrics.QualityAnalyzer
 				analyzerTypeName = this.Configuration.UseMetricsAnalyzer;
 			}
 
+			this.SelectedAnalyzerImplementation = analyzerTypeName;
+
+			logger.LogInformation(
+				$"Using Metrics Analyzer implementation: {this.SelectedAnalyzerImplementation}");
+		}
+
+		public void Analyze()
+		{
+			if (StringExtensions.IsNullOrEmptyOrWhiteSpace(this.SelectedAnalyzerImplementation))
+			{
+				throw new Exception($"No Analyzer was selected. Call {nameof(SelectAnalyzerImplementation)} to select one.");
+			}
+			var analyzerTypeName = this.SelectedAnalyzerImplementation;
 
 			var parallelOptions = new ParallelOptions();
 			if (this.ExecutionPolicy == ExecutionPolicy.Linear)
@@ -98,11 +117,12 @@ namespace GitMetrics.QualityAnalyzer
 					Configuration.TempDirectory.FullName);
 				try
 				{
+					logger.LogDebug($"Checking out repository at commit {commit.BaseObject.ShaShort()}");
 					Commands.Checkout(copyRepo, commit.BaseObject);
 				}
 				catch (Exception ex)
 				{
-					logger.LogError($"Cannot checkout commit #{commit.BaseObject.ShaShort()}: {ex.Message}", ex);
+					logger.LogError($"Cannot checkout commit {commit.BaseObject.ShaShort()}: {ex.Message}", ex);
 
 					this.Results.Add(new MetricsAnalysisResult
 					{

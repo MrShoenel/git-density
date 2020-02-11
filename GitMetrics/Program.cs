@@ -172,16 +172,35 @@ namespace GitMetrics
 
 				try
 				{
+					// We need to initialize a temporary database if GitMetrics
+					// is used standalone.
+					configuration.DatabaseType = DatabaseType.SQLiteTemp;
+					DataFactory.Configure(configuration,
+						Program.CreateLogger<DataFactory>(),
+						new DirectoryInfo(options.TempDirectory).FullName);
+					using (var tempSess = DataFactory.Instance.OpenSession())
+					{
+						logger.LogDebug("Successfully probed the temporary database.");
+					}
+
 					using (repository)
 					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
 					{
 						var repoEntity = repository.AsEntity(span);
 						var commitEntities = span.Select(commit => commit.AsEntity(repoEntity)).ToList();
-						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities);
-						ra.ExecutionPolicy = ExecutionPolicy.Linear;
-						ra.Analyze();
-						var foo = ra.Results.ToList();
+						logger.LogInformation($"Initializing Metrics Analyzer..");
+						var ra = new RepositoryAnalyzer(configuration, repoEntity, commitEntities)
+						{
+							ExecutionPolicy = options.ExecutionPolicy
+						};
+						ra.SelectAnalyzerImplementation();
 
+						var start = DateTime.Now;
+						logger.LogDebug("Starting Analysis..");
+						ra.Analyze();
+						logger.LogDebug("Analysis took {0}", DateTime.Now - start);
+
+						var results = ra.Results.SelectMany(r => r.AsSerializable.Value).ToList();
 						var pathToWrite = outputToConsole ? Path.GetTempFileName() : options.OutputFile;
 
 						if (writeCsv)
