@@ -143,10 +143,12 @@ namespace Util.Extensions
 			}
 			else
 			{
+				@string = Path.GetFullPath(@string);
 				// The string -supposedly- represents an accessible local path:
 				if (!Directory.Exists(@string))
 				{
-					throw new FileNotFoundException("The directory does not exist.", @string);
+					throw new FileNotFoundException(
+						$"The directory of the repository does not exist: {@string}", @string);
 				}
 
 				return new Repository(@string);
