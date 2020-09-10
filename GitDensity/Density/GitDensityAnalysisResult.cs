@@ -70,6 +70,13 @@ namespace GitDensity.Density
 					numEntities++;
 				}
 
+				logger.LogDebug("Inserting the Commits' keywords..");
+				foreach (var keywords in this.Repository.CommitsKeywords)
+				{
+					session.Insert(keywords);
+					numEntities++;
+				}
+
 				logger.LogDebug("Inserting the HoursEntities..");
 				foreach (var hour in this.Repository.Developers.SelectMany(dev => dev.Hours))
 				{
@@ -144,29 +151,38 @@ namespace GitDensity.Density
 					$"{fullLine}`- Repositories:\t\t1\n" +
 					"`- Developers:\t\t\t{1}\n" +
 					"`- Commits:\t\t\t{2}\n" +
-					"`- Git-Hours:\t\t\t{3}\n" +
-					"`- CommitPairs:\t\t\t{4}\n" +
-					"`- TreeEntryChanges:\t\t{5}\n" +
-					"`- TreeEntryChangesMetrics:\t{6}\n" +
-					"`- TreeEntryContributions:\t{}\n" +
-					"`- FileBlocks:\t\t\t{7} ({8} modified)\n" +
-					"`- Similarities:\t\t{9}\n" +
-					"`- MetricsStatuses:\t\t{10}\n" +
-					"`- Metrics:\t\t\t{11}\n" + fullLine +
-					"\t\t\t\t{12} total\n" + fullLine,
+					"`- CommitsKeywords:\t\t{3}\n" +
+					"`- Git-Hours:\t\t\t{4}\n" +
+					"`- CommitPairs:\t\t\t{5}\n" +
+					"`- TreeEntryChanges:\t\t{6}\n" +
+					"`- TreeEntryChangesMetrics:\t{7}\n" +
+					"`- TreeEntryContributions:\t{8}\n" +
+					"`- FileBlocks:\t\t\t{9} ({10} added / {11} deleted / {12} modified)\n" +
+
+					"`- Similarities:\t\t{13}\n" +
+					"`- MetricsStatuses:\t\t{14}\n" +
+					"`- Metrics:\t\t\t{15}\n" + fullLine +
+					"\t\t\t\t{16} total\n" + fullLine,
 					numEntities,
 					this.Repository.Developers.Count,
 					this.Repository.Commits.Count,
+					this.Repository.CommitsKeywords.Count,
 					this.Repository.Developers.SelectMany(dev => dev.Hours).Count(),
 					this.Repository.CommitPairs.Count,
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges).Count(),
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges.SelectMany(tec
 						=> tec.TreeEntryChangesMetrics)).Count(),
 					this.Repository.TreeEntryContributions.Count,
+
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
 						.SelectMany(tec => tec.FileBlocks).Count(),
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
+						.SelectMany(tec => tec.FileBlocks).Where(fb => fb.FileBlockType == FileBlockType.Added).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
+						.SelectMany(tec => tec.FileBlocks).Where(fb => fb.FileBlockType == FileBlockType.Deleted).Count(),
+					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
 						.SelectMany(tec => tec.FileBlocks).Where(fb => fb.FileBlockType == FileBlockType.Modified).Count(),
+
 					this.Repository.CommitPairs.SelectMany(cp => cp.TreeEntryChanges)
 						.SelectMany(tec => tec.FileBlocks.SelectMany(fb => fb.Similarities)).Count(),
 					this.Repository.CommitMetricsStatuses.Count,
