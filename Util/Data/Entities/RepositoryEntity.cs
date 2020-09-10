@@ -46,6 +46,9 @@ namespace Util.Data.Entities
 		public virtual ISet<CommitEntity> Commits { get; set; }
 			= new HashSet<CommitEntity>();
 
+		public virtual ISet<CommitKeywordsEntity> CommitsKeywords { get; set; }
+			= new HashSet<CommitKeywordsEntity>();
+
 		public virtual ISet<CommitMetricsStatusEntity> CommitMetricsStatuses { get; set; }
 			= new HashSet<CommitMetricsStatusEntity>();
 
@@ -90,6 +93,24 @@ namespace Util.Data.Entities
 			foreach (var commit in commits)
 			{
 				this.AddCommit(commit);
+			}
+			return this;
+		}
+
+		public virtual RepositoryEntity AddCommitKeywords(CommitKeywordsEntity commitKeywords)
+		{
+			lock (padLock)
+			{
+				this.CommitsKeywords.Add(commitKeywords);
+				return this;
+			}
+		}
+
+		public virtual RepositoryEntity AddCommitsKeywords(IEnumerable<CommitKeywordsEntity> commitsKeywords)
+		{
+			foreach (var commitKeywords in commitsKeywords)
+			{
+				this.AddCommitKeywords(commitKeywords);
 			}
 			return this;
 		}
@@ -162,6 +183,16 @@ namespace Util.Data.Entities
 				if (!(repo is RepositoryEntity))
 				{
 					throw new ArgumentException($"There is no Repository with ID {repositoryEntityId}");
+				}
+
+				using (var trans = session.BeginTransaction())
+				{
+					foreach (var keywords in repo.CommitsKeywords)
+					{
+						session.Delete(keywords);
+					}
+					trans.Commit();
+					logger.LogWarning("Deleted all commits' keywords.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -241,6 +272,7 @@ namespace Util.Data.Entities
 						session.Delete(commitPair);
 					}
 					trans.Commit();
+					logger.LogWarning("Deleted all CommitPairs.");
 				}
 
 				using (var trans = session.BeginTransaction())
@@ -307,6 +339,7 @@ namespace Util.Data.Entities
 
 			this.HasMany<DeveloperEntity>(x => x.Developers).Cascade.Lock();
 			this.HasMany<CommitEntity>(x => x.Commits).Cascade.Lock();
+			this.HasMany<CommitKeywordsEntity>(x => x.CommitsKeywords).Cascade.Lock();
 			this.HasMany<CommitPairEntity>(x => x.CommitPairs).Cascade.Lock();
 			this.HasMany<TreeEntryContributionEntity>(x => x.TreeEntryContributions).Cascade.Lock();
 			this.HasMany<CommitMetricsStatusEntity>(x => x.CommitMetricsStatuses).Cascade.Lock();
