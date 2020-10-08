@@ -27,6 +27,9 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using Signature = LibGit2Sharp.Signature;
+using Renci.SshNet.Common;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Util.Extensions
 {
@@ -422,7 +425,7 @@ namespace Util.Extensions
 		}
 
 		/// <summary>
-		/// Similar to <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit}, RepositoryEntity)"/>, this
+		/// Similar to <see cref="GroupByDeveloperToSignatures(IEnumerable{Commit}, RepositoryEntity, bool)"/>, this
 		/// method returns a mapping from each <see cref="LibGit2Sharp.Signature"/> to a
 		/// <see cref="DeveloperEntity"/>. More than one <see cref="LibGit2Sharp.Signature"/>
 		/// can point to the same <see cref="DeveloperEntity"/>.
@@ -487,6 +490,102 @@ namespace Util.Extensions
 			{
 				fieldContentChangesStringBuilder.SetValue(pec, null);
 			}
+		}
+
+
+		/// <summary>
+		/// Collection of identical, yet differently located repositories. This is
+		/// useful for when concurrent, yet mutually exclusive operations on a single
+		/// <see cref="LibGit2Sharp.Repository"/> need to be performed.
+		/// </summary>
+		public class RepositoryBundleCollection : LoanCollection<Repository>
+		{
+			/// <summary>
+			/// A reference to the original <see cref="LibGit2Sharp.Repository"/> that can
+			/// be used to add instances to this collection.
+			/// </summary>
+			public Repository Repository { get; private set; }
+
+			/// <summary>
+			/// If true, then, on dispose of this collection, all items owned
+			/// by it will also be disposed by calling their <see cref="Repository.Dispose"/> method.
+			/// </summary>
+			public virtual Boolean DeleteClonedReposAfterwards { get; set; }
+
+			/// <summary>
+			/// Creates a new bundle collection.
+			/// </summary>
+			/// <param name="repository"></param>
+			/// <param name="deleteClonedReposAfterwards"></param>
+			public RepositoryBundleCollection(Repository repository, bool deleteClonedReposAfterwards = true)
+				: base()
+			{
+				this.Repository = repository;
+				this.DeleteClonedReposAfterwards = deleteClonedReposAfterwards;
+			}
+
+			#region Dispose
+			private readonly Object disposeLock = new Object();
+			/// <summary>
+			/// Disposes this collection and conditionally all its items, by deleting
+			/// the repositories on disk first and then disposing the related object.
+			/// Lastly, calls <see cref="LoanCollection{T}.Dispose"/>.
+			/// </summary>
+			/// <param name="disposing"></param>
+			protected override sealed void Dispose(bool disposing)
+			{
+				lock (this.disposeLock)
+				{
+					if (!this.wasDisposed)
+					{
+						if (disposing)
+						{
+							foreach (var loanableItem in this)
+							{
+								try
+								{
+									if (this.DeleteClonedReposAfterwards)
+									{
+										var repo = loanableItem.Item;
+										var repoPath = repo.Info.WorkingDirectory;
+										repo.Dispose();
+										new DirectoryInfo(repoPath).TryDelete();
+									}
+								}
+								catch { }
+							}
+						}
+
+						base.Dispose(disposing);
+					}
+				}
+			}
+			#endregion
+		}
+
+		/// <summary>
+		/// Create a collection of identical repositories that are differently
+		/// located, so that mutually exclusive concurrent operations can be
+		/// carried out on each instance independently. Uses <see cref="BundleAndCloneTo(Repository, string)"/>
+		/// to create identical instances. See <see cref="RepositoryBundleCollection"/> and <see cref="LoanCollection{T}"/>.
+		/// </summary>
+		/// <param name="repository"></param>
+		/// <param name="targetPath"></param>
+		/// <param name="numInstances"></param>
+		/// <param name="deleteClonedReposAfterwards">Defaults to true. Upon disposal of the collection, all the repositories will be destroyed.</param>
+		/// <returns></returns>
+		public static RepositoryBundleCollection CreateBundleCollection(
+			this Repository repository, String targetPath, UInt16 numInstances, Boolean deleteClonedReposAfterwards = true)
+		{
+			var rbc = new RepositoryBundleCollection(
+				repository, deleteClonedReposAfterwards: deleteClonedReposAfterwards);
+
+			Parallel.ForEach(Enumerable.Range(0, numInstances), _ =>
+			{
+				rbc.Add(repository.BundleAndCloneTo(targetPath));
+			});
+
+			return rbc;
 		}
 
 		/// <summary>
