@@ -63,7 +63,7 @@ namespace GitTools
 			};
 		}
 
-		private static BaseLogger<Program> logger = CreateLogger<Program>();
+		private static readonly BaseLogger<Program> logger = CreateLogger<Program>();
 
 		/// <summary>
 		/// Main entry point for application.
