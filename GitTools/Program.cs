@@ -156,7 +156,7 @@ namespace GitTools
 						}
 
 						var span = new GitCommitSpan(
-							repo, options.Since, options.Until, options.Limit, sha1IDs);
+							repo, options.Since, options.Until, options.Limit, sha1IDs, options.SinceUseDate, options.UntilUseDate);
 						if (span.SHA1Filter.Count > 0)
 						{
 							logger.LogTrace($"Using the following commit-IDs for the {nameof(GitCommitSpan)}: {String.Join(", ", span.SHA1Filter)}");
@@ -185,6 +185,7 @@ namespace GitTools
 						}
 						#endregion
 
+						using (span)
 						using (var writer = File.CreateText(options.OutputFile))
 						{
 							// Now we extract some info and write it out later.
@@ -218,11 +219,11 @@ namespace GitTools
 							logger.LogInformation("Analysis done, attempting to write to CSV..");
 							if (options.AnalysisType == AnalysisType.Simple)
 							{
-								csvc.Write(details.Cast<SimpleCommitDetails>(), writer, outd);
+								csvc.Write(details.Cast<SimpleCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
 							}
 							else if (options.AnalysisType == AnalysisType.Extended)
 							{
-								csvc.Write(details.Cast<ExtendedCommitDetails>(), writer, outd);
+								csvc.Write(details.Cast<ExtendedCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
 							}
 
 							logger.LogInformation($"Wrote {details.Count} rows to file {options.OutputFile}.");
@@ -349,21 +350,29 @@ namespace GitTools
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
 
+		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
+		public String OutputFile { get; set; }
+
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
 		public String TempDirectory { get; set; }
 
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
+		[Option("since-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using a since-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate SinceUseDate { get; set; }
+
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
+
+		[Option("until-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using an until-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate UntilUseDate { get; set; }
 
 		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Extended, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public AnalysisType AnalysisType { get; set; } = AnalysisType.Extended;
-
-		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
-		public String OutputFile { get; set; }
 
 		[Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
 		public Boolean SkipSizeInExtendedAnalysis { get; set; }
