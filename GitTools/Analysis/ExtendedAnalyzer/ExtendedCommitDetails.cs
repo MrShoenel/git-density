@@ -40,7 +40,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// Overridden to return the entire commit message, which is potentially multi-line.
 		/// Line-breaks are substituted with single spaces.
 		/// </summary>
-		[CsvColumn(FieldIndex = 8)]
+		[CsvColumn(FieldIndex = 9)]
 		public override string Message
 			=> RegexNewLines.Replace(base.commit.Message, " ").Replace('"', ' ').Trim();
 		#endregion
@@ -50,74 +50,74 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// For initial commits (without parent), this field has a negative value (i.e. -.1)
 		/// to make it easier to distinguish from other commits' values.
 		/// </summary>
-		[CsvColumn(FieldIndex = 7)]
+		[CsvColumn(FieldIndex = 10)]
 		public double MinutesSincePreviousCommit { get; protected internal set; } = -.1;
 
-		[CsvColumn(FieldIndex = 11)]
+		[CsvColumn(FieldIndex = 13)]
 		public String AuthorNominalLabel { get; protected internal set; } = String.Empty;
 
-		[CsvColumn(FieldIndex = 12)]
+		[CsvColumn(FieldIndex = 14)]
 		public String CommitterNominalLabel { get; protected internal set; } = String.Empty;
 
-		[CsvColumn(FieldIndex = 17)]
+		[CsvColumn(FieldIndex = 19)]
 		public UInt32 NumberOfFilesAdded { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 18)]
+		[CsvColumn(FieldIndex = 20)]
 		public UInt32 NumberOfFilesAddedNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 19)]
+		[CsvColumn(FieldIndex = 21)]
 		public UInt32 NumberOfLinesAddedByAddedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 20)]
+		[CsvColumn(FieldIndex = 22)]
 		public UInt32 NumberOfLinesAddedByAddedFilesNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 21)]
+		[CsvColumn(FieldIndex = 23)]
 		public UInt32 NumberOfFilesDeleted { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 22)]
+		[CsvColumn(FieldIndex = 24)]
 		public UInt32 NumberOfFilesDeletedNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 23)]
+		[CsvColumn(FieldIndex = 25)]
 		public UInt32 NumberOfLinesDeletedByDeletedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 24)]
+		[CsvColumn(FieldIndex = 26)]
 		public UInt32 NumberOfLinesDeletedByDeletedFilesNet { get; protected internal set; } = 0u;
 
 
-		[CsvColumn(FieldIndex = 25)]
+		[CsvColumn(FieldIndex = 27)]
 		public UInt32 NumberOfFilesModified { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 26)]
+		[CsvColumn(FieldIndex = 28)]
 		public UInt32 NumberOfFilesModifiedNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 27)]
+		[CsvColumn(FieldIndex = 29)]
 		public UInt32 NumberOfFilesRenamed { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 28)]
+		[CsvColumn(FieldIndex = 30)]
 		public UInt32 NumberOfFilesRenamedNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 29)]
+		[CsvColumn(FieldIndex = 31)]
 		public UInt32 NumberOfLinesAddedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 30)]
+		[CsvColumn(FieldIndex = 32)]
 		public UInt32 NumberOfLinesAddedByModifiedFilesNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 31)]
+		[CsvColumn(FieldIndex = 33)]
 		public UInt32 NumberOfLinesDeletedByModifiedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 32)]
+		[CsvColumn(FieldIndex = 34)]
 		public UInt32 NumberOfLinesDeletedByModifiedFilesNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 33)]
+		[CsvColumn(FieldIndex = 35)]
 		public UInt32 NumberOfLinesAddedByRenamedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 34)]
+		[CsvColumn(FieldIndex = 36)]
 		public UInt32 NumberOfLinesAddedByRenamedFilesNet { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 35)]
+		[CsvColumn(FieldIndex = 37)]
 		public UInt32 NumberOfLinesDeletedByRenamedFiles { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 36)]
+		[CsvColumn(FieldIndex = 38)]
 		public UInt32 NumberOfLinesDeletedByRenamedFilesNet { get; protected internal set; } = 0u;
 		#endregion
 
@@ -126,7 +126,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// Returns the ratio between all lines added/removed gross and all lines
 		/// added/removed net ([0,1]).
 		/// </summary>
-		[CsvColumn(FieldIndex = 37)]
+		[CsvColumn(FieldIndex = 39)]
 		public Double Density
 		{
 			get
@@ -154,7 +154,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 		/// the amount of files affected net (an affected file is one that had
 		/// more than zero lines net added/deleted after).
 		/// </summary>
-		[CsvColumn(FieldIndex = 38)]
+		[CsvColumn(FieldIndex = 40)]
 		public Double AffectedFilesRatioNet
 		{
 			get
