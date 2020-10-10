@@ -27,6 +27,27 @@ using Util.Extensions;
 namespace Util
 {
 	/// <summary>
+	/// When using since and/or until in a <see cref="GitCommitSpan"/> or other supporting
+	/// types, the <see cref="DateTime"/> can be extracted from either the author or the
+	/// commiter, as a <see cref="Commit"/> has two signatures, <see cref="Commit.Author"/>
+	/// and <see cref="Commit.Committer"/>.
+	/// </summary>
+	public enum SinceUntilUseDate
+	{
+		/// <summary>
+		/// Use the <see cref="DateTime"/> of when the commit was authored.
+		/// </summary>
+		Author = 1,
+
+		/// <summary>
+		/// Use the <see cref="DateTime"/> of when then commit was incorporated (merged, rebased,
+		/// cherry-picked etc.).
+		/// </summary>
+		Committer = 2
+	}
+
+
+	/// <summary>
 	/// Represents a segment that spans from a point in time or <see cref="Commit"/>
 	/// to another point in time or <see cref="Commit"/> and thus represents a range
 	/// of <see cref="Commit"/>s.
@@ -82,6 +103,12 @@ namespace Util
 		[JsonProperty(NullValueHandling = NullValueHandling.Include, Order = 4)]
 		public String UntilCommitSha { get; private set; }
 
+		[JsonProperty(Order = 5)]
+		public SinceUntilUseDate SinceUseDate { get; private set; } = SinceUntilUseDate.Committer;
+
+		[JsonProperty(Order = 6)]
+		public SinceUntilUseDate UntilUseDate { get; private set; } = SinceUntilUseDate.Committer;
+
 		[JsonIgnore]
 		public String SinceAsString =>
 			this.SinceDateTime.HasValue ? this.SinceDateTime.ToString() :
@@ -97,7 +124,7 @@ namespace Util
 		/// with since/until, this can be a powerful tool to retrieve a certain amount
 		/// of commits using offsets. Note that the limit is applied after the filter.
 		/// </summary>
-		[JsonProperty(NullValueHandling = NullValueHandling.Include, Order = 5)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Include, Order = 7)]
 		public UInt32? Limit { get; private set; }
 
 		[JsonIgnore]
@@ -106,7 +133,7 @@ namespace Util
 		/// A set of SHA1 that can be set to limit this <see cref="GitCommitSpan"/> even
 		/// beyond any since/until constraints. Defaults to an empty set.
 		/// </summary>
-		[JsonProperty(NullValueHandling = NullValueHandling.Include, Order = 6)]
+		[JsonProperty(NullValueHandling = NullValueHandling.Include, Order = 8)]
 		public ReadOnlySet<String> SHA1Filter => this.sha1Filter;
 
 		/// <summary>
@@ -140,12 +167,23 @@ namespace Util
 		/// <see cref="DateTime.MaxValue"/> for <see cref="UntilDateTime"/>.</param>
 		/// <param name="limit"></param>
 		/// <param name="sha1IDs"></param>
-		public GitCommitSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null, UInt32? limit = null, ISet<String> sha1IDs = null)
+		/// <param name="sinceUseDate"></param>
+		/// <param name="untilUseDate"></param>
+		public GitCommitSpan(Repository repository, String sinceDateTimeOrCommitSha = null, String untilDatetimeOrCommitSha = null, UInt32? limit = null, ISet<String> sha1IDs = null, SinceUntilUseDate? sinceUseDate = null, SinceUntilUseDate? untilUseDate = null)
 		{
 			this.Repository = repository;
 			this.Limit = limit;
 			this.sha1Filter = new ReadOnlySet<String>(new HashSet<String>(
 				(sha1IDs ?? Enumerable.Empty<String>()).Select(v => v.Trim().ToLower())));
+
+			if (sinceUseDate.HasValue)
+			{
+				this.SinceUseDate = sinceUseDate.Value;
+			}
+			if (untilUseDate.HasValue)
+			{
+				this.UntilUseDate = untilUseDate.Value;
+			}
 
 			var ic = CultureInfo.InvariantCulture;
 
@@ -202,13 +240,21 @@ namespace Util
 					ie = ie.Take((Int32)this.Limit.Value);
 				}
 
+				Func<Commit, DateTimeOffset> authorSelector = c => c.Author.When,
+					committerSelector = c => c.Committer.When;
+
+				var signatureSinceWhenSelector = this.SinceUseDate == SinceUntilUseDate.Author ?
+					authorSelector : committerSelector;
+				var signatureUntilWhenSelector = this.UntilUseDate == SinceUntilUseDate.Author ?
+					authorSelector : committerSelector;
+
 				var orderedOldToNew = new List<Commit>(ie);
 
 				var idxSince = orderedOldToNew.FindIndex(commit =>
 				{
 					if (this.SinceDateTime.HasValue)
 					{
-						return commit.Committer.When.UtcDateTime >= this.SinceDateTime;
+						return signatureSinceWhenSelector(commit).UtcDateTime >= this.SinceDateTime;
 					}
 					else if (this.SinceCommitSha != null)
 					{
@@ -219,7 +265,7 @@ namespace Util
 				});
 
 				var idxUntil = this.UntilDateTime.HasValue ?
-					orderedOldToNew.TakeWhile(commit => commit.Committer.When.UtcDateTime <= this.UntilDateTime).Count() - 1
+					orderedOldToNew.TakeWhile(commit => signatureUntilWhenSelector(commit).UtcDateTime <= this.UntilDateTime).Count() - 1
 					:
 					orderedOldToNew.FindIndex(commit => commit.Sha.StartsWith(this.UntilCommitSha, StringComparison.InvariantCultureIgnoreCase));
 
