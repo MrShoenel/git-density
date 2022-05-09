@@ -29,7 +29,7 @@ namespace Util.Logging
 	public abstract class BaseLogger<T> : ILogger<T>, IDisposable
 	{
 		/// <summary>
-		/// A dictionary will all runtime-types. The logger can log the current type.
+		/// A dictionary with all runtime-types. The logger can log the current type.
 		/// </summary>
 		protected static Lazy<IDictionary<Type, String>> lazyLoadedTypes = new Lazy<IDictionary<Type, String>>(() =>
 		{

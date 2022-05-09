@@ -175,17 +175,20 @@ namespace GitTools
 								SHA1s = commits.Select(c => c.ShaShort())
 							});
 
-							using (var writer = File.CreateText(options.OutputFile))
+							using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
+								Console.Out : File.CreateText(options.OutputFile))
 							{
 								writer.Write(json);
 							}
-
-							logger.LogInformation($"Wrote JSON to {options.OutputFile}");
+							logger.LogInformation($"Wrote JSON to {(String.IsNullOrWhiteSpace(options.OutputFile) ? "console" : options.OutputFile)}.");
 							Environment.Exit((int)ExitCodes.OK);
 						}
 						#endregion
 
-						using (var writer = File.CreateText(options.OutputFile))
+
+						using (span)
+						using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
+								Console.Out : File.CreateText(options.OutputFile))
 						{
 							// Now we extract some info and write it out later.
 							var csvc = new CsvContext();
@@ -195,7 +198,8 @@ namespace GitTools
 								FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
 								SeparatorChar = ',',
 								QuoteAllFields = true,
-								EnforceCsvColumnAttribute = true
+								EnforceCsvColumnAttribute = true,
+								TextEncoding = System.Text.Encoding.UTF8
 							};
 
 							IAnalyzer<IAnalyzedCommit> analyzer = null;
@@ -349,6 +353,9 @@ namespace GitTools
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
 
+		[Option('o', "out-file", Required = false, HelpText = "A path to a file to write the analysis' result to. If left unspecified, output is written to the console.")]
+		public String OutputFile { get; set; }
+
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
 		public String TempDirectory { get; set; }
 
@@ -361,9 +368,6 @@ namespace GitTools
 		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Extended, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public AnalysisType AnalysisType { get; set; } = AnalysisType.Extended;
-
-		[Option('o', "out-file", Required = true, HelpText = "A path to a file to write the analysis' result to.")]
-		public String OutputFile { get; set; }
 
 		[Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
 		public Boolean SkipSizeInExtendedAnalysis { get; set; }
