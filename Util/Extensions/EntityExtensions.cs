@@ -144,10 +144,12 @@ namespace Util.Extensions
 		/// <param name="commit"></param>
 		/// <param name="repositoryEntity"></param>
 		/// <param name="developerEntity"></param>
+		/// <param name="keywordsEntity"></param>
 		/// <param name="addToRepository"></param>
 		/// <param name="addToDeveloper"></param>
+		/// <param name="addToKeywords"></param>
 		/// <returns></returns>
-		public static CommitEntity AsEntity(this Commit commit, RepositoryEntity repositoryEntity = null, DeveloperEntity developerEntity = null, Boolean addToRepository = true, Boolean addToDeveloper = true)
+		public static CommitEntity AsEntity(this Commit commit, RepositoryEntity repositoryEntity = null, DeveloperEntity developerEntity = null, CommitKeywordsEntity keywordsEntity = null, Boolean addToRepository = true, Boolean addToDeveloper = true, Boolean addToKeywords = true)
 		{
 			var entity = new CommitEntity
 			{
@@ -159,9 +161,18 @@ namespace Util.Extensions
 				Developer = developerEntity
 			};
 
+			// If the Keywords do not yet exist, we create them.
+			keywordsEntity = keywordsEntity ?? CommitKeywordsEntity.FromCommit(commit);
+			if (addToKeywords)
+			{
+				keywordsEntity.Commit = entity;
+				keywordsEntity.Repository = repositoryEntity;
+			}
+
 			if (addToRepository && repositoryEntity is RepositoryEntity)
 			{
 				repositoryEntity.AddCommit(entity);
+				repositoryEntity.AddCommitKeywords(keywordsEntity);
 			}
 			if (addToDeveloper && developerEntity is DeveloperEntity)
 			{

@@ -71,7 +71,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 
 		#region Nominal Signatures
 		/// <summary>
-		/// Will map each <see cref="Signature"/> uniquely to a <see cref="DeveloperEntity"/>.
+		/// Will map each <see cref="LibGit2Sharp.Signature"/> uniquely to a <see cref="DeveloperEntity"/>.
 		/// Then, for each entity, a unique ID (within the current repository) is assigned. The
 		/// IDs look like Excel columns.
 		/// </summary>

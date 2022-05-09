@@ -78,26 +78,28 @@ namespace GitDensity
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 			var options = new CommandLineOptions();
+			var optionsParseSuccess = Parser.Default.ParseArguments(args, options) && options.TryValidate();
 
-			if (Parser.Default.ParseArguments(args, options) && options.TryValidate())
+			#region Check some commands first
+			if (options.ShowHelp)
+			{
+				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
+				logger.LogInformation(options.GetUsage(wasHelpRequested: true));
+				Environment.Exit((int)ExitCodes.OK);
+			}
+			else if (options.WriteExampeConfig || !File.Exists(Configuration.DefaultConfigFilePath))
+			{
+				logger.LogCritical("Writing example to file: {0}", Configuration.DefaultConfigFilePath);
+				Configuration.WriteDefault();
+				Environment.Exit((int)ExitCodes.OK);
+			}
+			#endregion
+
+			if (optionsParseSuccess)
 			{
 				#region Initialize, DataFactory, temp-dir etc.
 				Program.LogLevel = options.LogLevel;
 				logger.LogLevel = options.LogLevel;
-
-				if (options.ShowHelp)
-				{
-					logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
-					Environment.Exit((int)ExitCodes.OK);
-				}
-				else if (options.WriteExampeConfig || !File.Exists(Configuration.DefaultConfigFilePath))
-				{
-					logger.LogCritical("Writing example to file: {0}", Configuration.DefaultConfigFilePath);
-					Configuration.WriteDefault();
-					Environment.Exit((int)ExitCodes.OK);
-				}
-
 
 				logger.LogWarning("Hello, this is GitDensity.");
 				logger.LogDebug("You supplied the following arguments: {0}",
@@ -345,10 +347,10 @@ namespace GitDensity
 		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
+		#region Command-Options
 		[Option("cmd-write-config", Required = false, DefaultValue = false, HelpText = "Command. If present, writes an exemplary 'configuration.json' file to the binary's location. Note that this will overwrite a may existing file. The program will terminate afterwards.")]
 		public Boolean WriteExampeConfig { get; set; }
 
-		#region Command-Options
 		[Option("cmd-delete-repo-id", Required = false, HelpText = "Command. Removes analysis results for an entire RepositoryEntity and all of its associated entities, then terminates the program.")]
 		public UInt32 DeleteRepoId { get; set; }
 		#endregion
