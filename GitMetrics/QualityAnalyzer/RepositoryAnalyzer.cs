@@ -19,9 +19,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
@@ -112,39 +110,44 @@ namespace GitMetrics.QualityAnalyzer
 				parallelOptions.MaxDegreeOfParallelism = Environment.ProcessorCount / 2;
 			}
 
-			Parallel.ForEach(this.CommitEntities, parallelOptions, commit => {
-				var copyRepo = this.Repository.BundleAndCloneTo(
-					Configuration.TempDirectory.FullName);
-				try
-				{
-					logger.LogDebug($"Checking out repository at commit {commit.BaseObject.ShaShort()}");
-					Commands.Checkout(copyRepo, commit.BaseObject);
-				}
-				catch (Exception ex)
-				{
-					logger.LogError($"Cannot checkout commit {commit.BaseObject.ShaShort()}: {ex.Message}", ex);
-
-					this.Results.Add(new MetricsAnalysisResult
+			using (var repoBundleCollection = this.Repository.CreateBundleCollection(
+				targetPath: Configuration.TempDirectory.FullName,
+				numInstances: (UInt16)parallelOptions.MaxDegreeOfParallelism,
+				deleteClonedReposAfterwards: this.DeleteClonedRepoAfterwards
+			)) {
+				Parallel.ForEach(this.CommitEntities, parallelOptions, commit => {
+					using (var loanedRepo = repoBundleCollection.Loan())
+					// using and dispose will return the item to the collection.
 					{
-						Commit = commit,
-						Metrics = new List<MetricEntity>(),
-						MetricTypes = new List<MetricTypeEntity>(),
-						Repository = this.RepositoryEntity,
-						CommitMetricsStatus = CommitMetricsStatus.CheckoutError
-					});
-					return;
-				}
+						var copyRepo = loanedRepo.Item;
 
-				var analyzer = CreateAnalyzer(
-					this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
+						try
+						{
+							logger.LogDebug($"Checking out repository at commit {commit.BaseObject.ShaShort()}");
+							Commands.Checkout(copyRepo, commit.BaseObject);
+						}
+						catch (Exception ex)
+						{
+							logger.LogError($"Cannot checkout commit {commit.BaseObject.ShaShort()}: {ex.Message}", ex);
 
-				this.Results.Add(analyzer.Analyze(copyRepo, this.RepositoryEntity, commit));
+							this.Results.Add(new MetricsAnalysisResult
+							{
+								Commit = commit,
+								Metrics = new List<MetricEntity>(),
+								MetricTypes = new List<MetricTypeEntity>(),
+								Repository = this.RepositoryEntity,
+								CommitMetricsStatus = CommitMetricsStatus.CheckoutError
+							});
+							return;
+						}
 
-				if (this.DeleteClonedRepoAfterwards)
-				{
-					new DirectoryInfo(copyRepo.Info.WorkingDirectory).TryDelete();
-				}
-			});
+						var analyzer = CreateAnalyzer(
+							this.Configuration, analyzerTypeName, analyzerTypeName.Contains("."));
+
+						this.Results.Add(analyzer.Analyze(copyRepo, this.RepositoryEntity, commit));
+					}
+				});
+			}
 		}
 
 		#region ISupportsExecPol

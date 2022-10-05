@@ -83,68 +83,74 @@ namespace GitTools.Analysis
 		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
 		public DateTime CommitterTime => this.commit.Committer.When.UtcDateTime;
 
-		[CsvColumn(FieldIndex = 9)]
+		[CsvColumn(FieldIndex = 7)]
+		public Int64 AuthorTimeUnixEpochMilliSecs => this.commit.Author.When.ToUnixTimeMilliseconds();
+
+		[CsvColumn(FieldIndex = 8)]
+		public Int64 CommitterTimeUnixEpochMilliSecs => this.commit.Committer.When.ToUnixTimeMilliseconds();
+
+		[CsvColumn(FieldIndex = 11)]
 		public String AuthorEmail => this.commit.Author.Email;
 
-		[CsvColumn(FieldIndex = 10)]
+		[CsvColumn(FieldIndex = 12)]
 		public String CommitterEmail => this.commit.Committer.Email;
 
 		/// <summary>
 		/// This is a boolean field but we use 0/1 for compatibility reasons.
 		/// </summary>
-		[CsvColumn(FieldIndex = 13)]
+		[CsvColumn(FieldIndex = 15)]
 		public UInt32 IsInitialCommit { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 14)]
+		[CsvColumn(FieldIndex = 16)]
 		public UInt32 IsMergeCommit { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 15)]
+		[CsvColumn(FieldIndex = 17)]
 		public UInt32 NumberOfParentCommits { get; protected internal set; } = 0u;
 
-		[CsvColumn(FieldIndex = 16)]
+		[CsvColumn(FieldIndex = 18)]
 		public String ParentCommitSHA1s { get; protected internal set; } = String.Empty;
 
 		#region Keywords
-		[CsvColumn(FieldIndex = 39)]
-		public UInt32 KW_add => this.keywords.KW_add;
-		[CsvColumn(FieldIndex = 40)]
-		public UInt32 KW_allow => this.keywords.KW_allow;
 		[CsvColumn(FieldIndex = 41)]
-		public UInt32 KW_bug => this.keywords.KW_bug;
+		public UInt32 KW_add => this.keywords.KW_add;
 		[CsvColumn(FieldIndex = 42)]
-		public UInt32 KW_chang => this.keywords.KW_chang;
+		public UInt32 KW_allow => this.keywords.KW_allow;
 		[CsvColumn(FieldIndex = 43)]
-		public UInt32 KW_error => this.keywords.KW_error;
+		public UInt32 KW_bug => this.keywords.KW_bug;
 		[CsvColumn(FieldIndex = 44)]
-		public UInt32 KW_fail => this.keywords.KW_fail;
+		public UInt32 KW_chang => this.keywords.KW_chang;
 		[CsvColumn(FieldIndex = 45)]
-		public UInt32 KW_fix => this.keywords.KW_fix;
+		public UInt32 KW_error => this.keywords.KW_error;
 		[CsvColumn(FieldIndex = 46)]
-		public UInt32 KW_implement => this.keywords.KW_implement;
+		public UInt32 KW_fail => this.keywords.KW_fail;
 		[CsvColumn(FieldIndex = 47)]
-		public UInt32 KW_improv => this.keywords.KW_improv;
+		public UInt32 KW_fix => this.keywords.KW_fix;
 		[CsvColumn(FieldIndex = 48)]
+		public UInt32 KW_implement => this.keywords.KW_implement;
+		[CsvColumn(FieldIndex = 49)]
+		public UInt32 KW_improv => this.keywords.KW_improv;
+		[CsvColumn(FieldIndex = 50)]
 		public UInt32 KW_issu => this.keywords.KW_issu;
 
-		[CsvColumn(FieldIndex = 49)]
-		public UInt32 KW_method => this.keywords.KW_method;
-		[CsvColumn(FieldIndex = 50)]
-		public UInt32 KW_new => this.keywords.KW_new;
 		[CsvColumn(FieldIndex = 51)]
-		public UInt32 KW_npe => this.keywords.KW_npe;
+		public UInt32 KW_method => this.keywords.KW_method;
 		[CsvColumn(FieldIndex = 52)]
-		public UInt32 KW_refactor => this.keywords.KW_refactor;
+		public UInt32 KW_new => this.keywords.KW_new;
 		[CsvColumn(FieldIndex = 53)]
-		public UInt32 KW_remov => this.keywords.KW_remov;
+		public UInt32 KW_npe => this.keywords.KW_npe;
 		[CsvColumn(FieldIndex = 54)]
-		public UInt32 KW_report => this.keywords.KW_report;
+		public UInt32 KW_refactor => this.keywords.KW_refactor;
 		[CsvColumn(FieldIndex = 55)]
-		public UInt32 KW_set => this.keywords.KW_set;
+		public UInt32 KW_remov => this.keywords.KW_remov;
 		[CsvColumn(FieldIndex = 56)]
-		public UInt32 KW_support => this.keywords.KW_support;
+		public UInt32 KW_report => this.keywords.KW_report;
 		[CsvColumn(FieldIndex = 57)]
-		public UInt32 KW_test => this.keywords.KW_test;
+		public UInt32 KW_set => this.keywords.KW_set;
 		[CsvColumn(FieldIndex = 58)]
+		public UInt32 KW_support => this.keywords.KW_support;
+		[CsvColumn(FieldIndex = 59)]
+		public UInt32 KW_test => this.keywords.KW_test;
+		[CsvColumn(FieldIndex = 60)]
 		public UInt32 KW_use => this.keywords.KW_use;
 		#endregion
 
@@ -153,7 +159,7 @@ namespace GitTools.Analysis
 		/// If using the <see cref="SimpleAnalyzer.SimpleAnalyzer"/>, this will be
 		/// the commit's short message.
 		/// </summary>
-		[CsvColumn(FieldIndex = 8)]
+		[CsvColumn(FieldIndex = 9)]
 		public virtual String Message =>
 			RegexNewLines.Replace(this.commit.MessageShort, " ").Replace('"', ' ').Trim();
 		#endregion
