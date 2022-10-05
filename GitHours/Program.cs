@@ -18,6 +18,7 @@ using CommandLine.Text;
 using LibGit2Sharp;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Globalization;
 using System.IO;
@@ -132,7 +133,8 @@ namespace GitHours
 				try
 				{
 					using (repository)
-					using (var span = new GitCommitSpan(repository, options.Since, options.Until))
+					using (var span = new GitCommitSpan(repository, options.Since, options.Until,
+						sinceUseDate: options.SinceUseDate, untilUseDate: options.UntilUseDate))
 					{
 						var gitHours = new Hours.GitHours(span, options.MaxCommitDiff, options.FirstCommitAdd);
 
@@ -193,8 +195,16 @@ namespace GitHours
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
+		[Option("since-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using a since-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate SinceUseDate { get; set; }
+
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
+
+		[Option("until-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using an until-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate UntilUseDate { get; set; }
 
 		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default.")]
 		public String TempDirectory { get; set; }

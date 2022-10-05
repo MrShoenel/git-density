@@ -221,7 +221,8 @@ namespace GitDensity
 						repoTempPath, useRepoName: useRepoName, pullIfAlreadyExists: true))
 					{
 						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
-						var span = new GitCommitSpan(repo, options.Since, options.Until);
+						var span = new GitCommitSpan(repo, options.Since, options.Until,
+							sinceUseDate: options.SinceUseDate, untilUseDate: options.UntilUseDate);
 
 						// Instantiate the Density analysis with the selected programming
 						// languages' file extensions and other options from the command line.
@@ -301,15 +302,15 @@ namespace GitDensity
 		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
 		public String RepoPath { get; set; }
 
-		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitDensity) + ".exe.")]
-		public String ConfigFile { get; set; }
-
 		/// <summary>
 		/// To obtains the actual <see cref="ICollection{ProgrammingLanguage}"/>s, use the
 		/// property <see cref="ProgrammingLanguages"/>.
 		/// </summary>
 		[OptionList('p', "prog-langs", ',', Required = true, HelpText = "A comma-separated list of programming languages to examine in the given repository. Other files will be ignored.")]
 		public IList<String> LanguagesRaw { get; set; }
+
+		[Option('c', "config-file", Required = false, HelpText = "Optional. Absolute path to a valid configuration.json. If not given, uses the configuration.json that is to be found in the same folder as " + nameof(GitDensity) + ".exe.")]
+		public String ConfigFile { get; set; }
 
 		[Option('i', "skip-initial-commit", Required = false, DefaultValue = false, HelpText = "If present, does not analyze the pair that consists of the 2nd and the initial commit to a repository.")]
 		public Boolean SkipInitialCommit { get; set; }
@@ -327,8 +328,16 @@ namespace GitDensity
 		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Since { get; set; }
 
+		[Option("since-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using a since-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate SinceUseDate { get; set; }
+
 		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
 		public String Until { get; set; }
+
+		[Option("until-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using an until-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+		[JsonConverter(typeof(StringEnumConverter))]
+		public SinceUntilUseDate UntilUseDate { get; set; }
 
 		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
 		[JsonConverter(typeof(StringEnumConverter))]
