@@ -26,11 +26,7 @@ authors:
 bibliography: refs.bib
 date: "29 September 2022"
 tags: 
-  - Python
-  - "Distribution fitting"
-  - "Inverse sampling"
-  - "Empirical distributions"
-  - "Kernel density estimation"
+  - C-Sharp
 title: "Metrics As Scores: A Tool- and Analysis Suite and Interactive Application for Exploring Context-Dependent Distributions"
 ---
 
