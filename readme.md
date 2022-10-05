@@ -9,11 +9,19 @@ It was developed during the research phase of the short technical paper and post
 To build the application, restore all _nuget_ packages and simply rebuild all projects.
 
 Run `GitDensity.exe`, which has an exhaustive command line interface for analyzing repositories. This implementation also includes a reimplementation of `git-hours` [2], runnable using `GitHours.exe` (with a similar command line interface).
+There are also separate command line tools for extracting metrics (`GitMetrics.exe`) and smaller utility that unites a few stand-alone commands (`GitTools.exe`, see below).
 
 ## Requirement of external tools
-This application relies on an external executable to run clone detection. Currently, it uses a local version of Softwerk's clone detection service [3]. To obtain a copy of this tool, please contact welf.lowe@lnu.se.
 
-As for `git-metrics`, the application relies on another tool that supports currently obtaining software metrics from Java applications. Please contact me if you intend to use Git Metrics and require the tool.
+This application relies on an external executable to run clone detection. Currently, it uses a local version of Softwerk's clone detection service [3].
+To obtain a copy free for academic use of this tool, please contact welf.lowe@lnu.se.
+
+You are not required to use the clone detection in order to obtain a notion fo source code density. In order to obtain a rough notion of it, you may use `git-tools` which will extract a ratio of net-lines to gross-lines as density.
+The clone detection used in `git-density`, however, also computes a string similarity which will yield a most-precise approximation of the source code density.
+
+As for `git-metrics`, the application relies on another tool that supports currently obtaining software metrics from Java applications.
+Metrics are obtained by building the application (for each commit).
+Please contact me if you intend to use Git Metrics and require the tool. The tool is free for academic use.
 
 
 # Structure of the applications
@@ -33,27 +41,30 @@ Git Density is a solution that currently features these three applications:
 	*	Has its own command-line interface and supports online/offline repos and parallelization.
 	*	Supports two methods currently: _Simple_ and _Extended_ (default) extraction.
 	*	Does not require tools for clone-detection or metrics, as these are not extracted.
-	*	Extracts __38__ features (__13__ in _Simple_-mode): `"SHA1", "RepoPathOrUrl", "AuthorName", "CommitterName", "AuthorTime", "CommitterTime", "Message", "AuthorEmail", "CommitterEmail", "IsInitialCommit", "IsMergeCommit", "NumberOfParentCommits", "ParentCommitSHA1s"` __plus 25 in extended:__ `"MinutesSincePreviousCommit", "AuthorNominalLabel", "CommitterNominalLabel", "NumberOfFilesAdded", "NumberOfFilesAddedNet", "NumberOfLinesAddedByAddedFiles", "NumberOfLinesAddedByAddedFilesNet", "NumberOfFilesDeleted", "NumberOfFilesDeletedNet", "NumberOfLinesDeletedByDeletedFiles", "NumberOfLinesDeletedByDeletedFilesNet", "NumberOfFilesModified", "NumberOfFilesModifiedNet", "NumberOfFilesRenamed", "NumberOfFilesRenamedNet", "NumberOfLinesAddedByModifiedFiles", "NumberOfLinesAddedByModifiedFilesNet", "NumberOfLinesDeletedByModifiedFiles", "NumberOfLinesDeletedByModifiedFilesNet", "NumberOfLinesAddedByRenamedFiles", "NumberOfLinesAddedByRenamedFilesNet", "NumberOfLinesDeletedByRenamedFiles", "NumberOfLinesDeletedByRenamedFilesNet", "Density", "AffectedFilesRatioNet"`
+	*	Extracts __58__ features (__13__ features + counts for __20__ keywords (see [5]) in _Simple_-mode): `"SHA1", "RepoPathOrUrl", "AuthorName", "CommitterName", "AuthorTime", "CommitterTime", "Message", "AuthorEmail", "CommitterEmail", "IsInitialCommit", "IsMergeCommit", "NumberOfParentCommits", "ParentCommitSHA1s"` __plus 25 in extended:__ `"MinutesSincePreviousCommit", "AuthorNominalLabel", "CommitterNominalLabel", "NumberOfFilesAdded", "NumberOfFilesAddedNet", "NumberOfLinesAddedByAddedFiles", "NumberOfLinesAddedByAddedFilesNet", "NumberOfFilesDeleted", "NumberOfFilesDeletedNet", "NumberOfLinesDeletedByDeletedFiles", "NumberOfLinesDeletedByDeletedFilesNet", "NumberOfFilesModified", "NumberOfFilesModifiedNet", "NumberOfFilesRenamed", "NumberOfFilesRenamedNet", "NumberOfLinesAddedByModifiedFiles", "NumberOfLinesAddedByModifiedFilesNet", "NumberOfLinesDeletedByModifiedFiles", "NumberOfLinesDeletedByModifiedFilesNet", "NumberOfLinesAddedByRenamedFiles", "NumberOfLinesAddedByRenamedFilesNet", "NumberOfLinesDeletedByRenamedFiles", "NumberOfLinesDeletedByRenamedFilesNet", "Density", "AffectedFilesRatioNet"`
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
-## Caveats
 
-If using `MySQL`, the latest 5.7.x GA-releases work, while some of the 8.x versions appear to cause problems in conjunction with Fluent NHibernate (this should be fixed in version 2020.1). You may also use other types of databases, as Git Density supports these: `MsSQL2000`, `MsSQL2005`, `MsSQL2008`, `MsSQL2012`, `MySQL`, `Oracle10`, `Oracle9`, `PgSQL81`, `PgSQL82`, `SQLite`, `SQLiteTemp` (temporary database that is discarded after the analysis, mainly for testing).
+
+## About Databases
+
+You may also use other types of databases, as Git Density supports these: `MsSQL2000`, `MsSQL2005`, `MsSQL2008`, `MsSQL2012`, `MySQL`, `Oracle10`, `Oracle9`, `PgSQL81`, `PgSQL82`, `SQLite`, `SQLiteTemp` (temporary database that is discarded after the analysis, mainly for testing).
 
 ___
 
 
 # Citing
 Please use the following BibTeX to cite __`GitDensity`__:
+
 <pre>
 @article{honel2020gitdensity,
-  title={Git Density (2020.1): Analyze git repositories to extract the Source Code Density and other Commit Properties},
+  title={Git Density (2022.10): Analyze git repositories to extract the Source Code Density and other Commit Properties},
   DOI={10.5281/zenodo.2565238},
   url={https://doi.org/10.5281/zenodo.2565238},
   publisher={Zenodo},
   author={Sebastian Hönel},
-  year={2020},
-  month={Jan},
+  year={2022},
+  month={Oct},
   abstractNote={Git Density (<code>git-density</code>) is a tool to analyze <code>git</code>-repositories with the goal of detecting the source code density. It was developed during the research phase of the short technical paper and poster &quot;<em>A changeset-based approach to assess source code density and developer efficacy</em>&quot; and has since been extended to support extended analyses.},
 }
 </pre>
@@ -69,3 +80,5 @@ ___
 [3] QTools Clone Detection. http://qtools.se/
 
 [4] Hönel, S., Ericsson, M., Löwe, W. and Wingkvist, A., 2019. Importance and Aptitude of Source code Density for Commit Classification into Maintenance Activities. In The 19th IEEE International Conference on Software Quality, Reliability, and Security.
+
+[5] Levin, S. and Yehudai, A., 2017, November. Boosting automatic commit classification into maintenance activities by utilizing source code changes. In Proceedings of the 13th International Conference on Predictive Models and Data Analytics in Software Engineering (pp. 97-106).
