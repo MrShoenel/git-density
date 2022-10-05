@@ -47,7 +47,7 @@ Mining of software repositories is done in order to obtain rich digital artifact
 Reasons for mining such repositories include, but are not limited to, understanding software evolution [@dambros2008], or classification of commits [@hindle2009].
 
 
-\gs is the first tool to specifically mine a software metric to become known as the ``source code density''[@honel2020using, @honel2018density].
+\gd is the first tool to specifically mine a software metric to become known as the ``source code density''[@honel2020using, @honel2018density].
 
 
 
@@ -74,7 +74,7 @@ This work is supported by the [Linnaeus University Centre for Data Intensive Sci
 
 # Applications
 
-The \gs tool- and analysis suite have been used to study and compare the source code density in comparison to traditonal methods of estimating size [@honel2018density].
+The \gd tool- and analysis suite have been used to study and compare the source code density in comparison to traditonal methods of estimating size [@honel2018density].
 The source code density as a language-agnostic metric was previously proven to be an effective predictor for maintenance activities associated with commits [@honel2020using].
 
 
