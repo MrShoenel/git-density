@@ -14,7 +14,7 @@ There are also separate command line tools for extracting metrics (`GitMetrics.e
 ## Requirement of external tools
 
 This application relies on an external executable to run clone detection. Currently, it uses a local version of Softwerk's clone detection service [3].
-To obtain a copy free for academic use of this tool, please contact welf.lowe@lnu.se.
+To obtain a copy free for academic use of this tool, please contact sebastian.honel@lnu.se (primarily) or welf.lowe@lnu.se.
 
 You are not required to use the clone detection in order to obtain a notion fo source code density. In order to obtain a rough notion of it, you may use `git-tools` which will extract a ratio of net-lines to gross-lines as density.
 The clone detection used in `git-density`, however, also computes a string similarity which will yield a most-precise approximation of the source code density.
