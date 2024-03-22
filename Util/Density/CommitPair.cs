@@ -99,7 +99,7 @@ namespace Util.Density
 		/// <param name="repo"></param>
 		/// <param name="child"></param>
 		/// <param name="parent"></param>
-		internal CommitPair(Repository repo, Commit child, Commit parent = null)
+		public CommitPair(Repository repo, Commit child, Commit parent = null)
 		{
 			this.Repository = repo;
 			this.pair = Tuple.Create(child, parent);
