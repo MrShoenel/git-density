@@ -1,8 +1,8 @@
-﻿using Renci.SshNet.Common;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Util
 {
@@ -154,7 +154,7 @@ namespace Util
 		/// </summary>
 		public int Count => this.items.Count;
 
-		private readonly SemaphoreLight semaphore;
+		private readonly SemaphoreSlim semaphore;
 
 		/// <summary>
 		/// Queue used for loaning items.
@@ -166,7 +166,7 @@ namespace Util
 		/// </summary>
 		public LoanCollection()
 		{
-			this.semaphore = new SemaphoreLight(initialCount: 0);
+			this.semaphore = new SemaphoreSlim(initialCount: 0);
 			this.items = new ConcurrentQueue<T>();
 		}
 
@@ -244,7 +244,7 @@ namespace Util
 		protected bool wasDisposed = false;
 
 		/// <summary>
-		/// Disposes the underlying <see cref="SemaphoreLight"/>, but does not
+		/// Disposes the underlying <see cref="SemaphoreSlim"/>, but does not
 		/// dispose the items in the collection.
 		/// </summary>
 		/// <param name="disposing"></param>
