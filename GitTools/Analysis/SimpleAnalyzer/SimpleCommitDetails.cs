@@ -23,7 +23,7 @@ using Util.Data.Entities;
 namespace GitTools.Analysis
 {
 	/// <summary>
-	/// Represents basic details about one <see cref="Commit"/> in a
+	/// Represents basic details about one <see cref="LibGit2Sharp.Commit"/> in a
 	/// <see cref="Repository"/>.
 	/// </summary>
 	public class SimpleCommitDetails : IAnalyzedCommit
@@ -35,9 +35,9 @@ namespace GitTools.Analysis
 			new Regex("\r|\n", RegexOptions.ECMAScript | RegexOptions.Compiled);
 
 		/// <summary>
-		/// Keeps a reference to the <see cref="Commit"/>.
+		/// Keeps a reference to the <see cref="LibGit2Sharp.Commit"/>.
 		/// </summary>
-		protected readonly Commit commit;
+		public Commit Commit { protected set; get; }
 
 		/// <summary>
 		/// Keeps a convenient reference.
@@ -46,17 +46,17 @@ namespace GitTools.Analysis
 
 		/// <summary>
 		/// Initializes a new <see cref="SimpleCommitDetails"/> from a given
-		/// <see cref="Repository"/> and <see cref="Commit"/>.
+		/// <see cref="Repository"/> and <see cref="LibGit2Sharp.Commit"/>.
 		/// </summary>
 		/// <param name="repoPathOrUrl"></param>
 		/// <param name="commit"></param>
 		public SimpleCommitDetails(String repoPathOrUrl, Commit commit)
 		{
 			this.RepoPathOrUrl = repoPathOrUrl;
-			this.commit = commit;
+			this.Commit = commit;
 			this.keywords = CommitKeywordsEntity.FromCommit(commit);
 
-			var parents = this.commit.Parents.ToList();
+			var parents = this.Commit.Parents.ToList();
 
 			this.IsInitialCommit = parents.Count == 0 ? 1u : 0u;
 			this.IsMergeCommit = parents.Count > 1 ? 1u : 0u;
@@ -66,34 +66,34 @@ namespace GitTools.Analysis
 
 		#region fields
 		[CsvColumn(FieldIndex = 1)]
-		public String SHA1 => this.commit.Sha;
+		public String SHA1 => this.Commit.Sha;
 
 		[CsvColumn(FieldIndex = 2)]
 		public String RepoPathOrUrl { get; protected set; }
 
 		[CsvColumn(FieldIndex = 3)]
-		public String AuthorName => this.commit.Author.Name;
+		public String AuthorName => this.Commit.Author.Name;
 
 		[CsvColumn(FieldIndex = 4)]
-		public String CommitterName => this.commit.Committer.Name;
+		public String CommitterName => this.Commit.Committer.Name;
 
 		[CsvColumn(FieldIndex = 5, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime AuthorTime => this.commit.Author.When.UtcDateTime;
+		public DateTime AuthorTime => this.Commit.Author.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
-		public DateTime CommitterTime => this.commit.Committer.When.UtcDateTime;
+		public DateTime CommitterTime => this.Commit.Committer.When.UtcDateTime;
 
 		[CsvColumn(FieldIndex = 7)]
-		public Int64 AuthorTimeUnixEpochMilliSecs => this.commit.Author.When.ToUnixTimeMilliseconds();
+		public Int64 AuthorTimeUnixEpochMilliSecs => this.Commit.Author.When.ToUnixTimeMilliseconds();
 
 		[CsvColumn(FieldIndex = 8)]
-		public Int64 CommitterTimeUnixEpochMilliSecs => this.commit.Committer.When.ToUnixTimeMilliseconds();
+		public Int64 CommitterTimeUnixEpochMilliSecs => this.Commit.Committer.When.ToUnixTimeMilliseconds();
 
 		[CsvColumn(FieldIndex = 11)]
-		public String AuthorEmail => this.commit.Author.Email;
+		public String AuthorEmail => this.Commit.Author.Email;
 
 		[CsvColumn(FieldIndex = 12)]
-		public String CommitterEmail => this.commit.Committer.Email;
+		public String CommitterEmail => this.Commit.Committer.Email;
 
 		/// <summary>
 		/// This is a boolean field but we use 0/1 for compatibility reasons.
@@ -161,7 +161,7 @@ namespace GitTools.Analysis
 		/// </summary>
 		[CsvColumn(FieldIndex = 9)]
 		public virtual String Message =>
-			RegexNewLines.Replace(this.commit.MessageShort, " ").Replace('"', ' ').Trim();
+			RegexNewLines.Replace(this.Commit.MessageShort, " ").Replace('"', ' ').Trim();
 		#endregion
 		#endregion
 	}

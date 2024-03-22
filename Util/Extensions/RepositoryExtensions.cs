@@ -69,8 +69,8 @@ namespace Util.Extensions
 			{
 				var parentCount = commit.Parents.Count();
 				var isInitialCommit = parentCount == 0
-					|| (sortOrder == SortOrder.OldestFirst && commit == commits[0])
-					|| (sortOrder == SortOrder.LatestFirst && commit == commits.Last());
+					|| (sortOrder == SortOrder.OldestFirst && commit == commits[0] && commits.Count > 1)
+					|| (sortOrder == SortOrder.LatestFirst && commit == commits.Last() && commits.Count > 1);
 
 				if (skipInitialCommit && isInitialCommit)
 				{
