@@ -59,7 +59,7 @@ namespace GitDensity.Density
 
 		public UInt32 NumberOfLinesDeleted { get { return (UInt32)this.lineNumbersDeleted.Count; } }
 		
-		internal String Patch { get; private set; }
+		public String Patch { protected set; get; }
 
 		protected IList<UInt32> lineNumbersAdded;
 
