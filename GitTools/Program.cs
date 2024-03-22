@@ -18,6 +18,7 @@ using CommandLine.Text;
 using GitTools.Analysis;
 using GitTools.Analysis.ExtendedAnalyzer;
 using GitTools.Analysis.SimpleAnalyzer;
+using GitTools.Prompting;
 using LINQtoCSV;
 using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
@@ -29,10 +30,9 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
+using System.Text;
 using System.Threading;
 using Util;
-using Util.Data;
 using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
@@ -182,6 +182,46 @@ namespace GitTools
 							}
 							logger.LogInformation($"Wrote JSON to {(String.IsNullOrWhiteSpace(options.OutputFile) ? "console" : options.OutputFile)}.");
 							Environment.Exit((int)ExitCodes.OK);
+						}
+						else if (options.CmdGeneratePrompts)
+						{
+							if (String.IsNullOrEmpty(options.TempDirectory))
+							{
+								logger.LogError("You must specify a temporary directory when generating prompts, because an individual output file is generated for each commit.");
+								Environment.Exit((int)ExitCodes.UsageInvalid);
+							}
+
+							String inputTemplate = null;
+							if (String.IsNullOrEmpty(options.InputPromptTemplate))
+							{
+								logger.LogWarning("No input prompt template was given, using the empty default template: __SUMMARY__ \\n __CHANGELIST__.");
+								inputTemplate = "__SUMMARY__ \n __CHANGELIST__";
+							}
+							else
+							{
+								inputTemplate = File.ReadAllText(path: options.InputPromptTemplate);
+							}
+
+							using (span)
+							{
+								if (options.AnalysisType != AnalysisType.Extended)
+								{
+									logger.LogWarning($"Switching to {nameof(AnalysisType.Extended)} analysis because it is required for generating prompts.");
+									options.AnalysisType = AnalysisType.Extended;
+								}
+								// logger.LogInformation($"Generating prompts for Commits with IDs {String.Join(separator: ", ", values: sha1IDs)}..");
+
+								var ea = new ExtendedAnalyzer(repoPathOrUrl: options.RepoPath, span: span, skipSizeAnalysis: false)
+								{ ExecutionPolicy = options.ExecutionPolicy };
+								var pg = new PromptGenerator(analyzer: ea, template: inputTemplate);
+
+								foreach (var commitPrompt in pg)
+								{
+									var outputPath = Path.Combine(options.TempDirectory, $"{commitPrompt.CommitPair.Child.Id.Sha.Substring(0, 8)}.txt");
+									File.WriteAllText(path: outputPath, contents: commitPrompt.ToString(), encoding: Encoding.UTF8);
+								}
+								Environment.Exit((int)ExitCodes.OK);
+							}
 						}
 						#endregion
 
@@ -394,12 +434,18 @@ namespace GitTools
 		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
+		[Option('p', "prompt-template", Required = false, DefaultValue = null, HelpText = "Optional. A path to a file")]
+		public String InputPromptTemplate { get; set; }
+
 		#region Command-Options
 		[Option("cmd-count-commits", Required = false, DefaultValue = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
 		public Boolean CmdCountCommits { get; set; }
 
 		[Option("cmd-count-keywords", Required = false, DefaultValue = false, HelpText = "Command. Counts the keywords on messages in entities already existing in table Gtools_Ex and updates each with the amount of keywords found. Writes some progress to the console.")]
 		public Boolean CmdCountKeywords { get; set; }
+
+		[Option("cmd-generate-prompts", Required = false, DefaultValue = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
+		public Boolean CmdGeneratePrompts { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
