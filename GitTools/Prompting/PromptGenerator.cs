@@ -155,7 +155,7 @@ namespace GitTools.Prompting
 						}));
 				});
 
-				yield return $"In the file {path}, the following changes were made:\n" + String.Join("\n", hunkChanges);
+				yield return $"The markup [..][/..], [++][/++], and [--][/--] encloses an unchanged, added, or removed line, respectively.\n\nIn the file {path}, the following changes were made:\n" + String.Join("\n", hunkChanges);
 			}
 		}
 
@@ -170,7 +170,7 @@ namespace GitTools.Prompting
 				$"{cd.NumberOfFilesAdded} files were added, {cd.NumberOfFilesDeleted} files were removed, " +
 				$"{cd.NumberOfFilesModified} files were modified, and {cd.NumberOfFilesRenamed} files were renamed. " +
 				$"In total, {added} lines of code were added, and {removed} lines of code were removed. " +
-				$"What follows is a summary for each added/changed/removed/renamed file. The markup [..][/..], [++][/++], and [--][/--] encloses an unchanged, added, or removed line, respectively.\n\n";
+				$"What follows is a summary for each added/changed/removed/renamed file.\n\n";
 		}
 	}
 }
