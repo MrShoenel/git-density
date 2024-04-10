@@ -1,5 +1,5 @@
-from Api import Api
-from models.ModelBase import ModelBase
+from .Api import Api
+from .models.ModelBase import ModelBase
 
 
 prompt = """
