@@ -95,34 +95,6 @@ namespace GitDensity.Similarity
 
 		public UInt32 LinesUntouched => (UInt32)this.linesWithLineNumber
 			.Count(kv => kv.Value.Type == LineType.Untouched);
-
-		/// <summary>
-		/// Returns the <see cref="TextBlockNature"/> of this block.
-		/// </summary>
-		public TextBlockNature Nature
-		{
-			get
-			{
-				var add = this.LinesAdded > 0u;
-				var del = this.LinesDeleted > 0u;
-
-				if (add && del)
-				{
-					return TextBlockNature.Replaced;
-				}
-				else if (add)
-				{
-					return TextBlockNature.Added;
-				}
-				else if (del)
-				{
-					return TextBlockNature.Deleted;
-				}
-
-				// No add or del:
-				return TextBlockNature.Context;
-			}
-		}
 		#endregion
 
 		/// <summary>
