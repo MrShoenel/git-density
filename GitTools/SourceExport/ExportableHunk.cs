@@ -12,6 +12,37 @@ using Line = GitDensity.Similarity.Line;
 
 namespace GitTools.SourceExport
 {
+
+    /// <summary>
+    /// In <see cref="Util.Data.Entities.FileBlockType"/> we have previously used
+    /// types for added, deleted, and modified. There were only these three types
+    /// because we never saved information about blocks that were untouched (context).
+    /// Here, we add the fourth kind so that a <see cref="TextBlock"/> can indentify
+    /// itself as any of the four kinds.
+    /// </summary>
+    public enum TextBlockNature : uint
+    {
+        /// <summary>
+        /// An untouched block of lines, usually shown as part of the Hunk (context).
+        /// </summary>
+        Context = 0u,
+
+        /// <summary>
+        /// A block that has one or more lines added, but no lines deleted.
+        /// </summary>
+        Added = 1u,
+
+        /// <summary>
+        /// A block that has one or more lines deleted, but no lines added.
+        /// </summary>
+        Deleted = 2u,
+
+        /// <summary>
+        /// A block that has one or more lines added, directly followed by one or
+        /// more lines deleted (i.e., no other lines in between).
+        /// </summary>
+        Replaced = 3u
+    }
     /// <summary>
     /// Represents an entire <see cref="GitDensity.Density.Hunk"/> that can be exported
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
