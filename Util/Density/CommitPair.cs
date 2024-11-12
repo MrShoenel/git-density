@@ -85,7 +85,7 @@ namespace Util.Density
 		/// relevant change. Also, we are always only dealing with added,
 		/// modified, renamed and deleted files.
 		/// </summary>
-		public IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => this.lazyRelevantTreeChanges.Value;
+		public virtual IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => this.lazyRelevantTreeChanges.Value;
 
 		/// <summary>
 		/// Set the <see cref="ExecutionPolicy"/> for parallel operations. Currently
