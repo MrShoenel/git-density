@@ -27,7 +27,7 @@ namespace GitTools.SourceExport
         /// <summary>
         /// The encapsulated <see cref="TextBlock"/> that holds <see cref="Line"/>s.
         /// </summary>
-        public TextBlock TextBlock { get; protected set; }
+        public LooseTextBlock TextBlock { get; protected set; }
 
         /// <summary>
         /// Creates a new contiguous exportable block of lines, by taking into account
@@ -36,7 +36,7 @@ namespace GitTools.SourceExport
         /// <param name="exportableHunk"></param>
         /// <param name="textBlock"></param>
         /// <param name="blockIdx"></param>
-        public ExportableBlock(ExportableHunk exportableHunk, TextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportableFile, exportableHunk.Hunk, exportableHunk.HunkIdx)
+        public ExportableBlock(ExportableHunk exportableHunk, LooseTextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportableFile, exportableHunk.Hunk, exportableHunk.HunkIdx)
         {
             this.TextBlock = textBlock;
             this.ExportableHunk = exportableHunk;
@@ -64,13 +64,13 @@ namespace GitTools.SourceExport
         public UInt32 BlockIdx { get; protected set; }
 
         [CsvColumn(FieldIndex = 22)]
-        public String BlockLineNumbersDeleted { get => String.Join(",", this.TextBlock.LinesWithNumber.Where(kv => kv.Value.Type == LineType.Deleted).Select(kv => kv.Key).OrderBy(k => k)); }
+        public String BlockLineNumbersDeleted { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Deleted).OrderBy(l => l.Number).Select(l => l.Number)); }
 
         [CsvColumn(FieldIndex = 23)]
-        public String BlockLineNumbersAdded { get => String.Join(",", this.TextBlock.LinesWithNumber.Where(kv => kv.Value.Type == LineType.Added).Select(kv => kv.Key).OrderBy(k => k)); }
+        public String BlockLineNumbersAdded { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Added).OrderBy(l => l.Number).Select(l => l.Number)); }
 
         [CsvColumn(FieldIndex = 24)]
-        public String BlockLineNumbersUntouched { get => String.Join(",", this.TextBlock.LinesWithNumber.Where(kv => kv.Value.Type == LineType.Untouched).Select(kv => kv.Key).OrderBy(k => k)); }
+        public String BlockLineNumbersUntouched { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Untouched).OrderBy(l => l.Number).Select(l => l.Number)); }
 
 
         /// <summary>

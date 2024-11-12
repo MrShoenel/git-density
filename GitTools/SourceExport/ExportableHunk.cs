@@ -1,7 +1,9 @@
 ﻿using GitDensity.Density;
 using GitDensity.Similarity;
+using Iesi.Collections.Generic;
 using LibGit2Sharp;
 using LINQtoCSV;
+using NHibernate.Mapping;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -99,7 +101,7 @@ namespace GitTools.SourceExport
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
     /// have one or more blocks of unchanged or changed lines.
     /// </summary>
-    public class ExportableHunk : ExportableFile, IEnumerable<TextBlock>
+    public class ExportableHunk : ExportableFile, IEnumerable<LooseTextBlock>
     {
         public ExportableFile ExportableFile { get; protected set; }
 
@@ -122,12 +124,12 @@ namespace GitTools.SourceExport
         /// assigned to a block of pure <see cref="TextBlockNature"/>.
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<TextBlock> GetEnumerator()
+        public IEnumerator<LooseTextBlock> GetEnumerator()
         {
             var lines = new Queue<String>(this.Hunk.Patch.GetLines(removeEmptyLines: false));
             if (lines.Count == 0)
             {
-                return Enumerable.Empty<TextBlock>().GetEnumerator();
+                return Enumerable.Empty<LooseTextBlock>().GetEnumerator();
             }
 
             Func<string, LineType> getType = (string line) =>
@@ -138,9 +140,9 @@ namespace GitTools.SourceExport
             };
 
 
-            var blocks = new LinkedList<TextBlock>();
+            var blocks = new LinkedList<LooseTextBlock>();
             // Create first block to be added.
-            var lastBlock = new TextBlock();
+            var lastBlock = new LooseTextBlock();
             var lastLine = "X";
 
             var idxOld = this.Hunk.OldLineStart;
@@ -159,7 +161,7 @@ namespace GitTools.SourceExport
                 {
                     // Switch between untouched(context) lines and added/deleted lines -> new Block.
                     blocks.AddLast(lastBlock);
-                    lastBlock = new TextBlock();
+                    lastBlock = new LooseTextBlock();
                     continue;
                 }
 
