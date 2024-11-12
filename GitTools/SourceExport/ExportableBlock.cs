@@ -37,7 +37,7 @@ namespace GitTools.SourceExport
         /// <param name="exportableHunk"></param>
         /// <param name="textBlock"></param>
         /// <param name="blockIdx"></param>
-        public ExportableBlock(ExportableHunk exportableHunk, TextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportCommit, exportableHunk.TreeChange, exportableHunk.Hunk, exportableHunk.HunkIdx)
+        public ExportableBlock(ExportableHunk exportableHunk, TextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportableFile, exportableHunk.Hunk, exportableHunk.HunkIdx)
         {
             this.TextBlock = textBlock;
             this.ExportableHunk = exportableHunk;
