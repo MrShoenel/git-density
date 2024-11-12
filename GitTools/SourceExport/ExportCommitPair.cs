@@ -3,6 +3,7 @@ using LibGit2Sharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Util.Density;
@@ -61,9 +62,16 @@ namespace GitTools.SourceExport
             foreach (var rtc in this.RelevantTreeChanges)
             {
                 var file = new ExportableFile(commit, rtc);
-                var added = rtc.Status == ChangeKind.Added;
-                var patch = this.Patch[added ? rtc.Path : rtc.OldPath];
+                var oldPatch = this.Patch[rtc.OldPath];
+                var newPatch = this.Patch[rtc.Path];
 
+                // Either one is null or they are both the same. For the purpose of exporting
+                // source code for either case, it does not matter. For example, when a file
+                // is renamed, we get both changes here: One change is the patch for the removal
+                // and one other (separate) change is for the addition (yes, we want both).
+                Debug.Assert(((oldPatch is null) ^ (newPatch is null)) || EqualityComparer<PatchEntryChanges>.Default.Equals(oldPatch, newPatch));
+                
+                var patch = newPatch ?? oldPatch;
                 uint hunkIdx = 0;
                 foreach (var hunk in Hunk.HunksForPatch(patch))
                 {
@@ -108,7 +116,6 @@ namespace GitTools.SourceExport
                 foreach (var block in hunk)
                 {
                     yield return new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
-
                 }
             }
         }
