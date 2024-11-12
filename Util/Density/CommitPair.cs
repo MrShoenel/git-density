@@ -99,22 +99,23 @@ namespace Util.Density
 		/// <param name="repo"></param>
 		/// <param name="child"></param>
 		/// <param name="parent"></param>
-		public CommitPair(Repository repo, Commit child, Commit parent = null)
+		/// <param name="compareOptions">Allow optional options for comparing two trees.</param>
+		public CommitPair(Repository repo, Commit child, Commit parent = null, CompareOptions compareOptions = null)
 		{
 			this.Repository = repo;
 			this.pair = Tuple.Create(child, parent);
 
 			this.lazyPatch = new Lazy<Patch>(() =>
 			{
-				return this.Repository.Diff.Compare<Patch>(this.Parent?.Tree, this.Child.Tree);
+                return this.Repository.Diff.Compare<Patch>(oldTree: this.Parent?.Tree, newTree: this.Child.Tree, compareOptions: compareOptions);
 			});
 
 			this.lazyTree = new Lazy<TreeChanges>(() =>
 			{
-				return this.Repository.Diff.Compare<TreeChanges>(this.Parent?.Tree, this.Child.Tree);
+				return this.Repository.Diff.Compare<TreeChanges>(oldTree: this.Parent?.Tree, newTree: this.Child.Tree, compareOptions: compareOptions);
 			});
 
-			this.lazyRelevantTreeChanges = new Lazy<IReadOnlyList<TreeEntryChanges>>(() =>
+            this.lazyRelevantTreeChanges = new Lazy<IReadOnlyList<TreeEntryChanges>>(() =>
 			{
 				return this.TreeChanges.Where(tc =>
 				{
@@ -123,7 +124,7 @@ namespace Util.Density
 							|| tc.Status == ChangeKind.Deleted || tc.Status == ChangeKind.Renamed);
 				}).ToList().AsReadOnly();
 			});
-		}
+        }
 
 		/// <summary>
 		/// Retrieves a <see cref="CommitPair"/> by ID, where the ID has been
