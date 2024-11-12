@@ -23,7 +23,7 @@ namespace GitTools.SourceExport
         /// An entity always relates to an <see cref="ExportCommit"/>, which is a sub-class of
         /// <see cref="CommitPair"/>. This means there is a child and a parent commit.
         /// </summary>
-        public ExportCommit ExportCommit { get; protected set; }
+        public ExportCommitPair ExportCommit { get; protected set; }
 
         /// <summary>
         /// Each single <see cref="TreeEntryChanges"/> refers to a single file that was modified.
@@ -63,7 +63,7 @@ namespace GitTools.SourceExport
         /// </summary>
         /// <param name="exportCommit"></param>
         /// <param name="treeChanges"></param>
-        public ExportableEntity(ExportCommit exportCommit, TreeEntryChanges treeChanges)
+        public ExportableEntity(ExportCommitPair exportCommit, TreeEntryChanges treeChanges)
         {
             this.ExportCommit = exportCommit;
             this.TreeChange = treeChanges;
