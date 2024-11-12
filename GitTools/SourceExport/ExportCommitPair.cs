@@ -15,8 +15,9 @@ namespace GitTools.SourceExport
     /// An exportable commit, in the sense of its source code that can be
     /// exported alongside some of its basic properties.
     /// </summary>
-    public class ExportCommitPair : CommitPair, IEnumerable<ExportableFile>, IEnumerable<ExportableHunk>, IEnumerable<ExportableBlock>, IEnumerable<ExportableLine>
+    public class ExportCommitPair : CommitPair, IEnumerable<ExportableCommit>, IEnumerable<ExportableFile>, IEnumerable<ExportableHunk>, IEnumerable<ExportableBlock>, IEnumerable<ExportableLine>
     {
+        private Lazy<IList<ExportableCommit>> lazyCommit;
         private Lazy<IList<ExportableFile>> lazyFiles;
         private Lazy<IList<ExportableHunk>> lazyHunks;
         private Lazy<IList<ExportableBlock>> lazyBlocks;
@@ -40,6 +41,7 @@ namespace GitTools.SourceExport
         {
             this.CompareOptions = compareOptions ?? new CompareOptions();
 
+            this.lazyCommit = new Lazy<IList<ExportableCommit>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Commit().ToList());
             this.lazyFiles = new Lazy<IList<ExportableFile>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Files().ToList());
             this.lazyHunks = new Lazy<IList<ExportableHunk>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Hunks().ToList());
             this.lazyBlocks = new Lazy<IList<ExportableBlock>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Blocks().ToList());
@@ -52,11 +54,13 @@ namespace GitTools.SourceExport
         public override IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => base.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Copied || rtc.Status == ChangeKind.Deleted || rtc.Status == ChangeKind.Renamed || rtc.Status == ChangeKind.Modified).ToList().AsReadOnly();
 
 
-        protected IEnumerable<ExportableFile> Files()
+        protected IEnumerable<ExportableCommit> Commit()
         {
+            var commit = new ExportableCommit(this);
+
             foreach (var rtc in this.RelevantTreeChanges)
             {
-                var file = new ExportableFile(this, rtc);
+                var file = new ExportableFile(commit, rtc);
                 var added = rtc.Status == ChangeKind.Added;
                 var patch = this.Patch[added ? rtc.Path : rtc.OldPath];
 
@@ -67,6 +71,17 @@ namespace GitTools.SourceExport
                     file.AddHunk(expoHunk);
                 }
 
+                commit.AddFile(file);
+            }
+
+            yield return commit;
+        }
+
+
+        protected IEnumerable<ExportableFile> Files()
+        {
+            foreach (var file in (this.lazyCommit.Value as IEnumerable<ExportableFile>))
+            {
                 yield return file;
             }
         }
@@ -108,9 +123,15 @@ namespace GitTools.SourceExport
             }
         }
 
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             throw new AmbiguousSpecificationException($"You must cast an instance of {nameof(ExportCommitPair)} to an explicit type for it to be enumerable, such as {nameof(IEnumerable<ExportableHunk>)}.");
+        }
+
+        IEnumerator<ExportableCommit> IEnumerable<ExportableCommit>.GetEnumerator()
+        {
+            return this.lazyCommit.Value.AsEnumerable().GetEnumerator();
         }
 
         IEnumerator<ExportableFile> IEnumerable<ExportableFile>.GetEnumerator()
