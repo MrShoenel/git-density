@@ -224,7 +224,6 @@ namespace GitTools.SourceExport
         /// The entire hunk's content as a string. Each line will have a leading character
         /// (space, +, -) that designates if the line is unchanged, added, or deleted.
         /// </summary>
-        [CsvColumn(FieldIndex = 999)]
-        public override String Content { get => this.Hunk.Patch; }
+        public override String ContentInteral { get => this.Hunk.Patch; }
     }
 }

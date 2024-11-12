@@ -25,8 +25,7 @@ namespace GitTools.SourceExport
         /// The returned line starts with a character that indicates wheter it is a context
         /// (untouched) line, or new (+) or deleted (-).
         /// </summary>
-        [CsvColumn(FieldIndex = 999)]
-        public override String Content { get => this.Line.String; }
+        public override String ContentInteral { get => this.Line.String; }
 
         IEnumerator<char> IEnumerable<char>.GetEnumerator()
         {

@@ -50,10 +50,9 @@ namespace GitTools.SourceExport
         /// and its <see cref="ExportableFile.FileName"/> before dumping its content to allow
         /// the files to be separable later on.
         /// </summary>
-        [CsvColumn(FieldIndex = 999)]
-        public override string Content => String.Join("\n\n", this.Select(ef =>
+        public override string ContentInteral => String.Join("\n\n", this.Select(ef =>
         {
-            return $"({ef.TreeChangeIntent}) {ef.FileName}:\n-------------\n{ef.Content}";
+            return $"({ef.TreeChangeIntent}) {ef.FileName}:\n-------------\n{ef.ContentInteral}";
         }));
 
         public IEnumerator<ExportableFile> GetEnumerator()

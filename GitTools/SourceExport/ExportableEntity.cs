@@ -1,6 +1,8 @@
 ﻿using LibGit2Sharp;
+using LINQtoCSV;
 using System;
 using Util.Density;
+using Util.Extensions;
 
 
 namespace GitTools.SourceExport
@@ -12,6 +14,11 @@ namespace GitTools.SourceExport
     /// </summary>
     public abstract class ExportableEntity
     {
+        /// <summary>
+        /// A flag that can be used to export the 
+        /// </summary>
+        public Boolean Base64 { get; set; } = true;
+
         /// <summary>
         /// An entity always relates to an <see cref="ExportCommit"/>, which is a sub-class of
         /// <see cref="CommitPair"/>. This means there is a child and a parent commit.
@@ -33,6 +40,13 @@ namespace GitTools.SourceExport
         /// This is the main property of every exportable item and represents a piece of source
         /// code, such as a line or hunk.
         /// </summary>
-        public abstract String Content { get; }
+        public abstract String ContentInteral { get; }
+
+        /// <summary>
+        /// The content that will be stored as a CSV field. Optionally base64-encodes.
+        /// See <see cref="Base64"/>.
+        /// </summary>
+        [CsvColumn(FieldIndex = 999)]
+        public String Content { get => this.Base64 ? this.ContentInteral.ToBase64() : this.ContentInteral; }
     }
 }
