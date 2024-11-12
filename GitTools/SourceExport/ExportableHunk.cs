@@ -17,16 +17,19 @@ namespace GitTools.SourceExport
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
     /// have one or more blocks of unchanged or changed lines.
     /// </summary>
-    public class ExportableHunk : ExportableEntity, IEnumerable<TextBlock>
+    public class ExportableHunk : ExportableFile, IEnumerable<TextBlock>
     {
+        public ExportableFile ExportableFile { get; protected set; }
+
         /// <summary>
         /// The encapsulated <see cref="GitDensity.Density.Hunk"/>.
         /// </summary>
         public Hunk Hunk { get; protected set; }
 
 
-        public ExportableHunk(ExportCommitPair exportCommit, TreeEntryChanges treeChanges, Hunk hunk, uint hunkIdx) : base(exportCommit, treeChanges)
+        public ExportableHunk(ExportableFile file, Hunk hunk, uint hunkIdx) : base(file.ExportCommit, file.TreeChange)
         {
+            this.ExportableFile = file;
             this.Hunk = hunk;
             this.HunkIdx = hunkIdx;
         }
