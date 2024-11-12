@@ -16,6 +16,7 @@
 using GitDensity.Density;
 using LibGit2Sharp;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -35,11 +36,13 @@ namespace GitDensity.Similarity
 		New
 	}
 
+
+
 	/// <summary>
 	/// Represents a block of text where the block consists of lines and their
 	/// line numbers.
 	/// </summary>
-	public class TextBlock : IEquatable<TextBlock>, ICloneable
+	public class TextBlock : IEquatable<TextBlock>, ICloneable, IEnumerable<Line>
 	{
 		protected IDictionary<UInt32, Line> linesWithLineNumber;
 
@@ -204,7 +207,7 @@ namespace GitDensity.Similarity
 		/// <returns>This (<see cref="TextBlock"/>) for chaining.</returns>
 		public TextBlock RemoveEmptyLinesAndComments()
 		{
-			return this.RemoveEmptyLinesAndComments(out TextBlock dummy);
+            return this.RemoveEmptyLinesAndComments(out _);
 		}
 
 		/// <summary>
@@ -420,5 +423,19 @@ namespace GitDensity.Similarity
 				linesDeletedWithoutEmptyOrComments += delNoC;
 			}
 		}
-	}
+
+		/// <summary>
+		/// Each <see cref="TextBlock"/> is also an enumerable of <see cref="Line"/> objects.
+		/// </summary>
+		/// <returns></returns>
+        public IEnumerator<Line> GetEnumerator()
+        {
+			return this.linesWithLineNumberReadOnly.Values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+			return this.GetEnumerator();
+        }
+    }
 }

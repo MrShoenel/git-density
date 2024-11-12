@@ -35,7 +35,7 @@ namespace GitDensity.Similarity
 	/// <summary>
 	/// Represents a single line in a <see cref="TextBlock"/>.
 	/// </summary>
-	public class Line : ICloneable
+	public class Line : ICloneable, IEquatable<Line>
 	{
 		public LineType Type { get; protected internal set; }
 
@@ -54,5 +54,15 @@ namespace GitDensity.Similarity
 		{
 			return new Line(this.Type, this.Number, this.String);
 		}
-	}
+
+        public bool Equals(Line other)
+        {
+			return other is Line && other.Type == this.Type && other.Number == this.Number && other.String == this.String;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.Type.GetHashCode() ^ this.Number.GetHashCode() ^ this.String.GetHashCode();
+        }
+    }
 }

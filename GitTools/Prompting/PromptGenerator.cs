@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Util.Density;
 using Util.Extensions;
+using Line = GitDensity.Similarity.Line;
 
 namespace GitTools.Prompting
 {
@@ -144,7 +145,6 @@ namespace GitTools.Prompting
 				var path = deleted ? change.OldPath : change.Path;
 				var patch = this.CommitPair.Patch[path];
 
-				var hunks = Hunk.HunksForPatch(patch).ToList();
 				var hunkChanges = Hunk.HunksForPatch(patch).Select(hunk =>
 				{
 					var tb = new FullTextBlock(hunk: hunk);

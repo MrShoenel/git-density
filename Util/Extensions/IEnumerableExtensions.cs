@@ -94,10 +94,49 @@ namespace Util.Extensions
 		/// <param name="outputFile"></param>
 		public static void WriteJson<T>(this IEnumerable<T> items, String outputFile)
 		{
-			using (var writer = File.CreateText(outputFile))
+			items.WriteJson(File.CreateText(outputFile));
+		}
+
+        /// <summary>
+        /// Writes the items as JSON stream, each item will become an entry in the
+        /// resulting array. The items in question should ideally use annotations,
+        /// such as <see cref="JsonArrayAttribute"/> or <see cref="JsonIgnoreAttribute"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items"></param>
+        /// <param name="writer"></param>
+        public static void WriteJson<T>(this IEnumerable<T> items, TextWriter writer)
+		{
+			using (writer)
 			{
 				writer.Write(JsonConvert.SerializeObject(items, Formatting.Indented));
 			}
+		}
+
+        /// <summary>
+        /// Write the items as CSV file, each item as a row. The items in question
+        /// should ideally use annotations, such as <see cref="CsvColumnAttribute"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items"></param>
+        /// <param name="writer"></param>
+        public static void WriteCsv<T>(this IEnumerable<T> items, TextWriter writer)
+		{
+			using (writer)
+			{
+                // Now we extract some info and write it out later.
+                var csvc = new CsvContext();
+                var outd = new CsvFileDescription
+                {
+                    FirstLineHasColumnNames = true,
+                    FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+                    SeparatorChar = ',',
+                    QuoteAllFields = true,
+                    EnforceCsvColumnAttribute = true
+                };
+
+                csvc.Write(items, writer, outd);
+            }
 		}
 
 		/// <summary>
@@ -108,20 +147,29 @@ namespace Util.Extensions
 		/// <param name="outputFile"></param>
 		public static void WriteCsv<T>(this IEnumerable<T> items, String outputFile)
 		{
-			using (var writer = File.CreateText(outputFile))
-			{
-				// Now we extract some info and write it out later.
-				var csvc = new CsvContext();
-				var outd = new CsvFileDescription
-				{
-					FirstLineHasColumnNames = true,
-					FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
-					SeparatorChar = ',',
-					QuoteAllFields = true,
-					EnforceCsvColumnAttribute = true
-				};
+			items.WriteCsv(File.CreateText(outputFile));
+		}
 
-				csvc.Write(items, writer, outd);
+
+		/// <summary>
+		/// Based on the extension of the output file, writes either a CSV or a JSON.
+		/// If the file ends in .json (case is ignored), a JSON is written. In all
+		/// other cases, a CSV files is written (regardless of the extension).
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="items"></param>
+		/// <param name="outputFile"></param>
+		public static void WriteCsvOrJson<T>(this IEnumerable<T> items, String outputFile)
+		{
+			var json = outputFile.EndsWith("json", StringComparison.OrdinalIgnoreCase);
+
+			if (json)
+			{
+				items.WriteJson(outputFile);
+			}
+			else
+			{
+				items.WriteCsv(outputFile);
 			}
 		}
 	}

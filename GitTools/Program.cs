@@ -19,26 +19,40 @@ using GitTools.Analysis;
 using GitTools.Analysis.ExtendedAnalyzer;
 using GitTools.Analysis.SimpleAnalyzer;
 using GitTools.Prompting;
+using GitTools.SourceExport;
 using LINQtoCSV;
 using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Util;
 using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
+using CompareOptions = LibGit2Sharp.CompareOptions;
+
 
 namespace GitTools
 {
+	internal enum ExportCodeType
+	{
+		Commits,
+		Files,
+		Hunks,
+		Blocks,
+		Lines
+	}
 
 	internal class Program
 	{
@@ -209,7 +223,7 @@ namespace GitTools
 									logger.LogWarning($"Switching to {nameof(AnalysisType.Extended)} analysis because it is required for generating prompts.");
 									options.AnalysisType = AnalysisType.Extended;
 								}
-								// logger.LogInformation($"Generating prompts for Commits with IDs {String.Join(separator: ", ", values: sha1IDs)}..");
+								logger.LogInformation($"Generating prompts for Commits with IDs {String.Join(separator: ", ", values: sha1IDs)}..");
 
 								var ea = new ExtendedAnalyzer(repoPathOrUrl: options.RepoPath, span: span, skipSizeAnalysis: false)
 								{ ExecutionPolicy = options.ExecutionPolicy };
@@ -221,6 +235,105 @@ namespace GitTools
 									File.WriteAllText(path: outputPath, contents: commitPrompt.ToString(), encoding: Encoding.UTF8);
 								}
 								Environment.Exit((int)ExitCodes.OK);
+							}
+						}
+						else if (options.CmdExportCode != null)
+						{
+							Debug.Assert(options.OutputFile is string, "This command requires writing to a file.");
+							try
+                            {
+								using (span)
+								{
+									var commits = span.FilteredCommits.ToList();
+									// For each of the span's commits, we will make pairs of commit and parent.
+									// This means, we will create one pair for each parent. Then, these pairs
+									// are processed according to the policy and returned.
+									var compOptions = new CompareOptions();
+									if (options.CmdExportCode == ExportCodeType.Files || options.CmdExportCode == ExportCodeType.Commits)
+									{
+										compOptions.ContextLines = Int32.MaxValue; // One hunk per file and per commit
+									}
+
+									var pairs = commits.SelectMany(commit =>
+									{
+										var parents = commit.Parents.ToList();
+										if (parents.Count == 0)
+										{
+											parents.Add(null);
+										}
+										return parents.Select(parent => new ExportCommitPair(repo: repo, child: commit, parent: parent, compareOptions: compOptions));
+									}).ToList();
+
+									logger.LogInformation($"Found {commits.Count} Commits and {pairs.Count} pairs.");
+									logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
+
+
+									var resultsBag = new ConcurrentBag<IEnumerable<ExportableEntity>>();
+									Parallel.ForEach(source: pairs, parallelOptions: new ParallelOptions() {
+										MaxDegreeOfParallelism = options.ExecutionPolicy == ExecutionPolicy.Linear ? 1 :
+											Math.Min(Environment.ProcessorCount, pairs.Count)
+									}, body: pair =>
+									{
+										if (options.CmdExportCode == ExportCodeType.Commits)
+										{
+											resultsBag.Add((pair as IEnumerable<ExportableCommit>).ToList());
+										}
+										else if (options.CmdExportCode == ExportCodeType.Files)
+										{
+											resultsBag.Add((pair as IEnumerable<ExportableFile>).ToList());
+										}
+										else if (options.CmdExportCode == ExportCodeType.Hunks)
+										{
+											resultsBag.Add((pair as IEnumerable<ExportableHunk>).ToList());
+										}
+										else if (options.CmdExportCode == ExportCodeType.Blocks)
+										{
+											resultsBag.Add((pair as IEnumerable<ExportableBlock>).ToList());
+										}
+										else if (options.CmdExportCode == ExportCodeType.Lines)
+										{
+											resultsBag.Add((pair as IEnumerable<ExportableLine>).ToList());
+										}
+									});
+
+
+									// Write the results:
+									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommit.Child.Author.When.UtcDateTime).ToList();
+									if (options.OutputFile.EndsWith("json", StringComparison.OrdinalIgnoreCase))
+									{
+										allResults.ForEach(r => r.Base64 = false);
+									}
+
+
+                                    if (options.CmdExportCode == ExportCodeType.Commits)
+                                    {
+                                        allResults.Cast<ExportableCommit>().WriteCsvOrJson(options.OutputFile);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Files)
+                                    {
+                                        allResults.Cast<ExportableFile>().WriteCsvOrJson(options.OutputFile);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Hunks)
+                                    {
+                                        allResults.Cast<ExportableHunk>().WriteCsvOrJson(options.OutputFile);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Blocks)
+                                    {
+                                        allResults.Cast<ExportableBlock>().WriteCsvOrJson(options.OutputFile);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Lines)
+                                    {
+                                        allResults.Cast<ExportableLine>().WriteCsvOrJson(options.OutputFile);
+                                    }
+
+									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} entities to {options.OutputFile}.");
+                                    Environment.Exit((int)ExitCodes.OK);
+                                }
+                            }
+							catch (Exception ex)
+							{
+								logger.LogError($"An exception occurred: {ex.Message}");
+								Environment.Exit((int)ExitCodes.CmdError);
 							}
 						}
 						#endregion
@@ -446,6 +559,9 @@ namespace GitTools
 
 		[Option("cmd-generate-prompts", Required = false, DefaultValue = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
 		public Boolean CmdGeneratePrompts { get; set; }
+
+		[Option("cmd-export-source", Required = false, DefaultValue = null, HelpText = "Command. Export source code from a repository. If present, needs to be one of " + nameof(ExportCodeType.Commits) + ", " + nameof(ExportCodeType.Files) + ", " + nameof(ExportCodeType.Hunks) + ", " + nameof(ExportCodeType.Blocks) + ", or " + nameof(ExportCodeType.Lines) + ". This will determine the granularity and level of detail that is included for each exported entity.")]
+		public ExportCodeType? CmdExportCode { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
