@@ -180,5 +180,31 @@ namespace Util.Extensions
 				return String.Join(String.Empty, result.Select(b => b.ToString("x2")));
 			}
 		}
+
+
+		/// <summary>
+		/// Convert a string to its base64-representation using a given encoding.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <param name="encoding">If not given, <see cref="Encoding.UTF8"/> is used
+		/// to encode the string.</param>
+		/// <returns></returns>
+		public static String ToBase64(this string value, Encoding encoding = null)
+		{
+			var bytes = (encoding ?? Encoding.UTF8).GetBytes(value);
+            return Convert.ToBase64String(bytes);
+        }
+
+        /// <summary>
+        /// Convert a base64-encoded string to its cleartext representation given an encoding.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="encoding">If not given, <see cref="Encoding.UTF8"/> is used
+		/// to decode the string.</param>
+        /// <returns></returns>
+        public static String FromBase64(this String value, Encoding encoding = null)
+		{
+			return (encoding ?? Encoding.UTF8).GetString(Convert.FromBase64String(value));
+		}
 	}
 }
