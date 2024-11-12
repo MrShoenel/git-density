@@ -100,6 +100,32 @@ namespace Util.Extensions
 			}
 		}
 
+        /// <summary>
+        /// Write the items as CSV file, each item as a row. The items in question
+        /// should ideally use annotations, such as <see cref="CsvColumnAttribute"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="items"></param>
+        /// <param name="writer"></param>
+        public static void WriteCsv<T>(this IEnumerable<T> items, TextWriter writer)
+		{
+			using (writer)
+			{
+                // Now we extract some info and write it out later.
+                var csvc = new CsvContext();
+                var outd = new CsvFileDescription
+                {
+                    FirstLineHasColumnNames = true,
+                    FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+                    SeparatorChar = ',',
+                    QuoteAllFields = true,
+                    EnforceCsvColumnAttribute = true
+                };
+
+                csvc.Write(items, writer, outd);
+            }
+		}
+
 		/// <summary>
 		/// Writes the items as CSV file, each item as a row. The items in question
 		/// should ideally use annotations, such as <see cref="CsvColumnAttribute"/>.
@@ -108,21 +134,7 @@ namespace Util.Extensions
 		/// <param name="outputFile"></param>
 		public static void WriteCsv<T>(this IEnumerable<T> items, String outputFile)
 		{
-			using (var writer = File.CreateText(outputFile))
-			{
-				// Now we extract some info and write it out later.
-				var csvc = new CsvContext();
-				var outd = new CsvFileDescription
-				{
-					FirstLineHasColumnNames = true,
-					FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
-					SeparatorChar = ',',
-					QuoteAllFields = true,
-					EnforceCsvColumnAttribute = true
-				};
-
-				csvc.Write(items, writer, outd);
-			}
+			items.WriteCsv(File.CreateText(outputFile));
 		}
 	}
 }
