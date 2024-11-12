@@ -25,37 +25,6 @@ namespace GitTools.SourceExport
         /// </summary>
         public ExportCommitPair ExportCommit { get; protected set; }
 
-        /// <summary>
-        /// Each single <see cref="TreeEntryChanges"/> refers to a single file that was modified.
-        /// </summary>
-        public TreeEntryChanges TreeChange { get; protected set; }
-
-        /// <summary>
-        /// The hash of the child commit.
-        /// </summary>
-        [CsvColumn(FieldIndex = 1)]
-        public String SHA1 { get => this.ExportCommit.Child.ShaShort(); }
-
-        /// <summary>
-        /// The hash of the parent commit.
-        /// </summary>
-        [CsvColumn(FieldIndex = 2)]
-        public String SHA_Parent { get => this.ExportCommit.Parent?.ShaShort() ?? "(initial)"; }
-
-        /// <summary>
-        /// The original event that triggered the creation/removal of this entity.
-        /// For example, creating a new file or renaming an existing one. We
-        /// retain this information because entities such as single lines do not
-        /// store this information.
-        /// </summary>
-        [CsvColumn(FieldIndex = 3)]
-        public ChangeKind TreeChangeIntent { get => this.TreeChange.Status; }
-
-        /// <summary>
-        /// The relative path (in the repository) of the file that was affected.
-        /// </summary>
-        [CsvColumn(FieldIndex = 4)]
-        public String FileName { get => this.TreeChange.Path; }
 
         /// <summary>
         /// Creates a new exportable entity that is based on a pair of commits and is concerned
@@ -63,10 +32,9 @@ namespace GitTools.SourceExport
         /// </summary>
         /// <param name="exportCommit"></param>
         /// <param name="treeChanges"></param>
-        public ExportableEntity(ExportCommitPair exportCommit, TreeEntryChanges treeChanges)
+        public ExportableEntity(ExportCommitPair exportCommit)
         {
             this.ExportCommit = exportCommit;
-            this.TreeChange = treeChanges;
         }
 
         public abstract String Content { get; }

@@ -27,7 +27,7 @@ namespace GitTools.SourceExport
         public Hunk Hunk { get; protected set; }
 
 
-        public ExportableHunk(ExportableFile file, Hunk hunk, uint hunkIdx) : base(file.ExportCommit, file.TreeChange)
+        public ExportableHunk(ExportableFile file, Hunk hunk, uint hunkIdx) : base(file.ExportableCommit, file.TreeChange)
         {
             this.ExportableFile = file;
             this.Hunk = hunk;
