@@ -9,6 +9,9 @@ using System.Linq;
 
 namespace GitTools.SourceExport
 {
+    /// <summary>
+    /// Represents an entire file (<see cref="TreeEntryChanges"/>) to be exported.
+    /// </summary>
     public class ExportableFile : ExportableCommit, IEnumerable<ExportableHunk>
     {
         public ExportableCommit ExportableCommit { get; protected set; }
@@ -49,6 +52,11 @@ namespace GitTools.SourceExport
         [CsvColumn(FieldIndex = 999)]
         public override string Content => String.Join("\n\n", this.expoHunks.Select(eh => eh.Content));
 
+        /// <summary>
+        /// Add a hunk to this file.
+        /// </summary>
+        /// <param name="hunk"></param>
+        /// <returns></returns>
         public ExportableFile AddHunk(ExportableHunk hunk)
         {
             this.expoHunks.Add(hunk);

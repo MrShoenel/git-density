@@ -3,11 +3,11 @@ using GitDensity.Similarity;
 using LibGit2Sharp;
 using LINQtoCSV;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Line = GitDensity.Similarity.Line;
 using Util.Extensions;
-using System.Collections;
+using Line = GitDensity.Similarity.Line;
 
 
 namespace GitTools.SourceExport

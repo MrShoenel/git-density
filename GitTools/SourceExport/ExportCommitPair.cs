@@ -80,9 +80,12 @@ namespace GitTools.SourceExport
 
         protected IEnumerable<ExportableFile> Files()
         {
-            foreach (var file in (this.lazyCommit.Value as IEnumerable<ExportableFile>))
+            foreach (var commit in this.lazyCommit.Value)
             {
-                yield return file;
+                foreach (var file in commit)
+                {
+                    yield return file;
+                }
             }
         }
 

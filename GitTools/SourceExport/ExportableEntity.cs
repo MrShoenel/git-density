@@ -1,13 +1,6 @@
 ﻿using LibGit2Sharp;
-using LINQtoCSV;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Util.Density;
-using Util.Extensions;
-
 
 
 namespace GitTools.SourceExport
@@ -31,12 +24,15 @@ namespace GitTools.SourceExport
         /// with exactly one file that was changed (i.e., a single <see cref="TreeEntryChanges"/>).
         /// </summary>
         /// <param name="exportCommit"></param>
-        /// <param name="treeChanges"></param>
         public ExportableEntity(ExportCommitPair exportCommit)
         {
             this.ExportCommit = exportCommit;
         }
 
+        /// <summary>
+        /// This is the main property of every exportable item and represents a piece of source
+        /// code, such as a line or hunk.
+        /// </summary>
         public abstract String Content { get; }
     }
 }

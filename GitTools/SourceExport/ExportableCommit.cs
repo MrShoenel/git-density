@@ -6,8 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Util.Extensions;
 
+
 namespace GitTools.SourceExport
 {
+    /// <summary>
+    /// Represents an entire commit to be exported.
+    /// </summary>
     public class ExportableCommit : ExportableEntity, IEnumerable<ExportableFile>
     {
         protected LinkedHashSet<ExportableFile> expoFiles;
@@ -29,12 +33,23 @@ namespace GitTools.SourceExport
         [CsvColumn(FieldIndex = 2)]
         public String SHA_Parent { get => this.ExportCommit.Parent?.ShaShort() ?? "(initial)"; }
 
+        /// <summary>
+        /// Add an <see cref="ExportableFile"/> to this commit.
+        /// </summary>
+        /// <param name="expoFile"></param>
+        /// <returns></returns>
         public ExportableCommit AddFile(ExportableFile expoFile)
         {
             this.expoFiles.Add(expoFile);
             return this;
         }
 
+        /// <summary>
+        /// Returns a concatenation of all <see cref="ExportableFile"/>s. Each file itself is
+        /// a concatenation of its hunks. Here, we prefix each file by its <see cref="ExportableFile.TreeChangeIntent"/>
+        /// and its <see cref="ExportableFile.FileName"/> before dumping its content to allow
+        /// the files to be separable later on.
+        /// </summary>
         [CsvColumn(FieldIndex = 999)]
         public override string Content => String.Join("\n\n", this.Select(ef =>
         {
