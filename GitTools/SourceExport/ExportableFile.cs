@@ -23,11 +23,12 @@ namespace GitTools.SourceExport
         /// </summary>
         public TreeEntryChanges TreeChange { get; protected set; }
 
-        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange) : base(exportableCommit.ExportCommit)
+        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange, uint fileIdx) : base(exportableCommit.ExportCommit)
         {
             this.ExportableCommit = exportableCommit;
             this.expoHunks = new LinkedHashSet<ExportableHunk>();
             this.TreeChange = treeChange;
+            this.FileIdx = fileIdx;
         }
 
         /// <summary>
@@ -39,6 +40,7 @@ namespace GitTools.SourceExport
         [CsvColumn(FieldIndex = 3)]
         public ChangeKind TreeChangeIntent { get => this.TreeChange.Status; }
 
+        public UInt32 FileIdx { get; protected set; }
         /// <summary>
         /// The relative path (in the repository) of the file that was affected.
         /// </summary>

@@ -52,16 +52,17 @@ namespace GitTools.SourceExport
         /// <summary>
         /// Overridden as to return relevant changes that are added, copied, deleted, or renamed.
         /// </summary>
-        public override IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => base.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Copied || rtc.Status == ChangeKind.Deleted || rtc.Status == ChangeKind.Renamed || rtc.Status == ChangeKind.Modified).ToList().AsReadOnly();
+        public override IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => base.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Copied || rtc.Status == ChangeKind.Deleted || rtc.Status == ChangeKind.Renamed || rtc.Status == ChangeKind.Modified).OrderBy(rtc => rtc.Path).ToList().AsReadOnly();
 
 
         protected IEnumerable<ExportableCommit> Commit()
         {
             var commit = new ExportableCommit(this);
 
+            uint fileIdx = 0;
             foreach (var rtc in this.RelevantTreeChanges)
             {
-                var file = new ExportableFile(commit, rtc);
+                var file = new ExportableFile(commit, rtc, fileIdx);
                 var oldPatch = this.Patch[rtc.OldPath];
                 var newPatch = this.Patch[rtc.Path];
 
@@ -80,6 +81,7 @@ namespace GitTools.SourceExport
                 }
 
                 commit.AddFile(file);
+                fileIdx++;
             }
 
             yield return commit;
