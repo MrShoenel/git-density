@@ -3,12 +3,14 @@ using GitDensity.Similarity;
 using Iesi.Collections.Generic;
 using LibGit2Sharp;
 using LINQtoCSV;
-using NHibernate.Mapping;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Util.Extensions;
+using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 using Line = GitDensity.Similarity.Line;
 
 
@@ -101,13 +103,16 @@ namespace GitTools.SourceExport
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
     /// have one or more blocks of unchanged or changed lines.
     /// </summary>
+    [JsonObject]
     public class ExportableHunk : ExportableFile, IEnumerable<LooseTextBlock>
     {
+        [JsonIgnore]
         public ExportableFile ExportableFile { get; protected set; }
 
         /// <summary>
         /// The encapsulated <see cref="GitDensity.Density.Hunk"/>.
         /// </summary>
+        [JsonIgnore]
         public Hunk Hunk { get; protected set; }
 
 
@@ -193,37 +198,51 @@ namespace GitTools.SourceExport
         /// The zero-based index of the hunk. Hunks within an affected file are ordered
         /// by where the change occurred, top to bottom.
         /// </summary>
-        [CsvColumn(FieldIndex = 5)]
+        [CsvColumn(FieldIndex = 30)]
+        [JsonProperty(Order = 30)]
         public UInt32 HunkIdx { get; protected internal set; }
 
         /// <summary>
         /// A concatenation of line numbers that were added.
         /// </summary>
-        [CsvColumn(FieldIndex = 6)]
-        public String HunkLineNumbersAdded { get => String.Join(",", this.Hunk.LineNumbersAdded); }
+        [CsvColumn(FieldIndex = 31)]
+        [JsonIgnore]
+        public String HunkLineNumbersAdded { get => String.Join(",", this.HunkLineNumbersAdded_JSON); }
+
+        [JsonProperty(Order = 31, PropertyName = nameof(HunkLineNumbersAdded))]
+        public IEnumerable<UInt32> HunkLineNumbersAdded_JSON { get => this.Hunk.LineNumbersAdded; }
 
         /// <summary>
         /// A concatenation of line numbers that were deleted.
         /// </summary>
-        [CsvColumn(FieldIndex = 7)]
-        public String HunkLineNumbersDeleted { get => String.Join(",", this.Hunk.LineNumbersDeleted); }
+        [CsvColumn(FieldIndex = 32)]
+        [JsonIgnore]
+        public String HunkLineNumbersDeleted { get => String.Join(",", this.HunkLineNumbersDeleted_JSON); }
 
-        [CsvColumn(FieldIndex = 8)]
+        [JsonProperty(Order = 32, PropertyName = nameof(HunkLineNumbersDeleted))]
+        public IEnumerable<UInt32> HunkLineNumbersDeleted_JSON { get => this.Hunk.LineNumbersDeleted; }
+
+        [CsvColumn(FieldIndex = 33)]
+        [JsonProperty(Order = 33)]
         public UInt32 HunkOldLineStart { get => this.Hunk.OldLineStart; }
 
-        [CsvColumn(FieldIndex = 9)]
+        [CsvColumn(FieldIndex = 34)]
+        [JsonProperty(Order = 34)]
         public UInt32 HunkOldNumberOfLines { get => this.Hunk.OldNumberOfLines; }
 
-        [CsvColumn(FieldIndex = 10)]
+        [CsvColumn(FieldIndex = 35)]
+        [JsonProperty(Order = 35)]
         public UInt32 HunkNewLineStart { get => this.Hunk.NewLineStart; }
 
-        [CsvColumn(FieldIndex = 11)]
+        [CsvColumn(FieldIndex = 36)]
+        [JsonProperty(Order = 36)]
         public UInt32 HunkNewNumberOfLines { get => this.Hunk.NewNumberOfLines; }
 
         /// <summary>
         /// The entire hunk's content as a string. Each line will have a leading character
         /// (space, +, -) that designates if the line is unchanged, added, or deleted.
         /// </summary>
+        [JsonIgnore]
         public override String ContentInteral { get => this.Hunk.Patch; }
     }
 }

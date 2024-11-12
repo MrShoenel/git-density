@@ -1,10 +1,16 @@
 ﻿using GitDensity.Similarity;
 using LINQtoCSV;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json.Serialization;
+using JsonConverter = Newtonsoft.Json.JsonConverter;
+using JsonConverterAttribute = Newtonsoft.Json.JsonConverterAttribute;
+using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
 
 namespace GitTools.SourceExport
@@ -20,13 +26,16 @@ namespace GitTools.SourceExport
     /// it will directly correspond to <see cref="TextBlockNature.Added"/> or <see cref="TextBlockNature.Deleted"/>,
     /// respectively.
     /// </summary>
+    [JsonObject]
     public class ExportableBlock : ExportableHunk, IEnumerable<Line>
     {
+        [JsonIgnore]
         public ExportableHunk ExportableHunk { get; protected set; }
 
         /// <summary>
         /// The encapsulated <see cref="TextBlock"/> that holds <see cref="Line"/>s.
         /// </summary>
+        [JsonIgnore]
         public LooseTextBlock TextBlock { get; protected set; }
 
         /// <summary>
@@ -46,31 +55,45 @@ namespace GitTools.SourceExport
             bool added = textBlock.LinesAdded > 0, deleted = textBlock.LinesDeleted > 0, untouched = textBlock.LinesUntouched > 0;
             Debug.Assert(((added || deleted) && !untouched) || (untouched && !added && !deleted));
 
-            this.Nature = added && deleted ? TextBlockNature.Replaced : (added ? TextBlockNature.Added : (deleted ? TextBlockNature.Deleted : TextBlockNature.Context));
+            this.BlockNature = added && deleted ? TextBlockNature.Replaced : (added ? TextBlockNature.Added : (deleted ? TextBlockNature.Deleted : TextBlockNature.Context));
         }
 
         /// <summary>
         /// The nature is determined by the (aggregated) nature of the contained
         /// <see cref="TextBlock"/>'s lines.
         /// </summary>
-        [CsvColumn(FieldIndex = 20)]
-        public TextBlockNature Nature { get; protected set; }
+        [CsvColumn(FieldIndex = 40)]
+        [JsonProperty(Order = 40), JsonConverter(typeof(StringEnumConverter))]
+        public TextBlockNature BlockNature { get; protected set; }
 
         /// <summary>
         /// The zero-based index of the block. This is very similar to <see cref="ExportableHunk.HunkIdx"/>,
         /// but on block-level. The order is top to bottom, with the top-most block having an index of zero.
         /// </summary>
-        [CsvColumn(FieldIndex = 21)]
+        [CsvColumn(FieldIndex = 41)]
+        [JsonProperty(Order = 41)]
         public UInt32 BlockIdx { get; protected set; }
 
-        [CsvColumn(FieldIndex = 22)]
-        public String BlockLineNumbersDeleted { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Deleted).OrderBy(l => l.Number).Select(l => l.Number)); }
+        [CsvColumn(FieldIndex = 42)]
+        [JsonIgnore]
+        public String BlockLineNumbersDeleted { get => String.Join(",", this.BlockLineNumbersDeleted_JSON); }
 
-        [CsvColumn(FieldIndex = 23)]
-        public String BlockLineNumbersAdded { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Added).OrderBy(l => l.Number).Select(l => l.Number)); }
+        [JsonProperty(Order = 42, PropertyName = nameof(BlockLineNumbersDeleted))]
+        public IEnumerable<UInt32> BlockLineNumbersDeleted_JSON { get => this.TextBlock.Lines.Where(l => l.Type == LineType.Deleted).OrderBy(l => l.Number).Select(l => l.Number); }
 
-        [CsvColumn(FieldIndex = 24)]
-        public String BlockLineNumbersUntouched { get => String.Join(",", this.TextBlock.Lines.Where(l => l.Type == LineType.Untouched).OrderBy(l => l.Number).Select(l => l.Number)); }
+        [CsvColumn(FieldIndex = 43)]
+        [JsonIgnore]
+        public String BlockLineNumbersAdded { get => String.Join(",", this.BlockLineNumbersAdded_JSON); }
+
+        [JsonProperty(Order = 43, PropertyName = nameof(BlockLineNumbersAdded))]
+        public IEnumerable<UInt32> BlockLineNumbersAdded_JSON { get => this.TextBlock.Lines.Where(l => l.Type == LineType.Added).OrderBy(l => l.Number).Select(l => l.Number); }
+
+        [CsvColumn(FieldIndex = 44)]
+        [JsonIgnore]
+        public String BlockLineNumbersUntouched { get => String.Join(",", this.BlockLineNumbersUntouched_JSON); }
+
+        [JsonProperty(Order = 44, PropertyName = nameof(BlockLineNumbersUntouched))]
+        public IEnumerable<UInt32> BlockLineNumbersUntouched_JSON { get => this.TextBlock.Lines.Where(l => l.Type == LineType.Untouched).OrderBy(l => l.Number).Select(l => l.Number); }
 
 
         /// <summary>
