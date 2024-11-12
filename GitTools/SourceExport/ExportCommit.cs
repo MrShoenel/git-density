@@ -1,18 +1,12 @@
 ﻿using GitDensity.Density;
-using GitDensity.Similarity;
-using GitTools.Prompting;
 using LibGit2Sharp;
-using LINQtoCSV;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography;
 using Util.Density;
-using Util.Extensions;
 using CompareOptions = LibGit2Sharp.CompareOptions;
-using Line = GitDensity.Similarity.Line;
+
 
 namespace GitTools.SourceExport
 {
@@ -73,7 +67,7 @@ namespace GitTools.SourceExport
             foreach (var hunk in this.lazyHunks.Value)
             {
                 uint blockIdx = 0;
-                foreach (var block in hunk.Blocks())
+                foreach (var block in hunk)
                 {
                     yield return new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
 
@@ -85,27 +79,13 @@ namespace GitTools.SourceExport
         {
             foreach (var block in this.lazyBlocks.Value)
             {
+                foreach (var line in block)
+                {
+                    yield return new ExportableLine(block, line);
+
+                }
 
             }
-
-            //foreach (var rtc in this.RelevantTreeChanges)
-            //{
-            //    var added = rtc.Status == ChangeKind.Added;
-            //    var patch = this.Patch[added ? rtc.Path : rtc.OldPath];
-
-            //    uint hunkIdx = 0;
-            //    foreach (var hunk in Hunk.HunksForPatch(patch))
-            //    {
-            //        var tb = new FullTextBlock(hunk);
-
-            //        foreach (var line in tb)
-            //        {
-            //            yield return new ExportableLine(exportCommit: this, treeChanges: rtc, line: line, hunkIdx: hunkIdx);
-            //        }
-
-            //        hunkIdx++;
-            //    }
-            //}
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -127,41 +107,5 @@ namespace GitTools.SourceExport
         {
             return this.lazyLines.Value.GetEnumerator();
         }
-    }
-
-    
-
-
-    
-
-
-    
-
-
-
-    public class ExportableLine : ExportableEntity
-    {
-        protected internal Line line;
-
-        public ExportableLine(ExportCommit exportCommit, TreeEntryChanges treeChanges, Line line, uint hunkIdx) : base(exportCommit, treeChanges)
-        {
-            this.line = line;
-            this.HunkIdx = hunkIdx;
-        }
-
-        [CsvColumn(FieldIndex = 5)]
-        public UInt32 HunkIdx { get; protected internal set; }
-
-
-        [CsvColumn(FieldIndex = 6)]
-        public LineType LineType { get => this.line.Type; }
-
-        [CsvColumn(FieldIndex = 7)]
-        public UInt32 LineNumber { get => this.line.Number; }
-
-        [CsvColumn(FieldIndex = 8)]
-        public override String Content { get => this.line.String + $"asd ,;\"; foo"; }
-
-
     }
 }
