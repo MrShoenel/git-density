@@ -68,5 +68,7 @@ namespace GitTools.SourceExport
             this.ExportCommit = exportCommit;
             this.TreeChange = treeChanges;
         }
+
+        public abstract String Content { get; }
     }
 }
