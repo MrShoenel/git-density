@@ -29,6 +29,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -238,6 +239,7 @@ namespace GitTools
 						}
 						else if (options.CmdExportCode != null)
 						{
+							Debug.Assert(options.OutputFile is string, "This command requires writing to a file.");
 							try
                             {
 								using (span)
@@ -252,7 +254,15 @@ namespace GitTools
 										compOptions.ContextLines = Int32.MaxValue; // One hunk per file and per commit
 									}
 
-									var pairs = commits.SelectMany(commit => commit.Parents.Select(parent => new ExportCommitPair(repo: repo, child: commit, parent: parent, compareOptions: compOptions))).ToList();
+									var pairs = commits.SelectMany(commit =>
+									{
+										var parents = commit.Parents.ToList();
+										if (parents.Count == 0)
+										{
+											parents.Add(null);
+										}
+										return parents.Select(parent => new ExportCommitPair(repo: repo, child: commit, parent: parent, compareOptions: compOptions));
+									}).ToList();
 
 									logger.LogInformation($"Found {commits.Count} Commits and {pairs.Count} pairs.");
 									logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
@@ -288,28 +298,32 @@ namespace GitTools
 
 
 									// Write the results:
-									var allResults = resultsBag.SelectMany(x => x).ToList();
-									var writer = options.OutputFile.IsNullOrEmptyOrWhiteSpace() ?
-										Console.Out : File.CreateText(options.OutputFile);
+									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommit.Child.Author.When.UtcDateTime).ToList();
+									if (options.OutputFile.EndsWith("json", StringComparison.OrdinalIgnoreCase))
+									{
+										allResults.ForEach(r => r.Base64 = false);
+									}
+
+
                                     if (options.CmdExportCode == ExportCodeType.Commits)
                                     {
-                                        allResults.Cast<ExportableCommit>().WriteCsv(writer);
+                                        allResults.Cast<ExportableCommit>().WriteCsvOrJson(options.OutputFile);
                                     }
                                     else if (options.CmdExportCode == ExportCodeType.Files)
                                     {
-                                        allResults.Cast<ExportableFile>().WriteCsv(writer);
+                                        allResults.Cast<ExportableFile>().WriteCsvOrJson(options.OutputFile);
                                     }
                                     else if (options.CmdExportCode == ExportCodeType.Hunks)
                                     {
-                                        allResults.Cast<ExportableHunk>().WriteCsv(writer);
+                                        allResults.Cast<ExportableHunk>().WriteCsvOrJson(options.OutputFile);
                                     }
                                     else if (options.CmdExportCode == ExportCodeType.Blocks)
                                     {
-                                        allResults.Cast<ExportableBlock>().WriteCsv(writer);
+                                        allResults.Cast<ExportableBlock>().WriteCsvOrJson(options.OutputFile);
                                     }
                                     else if (options.CmdExportCode == ExportCodeType.Lines)
                                     {
-                                        allResults.Cast<ExportableLine>().WriteCsv(writer);
+                                        allResults.Cast<ExportableLine>().WriteCsvOrJson(options.OutputFile);
                                     }
 
 									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} entities to {options.OutputFile}.");
