@@ -43,6 +43,57 @@ namespace GitTools.SourceExport
         /// </summary>
         Replaced = 3u
     }
+
+
+    /// <summary>
+    /// We need another kind of text block, because the original <see cref="TextBlock"/>
+    /// was not meant for holding old (removed) and new (added) lines simultaneously.
+    /// This type here is much less impartial and manages lines and their number by
+    /// relying on the <see cref="Line"/>s themselves. The API, otherwise, mimics the
+    /// original text block as much as possible.
+    /// </summary>
+    public class LooseTextBlock : IEnumerable<Line>
+    {
+        public UInt32 LinesAdded { get => (UInt32)this.lines.Where(l => l.Type == LineType.Added).Count(); }
+
+        public UInt32 LinesDeleted { get => (UInt32)this.lines.Where(l => l.Type == LineType.Deleted).Count(); }
+
+        public UInt32 LinesUntouched { get => (UInt32)this.lines.Where(l => l.Type == LineType.Untouched).Count(); }
+
+        public Boolean IsEmpty { get => this.lines.Count == 0; }
+
+        protected LinkedHashSet<Line> lines;
+
+        public ReadOnlySet<Line> Lines { get; protected set; }
+
+        public LooseTextBlock()
+        {
+            this.lines = new LinkedHashSet<Line>();
+            this.Lines = new ReadOnlySet<Line>(this.lines);
+        }
+
+        public LooseTextBlock AddLine(Line line)
+        {
+            this.lines.Add(line);
+            return this;
+        }
+
+        public IEnumerator<Line> GetEnumerator()
+        {
+            return this.Lines.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
+
+        public String WholeBlock => String.Join("\n",
+            this.Lines.OrderBy(l => l.Number).Select(l => l.String));
+    }
+
+
+
     /// <summary>
     /// Represents an entire <see cref="GitDensity.Density.Hunk"/> that can be exported
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
