@@ -257,6 +257,7 @@ namespace GitTools
 									logger.LogInformation($"Found {commits.Count} Commits and {pairs.Count} pairs.");
 									logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
 
+
 									var resultsBag = new ConcurrentBag<IEnumerable<ExportableEntity>>();
 									Parallel.ForEach(source: pairs, parallelOptions: new ParallelOptions() {
 										MaxDegreeOfParallelism = options.ExecutionPolicy == ExecutionPolicy.Linear ? 1 :
@@ -286,24 +287,29 @@ namespace GitTools
 									});
 
 
-									var allResults = resultsBag.SelectMany(res => res).ToList();
-                                    // Let's write the CSV:
-                                    using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
-                                        Console.Out : File.CreateText(options.OutputFile))
+									// Write the results:
+									var allResults = resultsBag.SelectMany(x => x).ToList();
+									var writer = options.OutputFile.IsNullOrEmptyOrWhiteSpace() ?
+										Console.Out : File.CreateText(options.OutputFile);
+                                    if (options.CmdExportCode == ExportCodeType.Commits)
                                     {
-                                        // Now we extract some info and write it out later.
-                                        var csvc = new CsvContext();
-                                        var outd = new CsvFileDescription
-                                        {
-                                            FirstLineHasColumnNames = true,
-                                            FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
-                                            SeparatorChar = ';',
-                                            QuoteAllFields = true,
-                                            EnforceCsvColumnAttribute = true,
-                                            TextEncoding = System.Text.Encoding.UTF8
-                                        };
-
-                                        csvc.Write(allResults, writer, outd);
+                                        allResults.Cast<ExportableCommit>().WriteCsv(writer);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Files)
+                                    {
+                                        allResults.Cast<ExportableFile>().WriteCsv(writer);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Hunks)
+                                    {
+                                        allResults.Cast<ExportableHunk>().WriteCsv(writer);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Blocks)
+                                    {
+                                        allResults.Cast<ExportableBlock>().WriteCsv(writer);
+                                    }
+                                    else if (options.CmdExportCode == ExportCodeType.Lines)
+                                    {
+                                        allResults.Cast<ExportableLine>().WriteCsv(writer);
                                     }
 
 									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} entities to {options.OutputFile}.");
