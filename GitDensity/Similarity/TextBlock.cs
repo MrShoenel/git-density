@@ -16,6 +16,7 @@
 using GitDensity.Density;
 using LibGit2Sharp;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -94,6 +95,34 @@ namespace GitDensity.Similarity
 
 		public UInt32 LinesUntouched => (UInt32)this.linesWithLineNumber
 			.Count(kv => kv.Value.Type == LineType.Untouched);
+
+		/// <summary>
+		/// Returns the <see cref="TextBlockNature"/> of this block.
+		/// </summary>
+		public TextBlockNature Nature
+		{
+			get
+			{
+				var add = this.LinesAdded > 0u;
+				var del = this.LinesDeleted > 0u;
+
+				if (add && del)
+				{
+					return TextBlockNature.Replaced;
+				}
+				else if (add)
+				{
+					return TextBlockNature.Added;
+				}
+				else if (del)
+				{
+					return TextBlockNature.Deleted;
+				}
+
+				// No add or del:
+				return TextBlockNature.Context;
+			}
+		}
 		#endregion
 
 		/// <summary>
@@ -236,7 +265,7 @@ namespace GitDensity.Similarity
 		/// <returns>This (<see cref="TextBlock"/>) for chaining.</returns>
 		public TextBlock RemoveEmptyLinesAndComments()
 		{
-			return this.RemoveEmptyLinesAndComments(out TextBlock dummy);
+            return this.RemoveEmptyLinesAndComments(out _);
 		}
 
 		/// <summary>
@@ -452,5 +481,19 @@ namespace GitDensity.Similarity
 				linesDeletedWithoutEmptyOrComments += delNoC;
 			}
 		}
-	}
+
+		/// <summary>
+		/// Each <see cref="TextBlock"/> is also an enumerable of <see cref="Line"/> objects.
+		/// </summary>
+		/// <returns></returns>
+        public IEnumerator<Line> GetEnumerator()
+        {
+			return this.linesWithLineNumberReadOnly.Values.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+			return this.GetEnumerator();
+        }
+    }
 }
