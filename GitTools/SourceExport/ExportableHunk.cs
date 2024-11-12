@@ -5,10 +5,9 @@ using LINQtoCSV;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Line = GitDensity.Similarity.Line;
 using Util.Extensions;
+using System.Collections;
 
 
 namespace GitTools.SourceExport
@@ -18,19 +17,12 @@ namespace GitTools.SourceExport
     /// as an entiry. For each changed file, there are one or more hunks. Each hunk can
     /// have one or more blocks of unchanged or changed lines.
     /// </summary>
-    public class ExportableHunk : ExportableEntity
+    public class ExportableHunk : ExportableEntity, IEnumerable<TextBlock>
     {
         /// <summary>
         /// The encapsulated <see cref="GitDensity.Density.Hunk"/>.
         /// </summary>
         public Hunk Hunk { get; protected set; }
-
-        /// <summary>
-        /// The zero-based index of the hunk. Hunks within an affected file are ordered
-        /// by where the change occurred, top to bottom.
-        /// </summary>
-        [CsvColumn(FieldIndex = 5)]
-        public UInt32 HunkIdx { get; protected internal set; }
 
 
         public ExportableHunk(ExportCommit exportCommit, TreeEntryChanges treeChanges, Hunk hunk, uint hunkIdx) : base(exportCommit, treeChanges)
@@ -45,12 +37,12 @@ namespace GitTools.SourceExport
         /// assigned to a block of pure <see cref="TextBlockNature"/>.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<TextBlock> Blocks()
+        public IEnumerator<TextBlock> GetEnumerator()
         {
             var lines = new Queue<String>(this.Hunk.Patch.GetLines(removeEmptyLines: false));
             if (lines.Count == 0)
             {
-                return Enumerable.Empty<TextBlock>();
+                return Enumerable.Empty<TextBlock>().GetEnumerator();
             }
 
             Func<string, LineType> getType = (string line) =>
@@ -101,32 +93,45 @@ namespace GitTools.SourceExport
                 }
             }
 
-            return blocks;
+            return blocks.GetEnumerator();
         }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
+
+
+        /// <summary>
+        /// The zero-based index of the hunk. Hunks within an affected file are ordered
+        /// by where the change occurred, top to bottom.
+        /// </summary>
+        [CsvColumn(FieldIndex = 5)]
+        public UInt32 HunkIdx { get; protected internal set; }
 
         /// <summary>
         /// A concatenation of line numbers that were added.
         /// </summary>
         [CsvColumn(FieldIndex = 6)]
-        public String LineNumbersAdded { get => String.Join(",", this.Hunk.LineNumbersAdded); }
+        public String HunkLineNumbersAdded { get => String.Join(",", this.Hunk.LineNumbersAdded); }
 
         /// <summary>
         /// A concatenation of line numbers that were deleted.
         /// </summary>
         [CsvColumn(FieldIndex = 7)]
-        public String LineNumbersDeleted { get => String.Join(",", this.Hunk.LineNumbersDeleted); }
+        public String HunkLineNumbersDeleted { get => String.Join(",", this.Hunk.LineNumbersDeleted); }
 
         [CsvColumn(FieldIndex = 8)]
-        public UInt32 OldLineStart { get => this.Hunk.OldLineStart; }
+        public UInt32 HunkOldLineStart { get => this.Hunk.OldLineStart; }
 
         [CsvColumn(FieldIndex = 9)]
-        public UInt32 OldNumberOfLines { get => this.Hunk.OldNumberOfLines; }
+        public UInt32 HunkOldNumberOfLines { get => this.Hunk.OldNumberOfLines; }
 
         [CsvColumn(FieldIndex = 10)]
-        public UInt32 NewLineStart { get => this.Hunk.NewLineStart; }
+        public UInt32 HunkNewLineStart { get => this.Hunk.NewLineStart; }
 
         [CsvColumn(FieldIndex = 11)]
-        public UInt32 NewNumberOfLines { get => this.Hunk.NewNumberOfLines; }
+        public UInt32 HunkNewNumberOfLines { get => this.Hunk.NewNumberOfLines; }
 
         /// <summary>
         /// The entire hunk's content as a string. Each line will have a leading character
