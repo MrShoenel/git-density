@@ -10,6 +10,27 @@ using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 namespace GitTools.SourceExport
 {
     /// <summary>
+    /// The content value of each <see cref="ExportableEntity"/> can be encoded to
+    /// Base64 or JSON. This is useful when exporting CSV, for example. No encoding
+    /// should be applied when exporting entities to JSON.
+    /// </summary>
+    public enum ContentEncoding
+    {
+        /// <summary>
+        /// Do not encode the content value.
+        /// </summary>
+        Plain,
+        /// <summary>
+        /// Convert the content to its base-64 representation.
+        /// </summary>
+        Base64,
+        /// <summary>
+        /// Convert the content to its JSON representation.
+        /// </summary>
+        JSON
+    }
+
+    /// <summary>
     /// A piece of source code that is exportable (e.g., To JSON or CSV). However, this
     /// class is abstract and requires a concrete type to inherit from it, such as a Hunk,
     /// block, or even a line.
@@ -21,14 +42,14 @@ namespace GitTools.SourceExport
         /// A flag that can be used to export the 
         /// </summary>
         [JsonIgnore]
-        public Boolean Base64 { get; set; } = true;
+        public ContentEncoding ContentEncoding { get; set; } = ContentEncoding.Plain;
 
         /// <summary>
-        /// An entity always relates to an <see cref="ExportCommit"/>, which is a sub-class of
+        /// An entity always relates to an <see cref="ExportCommitPair"/>, which is a sub-class of
         /// <see cref="CommitPair"/>. This means there is a child and a parent commit.
         /// </summary>
         [JsonIgnore]
-        public ExportCommitPair ExportCommit { get; protected set; }
+        public ExportCommitPair ExportCommitPair { get; protected set; }
 
 
         /// <summary>
@@ -50,10 +71,12 @@ namespace GitTools.SourceExport
 
         /// <summary>
         /// The content that will be stored as a CSV field. Optionally base64-encodes.
-        /// See <see cref="Base64"/>.
+        /// See <see cref="ContentEncoding"/>.
         /// </summary>
         [CsvColumn(FieldIndex = 999)]
         [JsonProperty(Order = 999)]
-        public String Content { get => this.Base64 ? this.ContentInteral.ToBase64() : this.ContentInteral; }
+        public String Content { get => this.ContentEncoding == ContentEncoding.Plain ? this.ContentInteral :
+                (this.ContentEncoding == ContentEncoding.Base64 ? this.ContentInteral.ToBase64() : this.ContentInteral.ToJSON());
+        }
     }
 }
