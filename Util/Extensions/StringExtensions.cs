@@ -14,6 +14,7 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -205,6 +206,18 @@ namespace Util.Extensions
         public static String FromBase64(this String value, Encoding encoding = null)
 		{
 			return (encoding ?? Encoding.UTF8).GetString(Convert.FromBase64String(value));
+		}
+
+
+		/// <summary>
+		/// Convert a string to its JSON-representation. This is useful for escaping strings
+		/// when they should be used in contexts such as CSV files.
+		/// </summary>
+		/// <param name="value"></param>
+		/// <returns></returns>
+		public static String ToJSON(this string value)
+		{
+			return JsonConvert.SerializeObject(value, formatting: Formatting.None);
 		}
 	}
 }

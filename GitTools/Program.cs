@@ -91,7 +91,7 @@ namespace GitTools
 			var options = new CommandLineOptions();
 			var optionsParseSuccess = Parser.Default.ParseArguments(args, options);
 
-			if (options.CmdCountKeywords)
+			if (options.CmdCountKeywords.HasValue && options.CmdCountKeywords.Value)
 			{
 				try
 				{
@@ -177,7 +177,7 @@ namespace GitTools
 						}
 
 						#region Check for commands
-						if (options.CmdCountCommits)
+						if (options.CmdCountCommits.HasValue && options.CmdCountCommits.Value)
 						{
 							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
 
@@ -197,7 +197,7 @@ namespace GitTools
 							logger.LogInformation($"Wrote JSON to {(String.IsNullOrWhiteSpace(options.OutputFile) ? "console" : options.OutputFile)}.");
 							Environment.Exit((int)ExitCodes.OK);
 						}
-						else if (options.CmdGeneratePrompts)
+						else if (options.CmdGeneratePrompts.HasValue && options.CmdGeneratePrompts.Value)
 						{
 							if (String.IsNullOrEmpty(options.TempDirectory))
 							{
@@ -206,14 +206,14 @@ namespace GitTools
 							}
 
 							String inputTemplate = null;
-							if (String.IsNullOrEmpty(options.InputPromptTemplate))
+							if (String.IsNullOrEmpty(options.CmdGeneratePrompts_Template))
 							{
 								logger.LogWarning("No input prompt template was given, using the empty default template: __SUMMARY__ \\n __CHANGELIST__.");
 								inputTemplate = "__SUMMARY__ \n __CHANGELIST__";
 							}
 							else
 							{
-								inputTemplate = File.ReadAllText(path: options.InputPromptTemplate);
+								inputTemplate = File.ReadAllText(path: options.CmdGeneratePrompts_Template);
 							}
 
 							using (span)
@@ -239,7 +239,11 @@ namespace GitTools
 						}
 						else if (options.CmdExportCode != null)
 						{
-							Debug.Assert(options.OutputFile is string, "This command requires writing to a file.");
+							if (!(options.OutputFile is string))
+							{
+								throw new ArgumentException("This command requires writing to a file.");
+                            }
+
 							try
                             {
 								using (span)
@@ -248,11 +252,10 @@ namespace GitTools
 									// For each of the span's commits, we will make pairs of commit and parent.
 									// This means, we will create one pair for each parent. Then, these pairs
 									// are processed according to the policy and returned.
-									var compOptions = new CompareOptions();
-									if (options.CmdExportCode == ExportCodeType.Files || options.CmdExportCode == ExportCodeType.Commits)
+									var compOptions = new CompareOptions()
 									{
-										compOptions.ContextLines = Int32.MaxValue; // One hunk per file and per commit
-									}
+										ContextLines = (Int32)options.CmdExport_ContextLines
+									};
 
 									var pairs = commits.SelectMany(commit =>
 									{
@@ -276,32 +279,32 @@ namespace GitTools
 									{
 										if (options.CmdExportCode == ExportCodeType.Commits)
 										{
-											resultsBag.Add((pair as IEnumerable<ExportableCommit>).ToList());
+											resultsBag.Add(pair.AsCommits.ToList());
 										}
 										else if (options.CmdExportCode == ExportCodeType.Files)
 										{
-											resultsBag.Add((pair as IEnumerable<ExportableFile>).ToList());
+											resultsBag.Add(pair.AsFiles.ToList());
 										}
 										else if (options.CmdExportCode == ExportCodeType.Hunks)
 										{
-											resultsBag.Add((pair as IEnumerable<ExportableHunk>).ToList());
+											resultsBag.Add(pair.AsHunks.ToList());
 										}
 										else if (options.CmdExportCode == ExportCodeType.Blocks)
 										{
-											resultsBag.Add((pair as IEnumerable<ExportableBlock>).ToList());
+											resultsBag.Add(pair.AsBlocks.ToList());
 										}
 										else if (options.CmdExportCode == ExportCodeType.Lines)
 										{
-											resultsBag.Add((pair as IEnumerable<ExportableLine>).ToList());
+											resultsBag.Add(pair.AsLines.ToList());
 										}
 									});
 
 
 									// Write the results:
-									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommit.Child.Author.When.UtcDateTime).ToList();
-									if (options.OutputFile.EndsWith("json", StringComparison.OrdinalIgnoreCase))
+									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommitPair.Child.Author.When.UtcDateTime).ToList();
+									if (options.OutputFile.EndsWith("csv", StringComparison.OrdinalIgnoreCase))
 									{
-										allResults.ForEach(r => r.Base64 = false);
+										allResults.ForEach(r => r.ContentEncoding = options.CmdExport_Encoding);
 									}
 
 
@@ -537,31 +540,37 @@ namespace GitTools
 		[JsonConverter(typeof(StringEnumConverter))]
 		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
-		[Option('i', "input-ids", Required = false, DefaultValue = null, HelpText = "Optional. A path to a file with SHA1's of commits to analyze (one SHA1 per line). If given, then only those commits will be analyzed and all others will be skipped. Can be used in conjunction with --limit.")]
+		[Option('i', "input-ids", Required = false, HelpText = "Optional. A path to a file with SHA1's of commits to analyze (one SHA1 per line). If given, then only those commits will be analyzed and all others will be skipped. Can be used in conjunction with --limit.")]
 		public String InputCommitIDs { get; set; }
 
-		[Option("limit", Required = false, DefaultValue = null, HelpText = "Optional. A positive integer to limit the amount of commits analyzed. Can be used in conjunction with any other options (such as -i).")]
+		[Option("limit", Required = false, HelpText = "Optional. A positive integer to limit the amount of commits analyzed. Can be used in conjunction with any other options (such as -i).")]
 		public UInt32? Limit { get; set; }
 
 		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
 		[JsonConverter(typeof(StringEnumConverter))]
 		public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
-		[Option('p', "prompt-template", Required = false, DefaultValue = null, HelpText = "Optional. A path to a file")]
-		public String InputPromptTemplate { get; set; }
-
 		#region Command-Options
-		[Option("cmd-count-commits", Required = false, DefaultValue = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
-		public Boolean CmdCountCommits { get; set; }
+		[Option("cmd-count-commits", Required = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
+		public Boolean? CmdCountCommits { get; set; }
 
-		[Option("cmd-count-keywords", Required = false, DefaultValue = false, HelpText = "Command. Counts the keywords on messages in entities already existing in table Gtools_Ex and updates each with the amount of keywords found. Writes some progress to the console.")]
-		public Boolean CmdCountKeywords { get; set; }
+		[Option("cmd-count-keywords", Required = false, HelpText = "Command. Counts the keywords on messages in entities already existing in table Gtools_Ex and updates each with the amount of keywords found. Writes some progress to the console.")]
+		public Boolean? CmdCountKeywords { get; set; }
 
-		[Option("cmd-generate-prompts", Required = false, DefaultValue = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
-		public Boolean CmdGeneratePrompts { get; set; }
+		[Option("cmd-generate-prompts", Required = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
+		public Boolean? CmdGeneratePrompts { get; set; }
 
-		[Option("cmd-export-source", Required = false, DefaultValue = null, HelpText = "Command. Export source code from a repository. If present, needs to be one of " + nameof(ExportCodeType.Commits) + ", " + nameof(ExportCodeType.Files) + ", " + nameof(ExportCodeType.Hunks) + ", " + nameof(ExportCodeType.Blocks) + ", or " + nameof(ExportCodeType.Lines) + ". This will determine the granularity and level of detail that is included for each exported entity.")]
+        [Option('p', "prompt-template", Required = false, HelpText = "Optional. Option for the command --cmd-generate-prompts. A path to a file that holds a template for generating prompts.")]
+        public String CmdGeneratePrompts_Template { get; set; }
+
+        [Option("cmd-export-source", Required = false, HelpText = "Command. Export source code from a repository. If present, needs to be one of " + nameof(ExportCodeType.Commits) + ", " + nameof(ExportCodeType.Files) + ", " + nameof(ExportCodeType.Hunks) + ", " + nameof(ExportCodeType.Blocks) + ", or " + nameof(ExportCodeType.Lines) + ". This will determine the granularity and level of detail that is included for each exported entity. Exports as CSV or JSON.")]
 		public ExportCodeType? CmdExportCode { get; set; }
+
+		[Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
+		public ContentEncoding CmdExport_Encoding { get; set; }
+
+		[Option("context-lines", Required = false, DefaultValue = 3u, HelpText = "Option for the command --cmd-export-source. The number of unchanged lines that define the boundary of a hunk (and to display before and after). If this value is large, then hunks will start to collapse into each other. This option is useful when exporting hunks, files, and commits. E.g., setting it to " + nameof(Int32.MaxValue) + " yields one hunk per file and per commit.")]
+		public UInt32 CmdExport_ContextLines { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]

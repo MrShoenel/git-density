@@ -31,54 +31,54 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 1)]
         [JsonProperty(Order = 1)]
-        public String SHA1 { get => this.ExportCommit.Child.ShaShort(); }
+        public String SHA1 { get => this.ExportCommitPair.Child.ShaShort(); }
 
         /// <summary>
         /// The hash of the parent commit.
         /// </summary>
         [CsvColumn(FieldIndex = 2)]
         [JsonProperty(Order = 2)]
-        public String SHA1_Parent { get => this.ExportCommit.Parent?.ShaShort() ?? "(initial)"; }
+        public String SHA1_Parent { get => this.ExportCommitPair.Parent?.ShaShort() ?? "(initial)"; }
 
         [CsvColumn(FieldIndex = 3)]
         [JsonProperty(Order = 3)]
-        public String Message { get => this.ExportCommit.Child.Message.Trim(); }
+        public String Message { get => this.ExportCommitPair.Child.Message.Trim(); }
 
         [CsvColumn(FieldIndex = 4)]
         [JsonProperty(Order = 4)]
-        public String AuthorName { get => this.ExportCommit.Child.Author.Name; }
+        public String AuthorName { get => this.ExportCommitPair.Child.Author.Name; }
 
         [CsvColumn(FieldIndex = 5)]
         [JsonProperty(Order = 5)]
-        public String AuthorEmail { get => this.ExportCommit.Child.Author.Email; }
+        public String AuthorEmail { get => this.ExportCommitPair.Child.Author.Email; }
 
         [CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
         [JsonProperty(Order = 6)]
-        public DateTime AuthorTime { get => this.ExportCommit.Child.Author.When.UtcDateTime; }
+        public DateTime AuthorTime { get => this.ExportCommitPair.Child.Author.When.UtcDateTime; }
 
         [CsvColumn(FieldIndex = 7)]
         [JsonProperty(Order = 7)]
-        public String CommitterName { get => this.ExportCommit.Child.Committer.Name; }
+        public String CommitterName { get => this.ExportCommitPair.Child.Committer.Name; }
 
         [CsvColumn(FieldIndex = 8)]
         [JsonProperty(Order = 8)]
-        public String CommitterEmail { get => this.ExportCommit.Child.Committer.Email; }
+        public String CommitterEmail { get => this.ExportCommitPair.Child.Committer.Email; }
 
         [CsvColumn(FieldIndex = 9, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
         [JsonProperty(Order = 9)]
-        public DateTime CommitterTime { get => this.ExportCommit.Child.Committer.When.UtcDateTime; }
+        public DateTime CommitterTime { get => this.ExportCommitPair.Child.Committer.When.UtcDateTime; }
 
         [CsvColumn(FieldIndex = 10)]
         [JsonProperty(Order = 10)]
-        public Boolean IsInitialCommit { get => this.ExportCommit.Child.Parents.Count() == 0; }
+        public Boolean IsInitialCommit { get => this.ExportCommitPair.Child.Parents.Count() == 0; }
 
         [CsvColumn(FieldIndex = 11)]
         [JsonProperty(Order = 11)]
-        public Boolean IsMergeCommit { get => this.ExportCommit.Child.Parents.Count() > 1; }
+        public Boolean IsMergeCommit { get => this.ExportCommitPair.Child.Parents.Count() > 1; }
 
         [CsvColumn(FieldIndex = 12)]
         [JsonProperty(Order = 12)]
-        public UInt32 NumberOfParentCommits { get => (uint)this.ExportCommit.Child.Parents.Count(); }
+        public UInt32 NumberOfParentCommits { get => (uint)this.ExportCommitPair.Child.Parents.Count(); }
 
         /// <summary>
         /// A map between child and parent commit time as the <see cref="TimeSpan"/> between
@@ -86,7 +86,7 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 13)]
         [JsonProperty(Order = 13)]
-        public Double? DaysSinceParentCommit { get => this.ExportCommit.Parent is Commit ? (this.ExportCommit.Child.Committer.When.UtcDateTime - this.ExportCommit.Parent.Committer.When.UtcDateTime).TotalDays : (Double?)null; }
+        public Double? DaysSinceParentCommit { get => this.ExportCommitPair.Parent is Commit ? (this.ExportCommitPair.Child.Committer.When.UtcDateTime - this.ExportCommitPair.Parent.Committer.When.UtcDateTime).TotalDays : (Double?)null; }
 
 
 

@@ -30,7 +30,7 @@ namespace GitTools.SourceExport
         [JsonIgnore]
         public TreeEntryChanges TreeChange { get; protected set; }
 
-        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange, uint fileIdx) : base(exportableCommit.ExportCommit)
+        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange, uint fileIdx) : base(exportableCommit.ExportCommitPair)
         {
             this.ExportableCommit = exportableCommit;
             this.expoHunks = new LinkedHashSet<ExportableHunk>();
