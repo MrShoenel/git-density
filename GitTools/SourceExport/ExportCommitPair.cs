@@ -170,5 +170,15 @@ namespace GitTools.SourceExport
         {
             return this.lazyLines.Value.GetEnumerator();
         }
+
+        public IEnumerable<ExportableCommit> AsCommits { get => this as IEnumerable<ExportableCommit>; }
+
+        public IEnumerable<ExportableFile> AsFiles { get => this as IEnumerable<ExportableFile>; }
+
+        public IEnumerable<ExportableHunk> AsHunks { get => this as IEnumerable<ExportableHunk>; }
+
+        public IEnumerable<ExportableBlock> AsBlocks { get =>  this as IEnumerable<ExportableBlock>; }
+
+        public IEnumerable<ExportableLine> AsLines { get => this as IEnumerable<ExportableLine>; }
     }
 }
