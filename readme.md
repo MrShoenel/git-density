@@ -42,6 +42,12 @@ Git Density is a solution that currently features these three applications:
 	*	Supports two methods currently: _Simple_ and _Extended_ (default) extraction.
 	*	Does not require tools for clone-detection or metrics, as these are not extracted.
 	*	Extracts __58__ features (__13__ features + counts for __20__ keywords (see [5]) in _Simple_-mode): `"SHA1", "RepoPathOrUrl", "AuthorName", "CommitterName", "AuthorTime", "CommitterTime", "Message", "AuthorEmail", "CommitterEmail", "IsInitialCommit", "IsMergeCommit", "NumberOfParentCommits", "ParentCommitSHA1s"` __plus 25 in extended:__ `"MinutesSincePreviousCommit", "AuthorNominalLabel", "CommitterNominalLabel", "NumberOfFilesAdded", "NumberOfFilesAddedNet", "NumberOfLinesAddedByAddedFiles", "NumberOfLinesAddedByAddedFilesNet", "NumberOfFilesDeleted", "NumberOfFilesDeletedNet", "NumberOfLinesDeletedByDeletedFiles", "NumberOfLinesDeletedByDeletedFilesNet", "NumberOfFilesModified", "NumberOfFilesModifiedNet", "NumberOfFilesRenamed", "NumberOfFilesRenamedNet", "NumberOfLinesAddedByModifiedFiles", "NumberOfLinesAddedByModifiedFilesNet", "NumberOfLinesDeletedByModifiedFiles", "NumberOfLinesDeletedByModifiedFilesNet", "NumberOfLinesAddedByRenamedFiles", "NumberOfLinesAddedByRenamedFilesNet", "NumberOfLinesDeletedByRenamedFiles", "NumberOfLinesDeletedByRenamedFilesNet", "Density", "AffectedFilesRatioNet"`
+* **New in v2024.11**: __`git-tools`__ can now export also source code! This may not be as trivial as it sounds.
+  * Export source code into CSV or JSON.
+  * Export on varying level of granularity: Commits, Files, Hunks, Blocks, or Lines.
+  * Depending on the level of granularity, export up to **`30`** additional details: `"SHA1","SHA1_Parent","Message","AuthorName","AuthorEmail","AuthorTime","CommitterName","CommitterEmail","CommitterTime","IsInitialCommit","IsMergeCommit","NumberOfParentCommits","DaysSinceParentCommit","TreeChangeIntent","FileIdx","FileName","HunkIdx","HunkLineNumbersAdded","HunkLineNumbersDeleted","HunkOldLineStart","HunkOldNumberOfLines","HunkNewLineStart","HunkNewNumberOfLines","BlockNature","BlockIdx","BlockLineNumbersDeleted","BlockLineNumbersAdded","BlockLineNumbersUntouched","LineType","LineNumber"`
+  * These features can be used to completely restore the patches and modified files.
+  * While commits, files, hunks, and lines are self-explanatory, blocks are groups of consectuive and contiguous lines. A block has a nature of added/deleted/replaced or context (untouched lines). The nature is determined by the lines, since it can have zero or more deleted lines, followed by zero or more added lines. A new block starts when switching from/to context.
 
 All applications can be run standalone, but may also be included as references, as they all feature a public API.
 
@@ -58,13 +64,13 @@ Please use the following BibTeX to cite __`GitDensity`__:
 
 <pre>
 @article{honel2020gitdensity,
-  title={Git Density (2022.10): Analyze git repositories to extract the Source Code Density and other Commit Properties},
+  title={Git Density (2024.11): Analyze git repositories to extract the Source Code Density and other Commit Properties},
   DOI={10.5281/zenodo.2565238},
   url={https://doi.org/10.5281/zenodo.2565238},
   publisher={Zenodo},
   author={Sebastian Hönel},
-  year={2022},
-  month={Oct},
+  year={2024},
+  month={Nov},
   abstractNote={Git Density (<code>git-density</code>) is a tool to analyze <code>git</code>-repositories with the goal of detecting the source code density. It was developed during the research phase of the short technical paper and poster &quot;<em>A changeset-based approach to assess source code density and developer efficacy</em>&quot; and has since been extended to support extended analyses.},
 }
 </pre>
