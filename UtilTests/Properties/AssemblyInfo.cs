@@ -1,6 +1,6 @@
 /// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2024 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
