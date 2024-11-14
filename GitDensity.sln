@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitDensity", "GitDensity\GitDensity.csproj", "{A387FE6E-4A84-4971-A8A7-3E60FB08B569}"
 EndProject
@@ -20,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitMetrics", "GitMetrics\GitMetrics.csproj", "{FF0514F8-C5E8-4148-A6BF-F9FEE96795BA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitTools", "GitTools\GitTools.csproj", "{E0E09425-B344-4555-A1C6-1264B1EFE3E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitToolsTests", "GitToolsTests\GitToolsTests.csproj", "{57F1238C-58C6-43BB-AD7F-6AA901031DCB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -62,6 +64,10 @@ Global
 		{E0E09425-B344-4555-A1C6-1264B1EFE3E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E0E09425-B344-4555-A1C6-1264B1EFE3E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E0E09425-B344-4555-A1C6-1264B1EFE3E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57F1238C-58C6-43BB-AD7F-6AA901031DCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57F1238C-58C6-43BB-AD7F-6AA901031DCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57F1238C-58C6-43BB-AD7F-6AA901031DCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57F1238C-58C6-43BB-AD7F-6AA901031DCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
