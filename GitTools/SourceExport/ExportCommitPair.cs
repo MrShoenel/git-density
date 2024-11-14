@@ -18,7 +18,7 @@ namespace GitTools.SourceExport
     /// </summary>
     public class ExportCommitPair : CommitPair, IEnumerable<ExportableCommit>, IEnumerable<ExportableFile>, IEnumerable<ExportableHunk>, IEnumerable<ExportableBlock>, IEnumerable<ExportableLine>
     {
-        private Lazy<IList<ExportableCommit>> lazyCommit;
+        private Lazy<IList<ExportableCommit>> lazyCommits;
         private Lazy<IList<ExportableFile>> lazyFiles;
         private Lazy<IList<ExportableHunk>> lazyHunks;
         private Lazy<IList<ExportableBlock>> lazyBlocks;
@@ -42,7 +42,7 @@ namespace GitTools.SourceExport
         {
             this.CompareOptions = compareOptions ?? new CompareOptions();
 
-            this.lazyCommit = new Lazy<IList<ExportableCommit>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Commit().ToList());
+            this.lazyCommits = new Lazy<IList<ExportableCommit>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Commits().ToList());
             this.lazyFiles = new Lazy<IList<ExportableFile>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Files().ToList());
             this.lazyHunks = new Lazy<IList<ExportableHunk>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Hunks().ToList());
             this.lazyBlocks = new Lazy<IList<ExportableBlock>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Blocks().ToList());
@@ -55,7 +55,12 @@ namespace GitTools.SourceExport
         public override IReadOnlyList<TreeEntryChanges> RelevantTreeChanges => base.RelevantTreeChanges.Where(rtc => rtc.Status == ChangeKind.Added || rtc.Status == ChangeKind.Copied || rtc.Status == ChangeKind.Deleted || rtc.Status == ChangeKind.Renamed || rtc.Status == ChangeKind.Modified).OrderBy(rtc => rtc.Path).ToList().AsReadOnly();
 
 
-        protected IEnumerable<ExportableCommit> Commit()
+        /// <summary>
+        /// Note that one pair can only generate a single commit. This method is called
+        /// <see cref="Commits"/> and returns an enumerable for reasons of consistency.
+        /// </summary>
+        /// <returns></returns>
+        protected IEnumerable<ExportableCommit> Commits()
         {
             var commit = new ExportableCommit(this);
 
@@ -90,7 +95,7 @@ namespace GitTools.SourceExport
 
         protected IEnumerable<ExportableFile> Files()
         {
-            foreach (var commit in this.lazyCommit.Value)
+            foreach (var commit in this.lazyCommits.Value)
             {
                 foreach (var file in commit)
                 {
@@ -143,7 +148,7 @@ namespace GitTools.SourceExport
 
         IEnumerator<ExportableCommit> IEnumerable<ExportableCommit>.GetEnumerator()
         {
-            return this.lazyCommit.Value.AsEnumerable().GetEnumerator();
+            return this.lazyCommits.Value.AsEnumerable().GetEnumerator();
         }
 
         IEnumerator<ExportableFile> IEnumerable<ExportableFile>.GetEnumerator()

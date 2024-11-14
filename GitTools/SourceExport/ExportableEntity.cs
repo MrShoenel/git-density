@@ -38,7 +38,7 @@ namespace GitTools.SourceExport
         /// <param name="exportCommit"></param>
         public ExportableEntity(ExportCommitPair exportCommit)
         {
-            this.ExportCommit = exportCommit;
+            this.ExportCommitPair = exportCommit;
         }
 
         /// <summary>
