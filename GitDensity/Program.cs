@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2024 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -15,19 +15,16 @@
 ///
 using CommandLine;
 using CommandLine.Text;
-using GitHours.Hours;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Util;
 using Util.Data;
 using Util.Data.Entities;
@@ -39,7 +36,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitDensity
 {
-	internal class Program
+    internal class Program
 	{
 		/// <summary>
 		/// The current global <see cref="LogLevel"/>.

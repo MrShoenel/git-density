@@ -1,6 +1,6 @@
 ﻿/// ---------------------------------------------------------------------------------
 ///
-/// Copyright (c) 2020 Sebastian Hönel [sebastian.honel@lnu.se]
+/// Copyright (c) 2024 Sebastian Hönel [sebastian.honel@lnu.se]
 ///
 /// https://github.com/MrShoenel/git-density
 ///
@@ -45,10 +45,18 @@ namespace GitDensity.Density
 
 		public UInt32 OldLineStart { get; protected internal set; }
 
+		/// <summary>
+		/// The number of lines of the entire <see cref="Hunk"/> before modification.
+		/// This includes also unaffected (context) lines.
+		/// </summary>
 		public UInt32 OldNumberOfLines { get; protected internal set; }
 
 		public UInt32 NewLineStart { get; protected internal set; }
 
+		/// <summary>
+		/// The number of lines of the entire <see cref="Hunk"/> after modification.
+		/// This includes also unaffected (context) lines.
+		/// </summary>
 		public UInt32 NewNumberOfLines { get; protected internal set; }
 
 		public String SourceFilePath { get; protected internal set; }
@@ -58,6 +66,10 @@ namespace GitDensity.Density
 		public UInt32 NumberOfLinesAdded { get { return (UInt32)this.lineNumbersAdded.Count; } }
 
 		public UInt32 NumberOfLinesDeleted { get { return (UInt32)this.lineNumbersDeleted.Count; } }
+
+		public IReadOnlyList<UInt32> LineNumbersAdded { get => this.lineNumbersAdded.ToList().AsReadOnly(); }
+
+		public IReadOnlyList<UInt32> LineNumbersDeleted { get => this.lineNumbersDeleted.ToList().AsReadOnly(); }
 		
 		public String Patch { protected set; get; }
 
