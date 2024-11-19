@@ -78,6 +78,17 @@ namespace GitTools.SourceExport
         }
 
         /// <summary>
+        /// Used to give all <see cref="DateTime"/> objects the same format, which defaults
+        /// to yyyy-MM-ddTHH:MM:ssZ (because the date will be converted as UTC).
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public String SerializeDateTime(DateTime dateTime)
+        {
+            return JsonConvert.DeserializeObject<String>(JsonConvert.SerializeObject(dateTime.ToUniversalTime()));
+        }
+
+        /// <summary>
         /// This is the main property of every exportable item and represents a piece of source
         /// code, such as a line or hunk.
         /// </summary>
