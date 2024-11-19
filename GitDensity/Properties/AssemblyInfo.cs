@@ -51,3 +51,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 
 [assembly: InternalsVisibleTo("GitDensityTests")]
+
+[assembly: AssemblyInformationalVersion("v2024.11+u1")]
