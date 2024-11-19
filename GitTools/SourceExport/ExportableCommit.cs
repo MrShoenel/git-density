@@ -21,6 +21,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Util.Extensions;
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
@@ -67,9 +68,12 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 5)]
         public String AuthorEmail { get => this.ExportCommitPair.Child.Author.Email; }
 
-        [CsvColumn(FieldIndex = 6, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
+        [CsvColumn(FieldIndex = 6)]
         [JsonProperty(Order = 6)]
-        public DateTime AuthorTime { get => this.ExportCommitPair.Child.Author.When.UtcDateTime; }
+        public String AuthorTime { get => this.SerializeDateTime(this.AuthorTime_DT); }
+
+        [JsonIgnore]
+        public DateTime AuthorTime_DT { get => this.ExportCommitPair.Child.Author.When.UtcDateTime; }
 
         [CsvColumn(FieldIndex = 7)]
         [JsonProperty(Order = 7)]
@@ -79,9 +83,13 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 8)]
         public String CommitterEmail { get => this.ExportCommitPair.Child.Committer.Email; }
 
-        [CsvColumn(FieldIndex = 9, OutputFormat = "yyyy-MM-dd HH:MM:ss")]
+        [CsvColumn(FieldIndex = 9)]
         [JsonProperty(Order = 9)]
-        public DateTime CommitterTime { get => this.ExportCommitPair.Child.Committer.When.UtcDateTime; }
+
+        public String CommitterTime { get => this.SerializeDateTime(this.CommitterTime_DT); }
+
+        [JsonIgnore]
+        public DateTime CommitterTime_DT { get => this.ExportCommitPair.Child.Committer.When.UtcDateTime; }
 
         [CsvColumn(FieldIndex = 10)]
         [JsonProperty(Order = 10)]
