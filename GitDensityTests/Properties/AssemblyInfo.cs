@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GitDensityTests")]
-[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2020")]
+[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
