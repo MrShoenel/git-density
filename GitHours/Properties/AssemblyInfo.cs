@@ -25,7 +25,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GitHours")]
-[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2020")]
+[assembly: AssemblyCopyright("Copyright © Sebastian Hönel <sebastian.honel@lnu.se> 2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -52,3 +52,5 @@ using System.Runtime.InteropServices;
 
 [assembly: InternalsVisibleTo("GitDensity")]
 [assembly: InternalsVisibleTo("GitHoursTests")]
+
+[assembly: AssemblyInformationalVersion("v2024.11+u1")]
