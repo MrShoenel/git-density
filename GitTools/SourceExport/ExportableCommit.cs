@@ -111,6 +111,34 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 13)]
         public Double? DaysSinceParentCommit { get => this.ExportCommitPair.Parent is Commit ? (this.ExportCommitPair.Child.Committer.When.UtcDateTime - this.ExportCommitPair.Parent.Committer.When.UtcDateTime).TotalDays : (Double?)null; }
 
+        /// <summary>
+        /// Returns the number files added in this commit.
+        /// </summary>
+        [CsvColumn(FieldIndex = 14)]
+        [JsonProperty(Order = 14)]
+        public virtual UInt32 CommitNumberOfAddedFiles { get => (UInt32)this.expoFiles.Where(f => f.TreeChangeIntent == ChangeKind.Added).Count(); set => throw new NotImplementedException(); }
+
+        /// <summary>
+        /// Returns the number of files deleted in this commit.
+        /// </summary>
+        [CsvColumn(FieldIndex = 15)]
+        [JsonProperty(Order = 15)]
+        public virtual UInt32 CommitNumberOfDeletedFiles { get => (UInt32)this.expoFiles.Where(f => f.TreeChangeIntent == ChangeKind.Deleted).Count(); set => throw new NotImplementedException(); }
+
+        /// <summary>
+        /// Returns the number of files renamed in this commit.
+        /// </summary>
+        [CsvColumn(FieldIndex = 16)]
+        [JsonProperty(Order = 16)]
+        public virtual UInt32 CommitNumberOfRenamedFiles { get => (UInt32)this.expoFiles.Where(f => f.TreeChangeIntent == ChangeKind.Renamed).Count(); set => throw new NotImplementedException(); }
+
+        /// <summary>
+        /// Returns the number of files modified in this commit.
+        /// </summary>
+        [CsvColumn(FieldIndex = 17)]
+        [JsonProperty(Order = 17)]
+        public virtual UInt32 CommitNumberOfModifiedFiles { get => (UInt32)this.expoFiles.Where(f => f.TreeChangeIntent == ChangeKind.Modified).Count(); set => throw new NotImplementedException(); }
+
 
 
         /// <summary>
