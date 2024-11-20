@@ -109,6 +109,33 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 44, PropertyName = nameof(BlockLineNumbersUntouched))]
         public IEnumerable<UInt32> BlockLineNumbersUntouched_JSON { get => this.TextBlock.Lines.Where(l => l.Type == LineType.Untouched).OrderBy(l => l.Number).Select(l => l.Number); }
 
+        [CsvColumn(FieldIndex = 45)]
+        [JsonProperty(Order = 45)]
+        public virtual UInt32 BlockNumberOfLines { get => (UInt32)(this as IEnumerable<Line>).Count(); set => throw new InvalidOperationException(); }
+
+        #region override
+        /// <summary>
+        /// Overridden to also copy over <see cref="HunkNumberOfBlocks"/>.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns><see cref="ExportableBlock"/> (this instance).</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
+        {
+            var hunk = entity as ExportableHunk;
+            if (!(hunk is ExportableHunk))
+            {
+                throw new ArgumentException($"Entity must be of type {nameof(ExportableHunk)}.");
+            }
+            this.HunkNumberOfBlocks = hunk.HunkNumberOfBlocks;
+            return base.CopyAggregateStatisticsFrom(entity);
+        }
+
+        [CsvColumn(FieldIndex = 37)]
+        [JsonProperty(Order = 37)]
+        public override uint HunkNumberOfBlocks { get; set; }
+        #endregion
+
 
         /// <summary>
         /// Similar to <see cref="ExportableHunk"/>, the content here are the raw lines. Each

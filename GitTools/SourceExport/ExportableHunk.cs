@@ -252,6 +252,43 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 36)]
         public UInt32 HunkNewNumberOfLines { get => this.Hunk.NewNumberOfLines; }
 
+        [CsvColumn(FieldIndex = 37)]
+        [JsonProperty(Order = 37)]
+        public virtual UInt32 HunkNumberOfBlocks { get => (UInt32)(this as IEnumerable<LooseTextBlock>).Count(); set => throw new InvalidOperationException(); }
+
+        #region override
+        /// <summary>
+        /// Overridden to also copy over <see cref="FileNumberOfHunks"/>.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns><see cref="ExportableHunk"/> (this instance).</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
+        {
+            var file = entity as ExportableFile;
+            if (!(file is ExportableFile))
+            {
+                throw new ArgumentException($"Entity must be of type {nameof(ExportableFile)}.");
+            }
+            this.FileNewNumberOfLines = file.FileNewNumberOfLines;
+            this.FileOldNumberOfLines = file.FileOldNumberOfLines;
+            this.FileNumberOfHunks = file.FileNumberOfHunks;
+            return base.CopyAggregateStatisticsFrom(entity);
+        }
+
+        [CsvColumn(FieldIndex = 23)]
+        [JsonProperty(Order = 23)]
+        public override uint? FileNewNumberOfLines { get; set; }
+
+        [CsvColumn(FieldIndex = 24)]
+        [JsonProperty(Order = 24)]
+        public override uint? FileOldNumberOfLines { get; set; }
+
+        [CsvColumn(FieldIndex = 25)]
+        [JsonProperty(Order = 25)]
+        public override uint FileNumberOfHunks { get; set; }
+        #endregion
+
         /// <summary>
         /// The entire hunk's content as a string. Each line will have a leading character
         /// (space, +, -) that designates if the line is unchanged, added, or deleted.
