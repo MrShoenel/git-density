@@ -101,8 +101,15 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 999)]
         [JsonProperty(Order = 999)]
-        public String Content { get => this.ContentEncoding == ContentEncoding.Plain ? this.ContentInteral :
-                (this.ContentEncoding == ContentEncoding.Base64 ? this.ContentInteral.ToBase64() : this.ContentInteral.ToJSON());
+        public String Content
+        {
+            get
+            {
+                // uFEFF = 65279 == Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble())
+                var content = this.ContentInteral.TrimStart('\uFEFF');
+                return this.ContentEncoding == ContentEncoding.Plain ? content :
+                    (this.ContentEncoding == ContentEncoding.Base64 ? content.ToBase64() : content.ToJSON());
+            }
         }
     }
 }
