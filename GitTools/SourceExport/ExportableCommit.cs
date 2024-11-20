@@ -17,6 +17,7 @@ using Iesi.Collections.Generic;
 using LibGit2Sharp;
 using LINQtoCSV;
 using Newtonsoft.Json;
+using NHibernate.SqlCommand;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,6 +37,13 @@ namespace GitTools.SourceExport
     {
         [JsonIgnore]
         protected LinkedHashSet<ExportableFile> expoFiles;
+
+        /// <summary>
+        /// Can be set to true if full files are exported (i.e., maximum number of content lines
+        /// which lead to Hunk-collapse and the inclusion of all lines).
+        /// </summary>
+        [JsonIgnore]
+        public Boolean FullCode { get => this.ExportCommitPair.ExportFullCode; }
 
         public ExportableCommit(ExportCommitPair exportCommit) : base(exportCommit)
         {
