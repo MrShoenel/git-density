@@ -248,13 +248,41 @@ namespace GitTools
                             {
 								using (span)
 								{
-									var commits = span.FilteredCommits.ToList();
+									if (options.CmdExport_ContextLines.HasValue)
+									{
+										Debug.Assert(options.CmdExport_ContextLines.Value >= 0);
+										if (options.CmdExport_FullCode ?? false)
+										{
+											options.CmdExport_ContextLines = Int32.MaxValue;
+										}
+									}
+									else
+									{
+										options.CmdExport_ContextLines = 3; // Set the default.
+                                        if (options.CmdExport_FullCode.HasValue)
+										{
+											if (options.CmdExport_FullCode.Value)
+                                            {
+                                                options.CmdExport_ContextLines = Int32.MaxValue;
+                                            }
+										}
+										else if (options.CmdExportCode == ExportCodeType.Files || options.CmdExportCode == ExportCodeType.Commits)
+                                        {
+                                            options.CmdExport_ContextLines = Int32.MaxValue;
+                                        }
+									}
+									if (options.CmdExport_ContextLines.HasValue && options.CmdExport_ContextLines.Value == Int32.MaxValue)
+									{
+										logger.LogWarning($"Context-Lines has been set to the maximum value of ({Int32.MaxValue}).");
+									}
+
+                                    var commits = span.FilteredCommits.ToList();
 									// For each of the span's commits, we will make pairs of commit and parent.
 									// This means, we will create one pair for each parent. Then, these pairs
 									// are processed according to the policy and returned.
 									var compOptions = new CompareOptions()
 									{
-										ContextLines = (Int32)options.CmdExport_ContextLines
+										ContextLines = options.CmdExport_ContextLines.Value
 									};
 
 									var pairs = commits.SelectMany(commit =>
@@ -564,13 +592,18 @@ namespace GitTools
         public String CmdGeneratePrompts_Template { get; set; }
 
         [Option("cmd-export-source", Required = false, HelpText = "Command. Export source code from a repository. If present, needs to be one of " + nameof(ExportCodeType.Commits) + ", " + nameof(ExportCodeType.Files) + ", " + nameof(ExportCodeType.Hunks) + ", " + nameof(ExportCodeType.Blocks) + ", or " + nameof(ExportCodeType.Lines) + ". This will determine the granularity and level of detail that is included for each exported entity. Exports as CSV or JSON.")]
-		public ExportCodeType? CmdExportCode { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ExportCodeType? CmdExportCode { get; set; }
 
 		[Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
-		public ContentEncoding CmdExport_Encoding { get; set; }
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ContentEncoding CmdExport_Encoding { get; set; }
 
-		[Option("context-lines", Required = false, DefaultValue = 3u, HelpText = "Option for the command --cmd-export-source. The number of unchanged lines that define the boundary of a hunk (and to display before and after). If this value is large, then hunks will start to collapse into each other. This option is useful when exporting hunks, files, and commits. E.g., setting it to " + nameof(Int32.MaxValue) + " yields one hunk per file and per commit.")]
-		public UInt32 CmdExport_ContextLines { get; set; }
+		[Option("context-lines", Required = false, HelpText = "Optional (no default). Option for the command --cmd-export-source. The number of unchanged lines that define the boundary of a hunk (and to display before and after). If this value is large, then hunks will start to collapse into each other. This option is useful when exporting hunks, files, and commits. E.g., setting it to " + nameof(Int32) + "." + nameof(Int32.MaxValue) + " yields one hunk per file and per commit. The common git-default is 3 lines.")]
+		public Int32? CmdExport_ContextLines { get; set; }
+
+		[Option("full-code", Required = false, HelpText = "Optional Boolean. Option for the command --cmd-export-source. If present, overrides the command --context-lines by setting it to " + nameof(Int32) + "." + nameof(Int32.MaxValue) + " if true. If --context-lines was not specified, this option *defaults to true* if --cmd-export-source is either Files or Commits. Exporting full code allows to fully reconstruct the original source code.")]
+		public Boolean? CmdExport_FullCode { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
