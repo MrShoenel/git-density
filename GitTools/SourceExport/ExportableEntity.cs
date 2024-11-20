@@ -106,7 +106,7 @@ namespace GitTools.SourceExport
             get
             {
                 // uFEFF = 65279 == Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble())
-                var content = this.ContentInteral.TrimStart('\uFEFF');
+                var content = this.ContentInteral.Replace("\uFEFF", "");
                 return this.ContentEncoding == ContentEncoding.Plain ? content :
                     (this.ContentEncoding == ContentEncoding.Base64 ? content.ToBase64() : content.ToJSON());
             }
