@@ -45,6 +45,12 @@ namespace GitTools.SourceExport
         public CompareOptions CompareOptions { get; protected set; }
 
         /// <summary>
+        /// Returns true iff the number of context lines in <see cref="CompareOptions"/> has been
+        /// set to the maximum allowed value of <see cref="Int32.MaxValue"/>.
+        /// </summary>
+        public Boolean ExportFullCode {  get => this.CompareOptions.ContextLines == Int32.MaxValue; }
+
+        /// <summary>
         /// An exportable commit always is a pair, because it needs to be compared relative to
         /// some parent commit.
         /// </summary>
@@ -114,6 +120,7 @@ namespace GitTools.SourceExport
             {
                 foreach (var file in commit)
                 {
+                    file.CopyAggregateStatisticsFrom(commit);
                     yield return file;
                 }
             }
@@ -123,9 +130,10 @@ namespace GitTools.SourceExport
         {
             foreach (var file in this.lazyFiles.Value)
             {
-                foreach (var expoHunk in file)
+                foreach (var hunk in file)
                 {
-                    yield return expoHunk;
+                    hunk.CopyAggregateStatisticsFrom(file);
+                    yield return hunk;
                 }
             }
         }
@@ -137,7 +145,9 @@ namespace GitTools.SourceExport
                 uint blockIdx = 0;
                 foreach (var block in hunk)
                 {
-                    yield return new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
+                    var expoblock = new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
+                    expoblock.CopyAggregateStatisticsFrom(hunk);
+                    yield return expoblock;
                 }
             }
         }
@@ -148,8 +158,9 @@ namespace GitTools.SourceExport
             {
                 foreach (var line in block)
                 {
-                    yield return new ExportableLine(block, line);
-
+                    var expoLine = new ExportableLine(block, line);
+                    expoLine.CopyAggregateStatisticsFrom(block);
+                    yield return expoLine;
                 }
 
             }
@@ -186,14 +197,14 @@ namespace GitTools.SourceExport
             return this.lazyLines.Value.GetEnumerator();
         }
 
-        public IEnumerable<ExportableCommit> AsCommits { get => this as IEnumerable<ExportableCommit>; }
+        public IEnumerable<ExportableCommit> AsCommits { get => this; }
 
-        public IEnumerable<ExportableFile> AsFiles { get => this as IEnumerable<ExportableFile>; }
+        public IEnumerable<ExportableFile> AsFiles { get => this; }
 
-        public IEnumerable<ExportableHunk> AsHunks { get => this as IEnumerable<ExportableHunk>; }
+        public IEnumerable<ExportableHunk> AsHunks { get => this; }
 
-        public IEnumerable<ExportableBlock> AsBlocks { get =>  this as IEnumerable<ExportableBlock>; }
+        public IEnumerable<ExportableBlock> AsBlocks { get =>  this; }
 
-        public IEnumerable<ExportableLine> AsLines { get => this as IEnumerable<ExportableLine>; }
+        public IEnumerable<ExportableLine> AsLines { get => this; }
     }
 }

@@ -43,6 +43,29 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 51)]
         public UInt32 LineNumber { get => this.Line.Number; }
 
+        #region override
+        /// <summary>
+        /// Overridden to also copy over <see cref="BlockNumberOfLines"/>.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns><see cref="ExportableLine"/> (this instance).</returns>
+        /// <exception cref="ArgumentException"></exception>
+        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
+        {
+            var block = entity as ExportableBlock;
+            if (!(block is ExportableBlock))
+            {
+                throw new ArgumentException($"Entity must be of type {nameof(ExportableBlock)}.");
+            }
+            this.BlockNumberOfLines = block.BlockNumberOfLines;
+            return base.CopyAggregateStatisticsFrom(entity);
+        }
+
+        [CsvColumn(FieldIndex = 45)]
+        [JsonProperty(Order = 45)]
+        public override uint BlockNumberOfLines { get; set; }
+        #endregion
+
         /// <summary>
         /// The returned line starts with a character that indicates wheter it is a context
         /// (untouched) line, or new (+) or deleted (-).

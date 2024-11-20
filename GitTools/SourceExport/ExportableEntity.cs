@@ -78,6 +78,17 @@ namespace GitTools.SourceExport
         }
 
         /// <summary>
+        /// Used to give all <see cref="DateTime"/> objects the same format, which defaults
+        /// to yyyy-MM-ddTHH:MM:ssZ (because the date will be converted as UTC).
+        /// </summary>
+        /// <param name="dateTime"></param>
+        /// <returns></returns>
+        public String SerializeDateTime(DateTime dateTime)
+        {
+            return JsonConvert.DeserializeObject<String>(JsonConvert.SerializeObject(dateTime.ToUniversalTime()));
+        }
+
+        /// <summary>
         /// This is the main property of every exportable item and represents a piece of source
         /// code, such as a line or hunk.
         /// </summary>
@@ -90,8 +101,15 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 999)]
         [JsonProperty(Order = 999)]
-        public String Content { get => this.ContentEncoding == ContentEncoding.Plain ? this.ContentInteral :
-                (this.ContentEncoding == ContentEncoding.Base64 ? this.ContentInteral.ToBase64() : this.ContentInteral.ToJSON());
+        public String Content
+        {
+            get
+            {
+                // uFEFF = 65279 == Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble())
+                var content = this.ContentInteral.Replace("\uFEFF", "");
+                return this.ContentEncoding == ContentEncoding.Plain ? content :
+                    (this.ContentEncoding == ContentEncoding.Base64 ? content.ToBase64() : content.ToJSON());
+            }
         }
     }
 }

@@ -52,6 +52,17 @@ namespace GitToolsTests.SourceExport
             var exp = tp.Item1;
             // This commit has only one file, but it has 4 hunks.
             var lines = exp.AsLines.OrderBy(l => l.HunkIdx).ThenBy(l => l.BlockIdx).ThenBy(l => l.LineNumber).ToList();
+            foreach (var line in lines)
+            {
+                // The following should be the same for all lines. But remember,
+                // properties inherited from hunks will differ because not all
+                // line belong to the same hunk.
+                Assert.AreEqual(line.CommitNumberOfModifiedFiles, 1u);
+                Assert.AreEqual(line.CommitNumberOfAddedFiles, 0u);
+                Assert.AreEqual(line.CommitNumberOfDeletedFiles, 0u);
+                Assert.AreEqual(line.CommitNumberOfRenamedFiles, 0u);
+                Assert.AreEqual(line.FileNumberOfHunks, 4u);
+            }
 
             Assert.AreEqual(4, lines.GroupBy(l => l.HunkIdx).Count());
 
@@ -59,6 +70,7 @@ namespace GitToolsTests.SourceExport
             var hunk1 = lines.Where(l => l.HunkIdx == 0).ToList();
             Assert.AreEqual(7, hunk1.Count());
             Assert.AreEqual(3, hunk1.GroupBy(l => l.BlockIdx).Count());
+            Assert.IsTrue(hunk1.All(l => l.HunkNumberOfBlocks == 3u));
             Assert.IsTrue(hunk1.Take(3).All(l => l.LineType == LineType.Untouched));
             Assert.IsTrue(hunk1[3].LineType == LineType.Added);
             Assert.IsTrue(hunk1.Skip(4).All(l => l.LineType == LineType.Untouched));
@@ -67,6 +79,11 @@ namespace GitToolsTests.SourceExport
             Assert.AreEqual(6, hunk3.Where(l => l.LineType == LineType.Untouched).Count());
             Assert.AreEqual(1, hunk3.Where(l => l.LineType == LineType.Deleted).Count());
             Assert.AreEqual(9, hunk3.Where(l => l.LineType == LineType.Added).Count());
+            Assert.IsTrue(hunk3.All(l => l.HunkNumberOfBlocks == 3u));
+
+
+            var hunk4 = lines.Where(l => l.HunkIdx == 3).ToList();
+            Assert.IsTrue(hunk4.All(l => l.HunkNumberOfBlocks == 13u));
 
             tp.Item2.Dispose();
             tp.Item3.Dispose();
@@ -81,8 +98,10 @@ namespace GitToolsTests.SourceExport
 
             CollectionAssert.AreEqual(blocks.GroupBy(b => b.HunkIdx).Select(grp => grp.Count()).ToList(), new List<int> { 3, 3, 3, 13 });
 
+
             // hunk #4 has 13 blocks.
             var hunk4 = blocks.Where(b => b.HunkIdx == 3).ToList();
+            Assert.AreEqual((Int32)hunk4[0].HunkNumberOfBlocks, hunk4.Count);
             foreach (var idx in new List<int> { 0, 2, 4, 6, 8, 10, 12 })
             {
                 Assert.IsTrue(hunk4[idx].BlockNature == TextBlockNature.Context);
@@ -110,6 +129,7 @@ namespace GitToolsTests.SourceExport
             var hunks = exp.AsHunks.OrderBy(h => h.HunkIdx).ToList();
 
             Assert.AreEqual(4, hunks.Count);
+            Assert.AreEqual(4u, hunks[0].FileNumberOfHunks);
 
             var hunk3 = hunks[2];
             Assert.AreEqual("255", hunk3.HunkLineNumbersDeleted);

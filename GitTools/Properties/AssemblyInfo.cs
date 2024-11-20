@@ -52,4 +52,4 @@ using System.Runtime.InteropServices;
 
 [assembly: InternalsVisibleTo("GitToolsTests")]
 
-[assembly: AssemblyInformationalVersion("v2024.11+u1")]
+[assembly: AssemblyInformationalVersion("v2024.11+u2")]
