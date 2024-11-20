@@ -53,4 +53,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("GitDensity")]
 [assembly: InternalsVisibleTo("GitHoursTests")]
 
-[assembly: AssemblyInformationalVersion("v2024.11+u1")]
+[assembly: AssemblyInformationalVersion("v2024.11+u2")]
