@@ -257,6 +257,7 @@
     <Compile Include="Data\StringEnumMapper.cs" />
     <Compile Include="Density\CommitPair.cs" />
     <Compile Include="ExitCodes.cs" />
+    <Compile Include="Extensions\CommitExtensions.cs" />
     <Compile Include="Extensions\DirectoryInfoExtensions.cs" />
     <Compile Include="Extensions\EntityExtensions.cs" />
     <Compile Include="Extensions\IEnumerableExtensions.cs" />

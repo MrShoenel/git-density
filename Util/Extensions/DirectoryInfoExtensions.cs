@@ -40,7 +40,8 @@ namespace Util.Extensions
 			{
 				directoryInfo.Delete(recursive);
 				return true;
-			} catch
+			}
+			catch
 			{
 				return false;
 			}
