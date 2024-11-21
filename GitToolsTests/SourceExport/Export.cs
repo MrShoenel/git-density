@@ -34,12 +34,13 @@ namespace GitToolsTests.SourceExport
         public static DirectoryInfo SolutionDirectory
             => new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Locati‌​on)).Parent.Parent;
 
-        public static Tuple<ExportCommitPair, Repository, GitCommitSpan> GetPair(string sha1, int ctxLines = 3) {
+        public static Tuple<ExportCommitPair, Repository, GitCommitSpan> GetPair(string sha1, int ctxLines = 3)
+        {
             var repo = SolutionDirectory.FullName.OpenRepository();
             var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: sha1, untilDatetimeOrCommitSha: sha1);
 
             var commit = span.FilteredCommits.Single();
-            return Tuple.Create(new ExportCommitPair(repo, commit, commit.Parents.Single(), new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }), repo, span);
+            return Tuple.Create(new ExportCommitPair(repo, commit, commit.Parents.First(), new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }), repo, span);
         }
 
         /// <summary>
@@ -188,6 +189,40 @@ namespace GitToolsTests.SourceExport
 
             tp.Item2.Dispose();
             tp.Item3.Dispose();
+        }
+
+        [TestMethod]
+        public void TestGenerations_9b70()
+        {
+            var tp = GetPair("9b70");
+            var commit = tp.Item1.Child;
+
+            Assert.IsTrue(commit.ParentGenerations(numGenerations: 0).Count() == 0);
+
+            // In its first generation, it has two parents: ef1db10 and 8f05cad
+            var s = commit.ParentGenerations(numGenerations: 1);
+            Assert.AreEqual(2, s.Count);
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "ef1db10").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "8f05cad").Count());
+
+            // In its second generation, ef1db has one parent and 8f05 has one parent
+            s = commit.ParentGenerations(numGenerations: 2);
+            Assert.AreEqual(4, s.Count);
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "ef1db10").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "8f05cad").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "7710093").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "90ae132").Count());
+
+            // In its third generation, 7710093 has one parent and 90ae has two parents!
+            // However, one of 90ae's parents is 8f05cad again, so there should be 6 commits in the set!
+            s = commit.ParentGenerations(numGenerations: 3);
+            Assert.AreEqual(6, s.Count);
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "ef1db10").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "8f05cad").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "7710093").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "90ae132").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "9992e0a").Count());
+            Assert.AreEqual(1, s.Where(c => c.ShaShort() == "4b938a6").Count());
         }
     }
 }
