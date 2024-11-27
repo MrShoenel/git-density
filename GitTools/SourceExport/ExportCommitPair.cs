@@ -83,6 +83,11 @@ namespace GitTools.SourceExport
         public Boolean ExportFullCode {  get => this.CompareOptions.ContextLines == Int32.MaxValue; }
 
         /// <summary>
+        /// Whether or not the child of this pair marks the beginning of a chain.
+        /// </summary>
+        public ExportReason ExportReason { get; protected set; }
+
+        /// <summary>
         /// An exportable commit always is a pair, because it needs to be compared relative to
         /// some parent commit.
         /// </summary>
@@ -91,8 +96,9 @@ namespace GitTools.SourceExport
         /// <param name="parent">The parent commit. If not given, this commit is compared to
         /// the beginning of the repository.</param>
         /// <param name="compareOptions"></param>
-        public ExportCommitPair(Repository repo, Commit child, Commit parent = null, CompareOptions compareOptions = null) : base(repo, child, parent, compareOptions)
+        public ExportCommitPair(Repository repo, Commit child, ExportReason includeReason, Commit parent = null, CompareOptions compareOptions = null) : base(repo, child, parent, compareOptions)
         {
+            this.ExportReason = includeReason;
             this.CompareOptions = compareOptions ?? new CompareOptions();
 
             this.lazyCommits = new Lazy<IList<ExportableCommit>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Commits().ToList());
@@ -206,7 +212,7 @@ namespace GitTools.SourceExport
 
         IEnumerator<ExportableCommit> IEnumerable<ExportableCommit>.GetEnumerator()
         {
-            return this.lazyCommits.Value.AsEnumerable().GetEnumerator();
+            return this.lazyCommits.Value.GetEnumerator();
         }
 
         IEnumerator<ExportableFile> IEnumerable<ExportableFile>.GetEnumerator()
@@ -238,5 +244,43 @@ namespace GitTools.SourceExport
         public IEnumerable<ExportableBlock> AsBlocks { get =>  this; }
 
         public IEnumerable<ExportableLine> AsLines { get => this; }
+
+
+        /// <summary>
+        /// Takes all of a <see cref="GitCommitSpan"/>'s filtered commits, which become the 'primary' commits.
+        /// For each, gets N parent generations. Then, recursively, returns all <see cref="ExportCommitPair"/>
+        /// entities between each commit and its parent. Also make sure to check out <see cref="ExportReason"/>.
+        /// </summary>
+        /// <param name="repo"></param>
+        /// <param name="span"></param>
+        /// <param name="numGenerations"></param>
+        /// <returns></returns>
+        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, UInt32 numGenerations)
+        {
+            var allCommits = span.FilteredCommits.ToHashSet();
+            var primaryCommits = allCommits.ToHashSet(); // make a copy
+
+
+            var allParents = primaryCommits.SelectMany(commit => commit.ParentGenerations(numGenerations: numGenerations)).ToHashSet();
+            var both = allCommits.Intersect(allParents).ToHashSet();
+
+            // Update all commits
+            allCommits = primaryCommits.Concat(allParents).ToHashSet();
+
+            return allCommits.SelectMany(commit =>
+            {
+                var parents = commit.Parents.ToList();
+                if (parents.Count == 0)
+                {
+                    parents.Add(null); // Required to collect pairs with initial (no) parent!
+                }
+
+                return parents.Select(parent =>
+                {
+                    var reason = both.Contains(commit) ? ExportReason.Both : (primaryCommits.Contains(commit) ? ExportReason.Primary : ExportReason.Parent);
+                    return new ExportCommitPair(repo: repo, includeReason: reason, child: commit, parent: parent);
+                });
+            });
+        }
     }
 }
