@@ -50,28 +50,37 @@ namespace Util.Extensions
         /// </summary>
         /// <param name="commit"></param>
         /// <param name="numGenerations"></param>
+        /// <exception cref="Exception">If parents for a parent-less commit were requested.</exception>
         /// <returns></returns>
-        public static ISet<Commit> ParentGenerations(this Commit commit, UInt32 numGenerations)
+        public static ISet<Commit> ParentGenerations(this Commit commit, UInt32 numGenerations, Commit primaryCommit = null, UInt32? originalNum = null)
         {
+            var usePrimary = primaryCommit ?? commit;
+            var useOrgNum = originalNum ?? numGenerations;
             var results = new HashSet<Commit>(comparer: new CommitEqualityComparer());
             if (numGenerations == 0)
             {
                 return results;
             }
 
+
+            var parents = commit.Parents.ToList();
+            if (parents.Count == 0)
+            {
+                throw new Exception($"Cannot export {useOrgNum} parent generations. Commit with ID {usePrimary.ShaShort()} only has {useOrgNum - numGenerations} parent generation(s).");
+            }
+
             // Let's decrease it. Since it's an UInt32, it was > 0 before (no overflow here).
             numGenerations--;
 
-
-            foreach (var parent in commit.Parents)
+            foreach (var parent in parents)
             {
                 results.Add(parent);
 
                 if (numGenerations > 0)
                 {
-                    foreach (var parent_parent in parent.ParentGenerations(numGenerations: numGenerations))
+                    foreach (var parent_parent in parent.ParentGenerations(numGenerations: numGenerations, primaryCommit: usePrimary, originalNum: useOrgNum))
                     {
-                        results.AddAll(parent.ParentGenerations(numGenerations: numGenerations));
+                        results.AddAll(parent.ParentGenerations(numGenerations: numGenerations, primaryCommit: usePrimary, originalNum: useOrgNum));
                     }
                 }
             }
