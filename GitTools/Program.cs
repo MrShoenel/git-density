@@ -20,7 +20,6 @@ using GitTools.Analysis.ExtendedAnalyzer;
 using GitTools.Analysis.SimpleAnalyzer;
 using GitTools.Prompting;
 using GitTools.SourceExport;
-using LibGit2Sharp;
 using LINQtoCSV;
 using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
@@ -48,7 +47,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace GitTools
 {
-	internal enum ExportCodeType
+    internal enum ExportCodeType
 	{
 		Commits,
 		Files,
@@ -279,7 +278,10 @@ namespace GitTools
 										logger.LogWarning($"Context-Lines has been set to the maximum value of ({Int32.MaxValue}).");
 									}
 
-                                    var commits = span.FilteredCommits.ToHashSet();
+                                    var allCommits = span.FilteredCommits.ToHashSet();
+									// Make a copy so we can later check for which "primary" commits we have
+									// actually exported parents (where the chains should start).
+									var primaryCommits = allCommits.ToHashSet();
 									// For each of the span's commits, we will make pairs of commit and parent.
 									// This means, we will create one pair for each parent. Then, these pairs
 									// are processed according to the policy and returned.
@@ -288,27 +290,18 @@ namespace GitTools
 										ContextLines = options.CmdExport_ContextLines.Value
 									};
 
+									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: options.CmdExport_ParentGens).ToList();
+
 									// Let's check if parent generations should be exported.
 									if (options.CmdExport_ParentGens > 0u)
 									{
 										// Make a new set containing the original commits and their parents
-										logger.LogWarning($"Including {options.CmdExport_ParentGens} parent generations. Original number of commits is {commits.Count}.");
-										commits = new HashSet<Commit>(
-											commits.Concat(commits.SelectMany(commit => commit.ParentGenerations(numGenerations: options.CmdExport_ParentGens))));
-										logger.LogWarning($"Number of commits increased to {commits.Count} by including parent generations.");
+										logger.LogWarning($"Including {options.CmdExport_ParentGens} parent generations. Original number of commits is {allCommits.Count}.");
+										logger.LogWarning($"Number of commits increased to {pairs.Count} by including parent generations.");
 									}
 
-									var pairs = commits.SelectMany(commit =>
-									{
-										var parents = commit.Parents.ToList();
-										if (parents.Count == 0)
-										{
-											parents.Add(null);
-										}
-										return parents.Select(parent => new ExportCommitPair(repo: repo, child: commit, parent: parent, compareOptions: compOptions));
-									}).ToList();
 
-									logger.LogInformation($"Found {commits.Count()} Commits and {pairs.Count} pairs.");
+									logger.LogInformation($"Found {allCommits.Count()} Commits and {pairs.Count} pairs.");
 									logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
 
 
@@ -370,7 +363,7 @@ namespace GitTools
                                         allResults.Cast<ExportableLine>().WriteCsvOrJson(options.OutputFile);
                                     }
 
-									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} entities to {options.OutputFile}.");
+									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} to {options.OutputFile}.");
                                     Environment.Exit((int)ExitCodes.OK);
                                 }
                             }
