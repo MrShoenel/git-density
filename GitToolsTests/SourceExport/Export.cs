@@ -17,6 +17,7 @@ using GitDensity.Similarity;
 using GitTools.SourceExport;
 using LibGit2Sharp;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -40,7 +41,7 @@ namespace GitToolsTests.SourceExport
             var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: sha1, untilDatetimeOrCommitSha: sha1);
 
             var commit = span.FilteredCommits.Single();
-            return Tuple.Create(new ExportCommitPair(repo, commit, commit.Parents.First(), new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }), repo, span);
+            return Tuple.Create(new ExportCommitPair(repo, commit, ExportReason.Primary, commit.Parents.First(), new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }), repo, span);
         }
 
         /// <summary>
@@ -223,6 +224,90 @@ namespace GitToolsTests.SourceExport
             Assert.AreEqual(1, s.Where(c => c.ShaShort() == "90ae132").Count());
             Assert.AreEqual(1, s.Where(c => c.ShaShort() == "9992e0a").Count());
             Assert.AreEqual(1, s.Where(c => c.ShaShort() == "4b938a6").Count());
+        }
+
+        [TestMethod]
+        public void TestGenerations_47309_b1880()
+        {
+            using (var repo = SolutionDirectory.FullName.OpenRepository())
+            using (var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: "b1880", untilDatetimeOrCommitSha: "47309"))
+            {
+                var b1880 = span.Where(comm => comm.ShaShort() == "b1880aa").Single();
+
+                Assert.ThrowsException<Exception>(() =>
+                {
+                    b1880.ParentGenerations(numGenerations: 1u);
+                });
+
+                var _473 = span.Where(comm => comm.ShaShort() == "47309bf").Single();
+                Assert.AreEqual(b1880, _473.ParentGenerations(numGenerations: 1u).Single());
+
+                Assert.ThrowsException<Exception>(() =>
+                {
+                    _473.ParentGenerations(numGenerations: 2u);
+                });
+            }
+        }
+
+        [TestMethod]
+        public void TestGenerations_Reason()
+        {
+            using (var repo = SolutionDirectory.FullName.OpenRepository())
+            {
+                using (var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: "85d7", untilDatetimeOrCommitSha: "8a54"))
+                {
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 2u);
+
+                    var asCommits = pairs.SelectMany(pair => pair.AsCommits).ToDictionary(kv => $"{kv.SHA1}_{kv.SHA1_Parent}", kv => kv);
+                    Assert.AreEqual(5, asCommits.Count);
+
+                    Assert.IsTrue(asCommits["b1880aa_(initial)"].ExportReason == ExportReason.Parent);
+                    Assert.IsTrue(asCommits["47309bf_b1880aa"].ExportReason == ExportReason.Parent);
+                    Assert.IsTrue(asCommits["85d75c5_47309bf"].ExportReason == ExportReason.Both);
+                    Assert.IsTrue(asCommits["c35070a_85d75c5"].ExportReason == ExportReason.Both);
+                    Assert.IsTrue(asCommits["8a54cc5_c35070a"].ExportReason == ExportReason.Primary);
+                }
+
+
+                using (var span = new GitCommitSpan(repository: repo))
+                {
+                    // all commits:
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 0);
+
+                    Assert.IsTrue(pairs.SelectMany(pair => pair.AsCommits).All(c => c.ExportReason == ExportReason.Primary));
+                }
+
+
+                // Let's do a 3rd, more complex test.
+                using (var span = new GitCommitSpan(repository: repo, sinceDateTimeOrCommitSha: "7d94", untilDatetimeOrCommitSha: "66bb"))
+                {
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 3);
+
+                    // That should be 8 commits.
+                    var asCommits = pairs.SelectMany(pair => pair.AsCommits).ToList();
+                    Func<string, string, ExportReason, bool> get = (hc, hp, er) => asCommits.Where(c => c.SHA1 == hc && c.SHA1_Parent == hp).Single().ExportReason == er;
+
+                    // While the selection is only 8 commits, 7d94 is a merge commit, so it
+                    // will appears twice with different parents (8a67 and e0aa)
+                    Assert.AreEqual(9, pairs.Count());
+
+                    var par = ExportReason.Parent;
+                    var bot = ExportReason.Both;
+                    var pri = ExportReason.Primary;
+
+                    Assert.IsTrue(get("66bbe65", "7d94800", pri));
+
+                    Assert.IsTrue(get("7d94800", "e0aa22f", bot));
+                    Assert.IsTrue(get("7d94800", "8a67cf3", bot));
+
+                    Assert.IsTrue(get("e0aa22f", "0ef7dcc", par));
+                    Assert.IsTrue(get("8a67cf3", "0b52fa8", par));
+                    Assert.IsTrue(get("0b52fa8", "f8ce1e1", par));
+                    Assert.IsTrue(get("f8ce1e1", "47fbf35", par));
+                    Assert.IsTrue(get("0ef7dcc", "17d9155", par));
+                    Assert.IsTrue(get("17d9155", "227f070", par));
+                }
+            }
         }
     }
 }
