@@ -21,12 +21,44 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Util;
 using Util.Density;
+using Util.Extensions;
 using CompareOptions = LibGit2Sharp.CompareOptions;
 
 
 namespace GitTools.SourceExport
 {
+    /// <summary>
+    /// An enumeration of reasons as to why an <see cref="ExportableEntity"/> was exported,
+    /// with regard to whether it was primarily selected by the <see cref="GitCommitSpan"/>
+    /// or whether it was included because it is a parent generation. When exporting sequences
+    /// of commits with number of parent generations greater than zero, it is quite common
+    /// that a commit is exported because it is both a primary and a parent commit.
+    /// </summary>
+    public enum ExportReason
+    {
+        /// <summary>
+        /// An entity was directly selected by the <see cref="GitCommitSpan.FilteredCommits"/>.
+        /// </summary>
+        Primary,
+
+        /// <summary>
+        /// An entity was selected as an ancestor of a primary entity and is only exported
+        /// because of that reason.
+        /// </summary>
+        Parent,
+
+        /// <summary>
+        /// An entity that was primarily selected by the <see cref="GitCommitSpan.FilteredCommits"/>,
+        /// but is also a parent (ancestor) to another entity. For example, when selecting two
+        /// consecutive commits as primary commits and expanding parents
+        /// (<see cref="ExportCommitPair.ExpandParents(Repository, GitCommitSpan, uint)"/>) with one
+        /// generation, then the older of these two commits is both a primary- and a parent commit.
+        /// </summary>
+        Both
+    }
+
     /// <summary>
     /// An exportable commit, in the sense of its source code that can be
     /// exported alongside some of its basic properties.
