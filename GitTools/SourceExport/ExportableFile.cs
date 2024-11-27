@@ -124,20 +124,20 @@ namespace GitTools.SourceExport
         public virtual UInt32 FileNumberOfHunks { get => (UInt32)this.expoHunks.Count; set => throw new InvalidOperationException(); }
 
         #region overrides
-        [CsvColumn(FieldIndex = 14)]
-        [JsonProperty(Order = 14)]
-        public override UInt32 CommitNumberOfAddedFiles { get; set; }
-
         [CsvColumn(FieldIndex = 15)]
         [JsonProperty(Order = 15)]
-        public override UInt32 CommitNumberOfDeletedFiles { get; set; }
+        public override UInt32 CommitNumberOfAddedFiles { get; set; }
 
         [CsvColumn(FieldIndex = 16)]
         [JsonProperty(Order = 16)]
-        public override UInt32 CommitNumberOfRenamedFiles { get; set; }
+        public override UInt32 CommitNumberOfDeletedFiles { get; set; }
 
         [CsvColumn(FieldIndex = 17)]
         [JsonProperty(Order = 17)]
+        public override UInt32 CommitNumberOfRenamedFiles { get; set; }
+
+        [CsvColumn(FieldIndex = 18)]
+        [JsonProperty(Order = 18)]
         public override UInt32 CommitNumberOfModifiedFiles { get; set; }
         #endregion
 
