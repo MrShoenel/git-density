@@ -73,24 +73,10 @@ namespace GitTools
 			var options = new CommandLineOptions();
 			var optionsParseSuccess = Parser.Default.ParseArguments(args, options);
 
-			if (options.CmdCountKeywords.HasValue && options.CmdCountKeywords.Value)
-			{
-				try
-				{
-					Program.Update_Gtools_ex();
-					Environment.Exit((int)ExitCodes.OK);
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"Error: {ex.Message}, {ex.StackTrace}");
-					Environment.Exit((int)ExitCodes.OtherError);
-				}
-			}
-
 			if (optionsParseSuccess)
 			{
 				#region Initialize, DataFactory, temp-dir etc.
-				Program.LogLevel = options.LogLevel;
+				Util.ColoredConsole.RuntimeLogLevel = options.LogLevel;
 				logger.LogLevel = options.LogLevel;
 
 				if (options.ShowHelp)
@@ -430,87 +416,6 @@ namespace GitTools
 
 			Environment.Exit((int)ExitCodes.OK);
 		}
-
-
-		#region Update Gtools_Ex and add keywords
-		internal class Gtools_ex_Keywords
-		{
-			private readonly CommitKeywordsEntity commitKeywordsEntity;
-			public Gtools_ex_Keywords(CommitKeywordsEntity commitKeywordsEntity)
-			{
-				this.commitKeywordsEntity = commitKeywordsEntity;
-			}
-
-			public Boolean HasAny => CommitKeywordsEntity.KeywordProperties.Any(kwp => (UInt32)kwp.GetValue(this.commitKeywordsEntity) > 0u);
-
-			public static String AsSetQuery => String.Join(", ", CommitKeywordsEntity.KeywordProperties.Select(kwp => $"{kwp.Name}=@_{kwp.Name}"));
-
-			public void FillStmt(MySqlCommand stmt)
-			{
-				foreach (var kwp in CommitKeywordsEntity.KeywordProperties)
-				{
-					stmt.Parameters.AddWithValue($"@_{kwp.Name}", Math.Min(255u, (UInt32)kwp.GetValue(this.commitKeywordsEntity)));
-				}
-			}
-		}
-
-		internal static void Update_Gtools_ex()
-		{
-			var con = new MySqlConnection("server=localhost;port=3306;uid=root;pwd=root;database=comm_class;");
-			var messages = new Dictionary<String, String>();
-
-			con.Open();
-			using (var com = con.CreateCommand())
-			{
-				//com.CommandType = System.Data.CommandType.Text;
-				com.CommandText = "SELECT SHA1, Message From gtools_ex;";
-				var reader = com.ExecuteReader();
-
-				if (reader.HasRows)
-				{
-					while (reader.Read())
-					{
-						messages[reader.GetString(0)] = reader.GetString(1);
-					}
-					reader.Close();
-				}
-			}
-				
-
-			using (var trans = con.BeginTransaction(IsolationLevel.Serializable))
-			{
-				using (var stmt = con.CreateCommand())
-				{
-					stmt.CommandText = $"UPDATE gtools_ex SET {Gtools_ex_Keywords.AsSetQuery} WHERE SHA1=@sha1;";
-
-					Console.WriteLine($"Messages: {messages.Count}");
-					var cnt = 0;
-					foreach (var kv in messages)
-					{
-						cnt++;
-						if ((cnt % 500) == 0)
-						{
-							Console.WriteLine($"Progress is {(100d * cnt / messages.Count).ToString("000.00")} %");
-						}
-
-						var gex = new Gtools_ex_Keywords(CommitKeywordsEntity.FromMessage(kv.Value));
-						if (!gex.HasAny)
-						{
-							continue;
-						}
-
-						stmt.Parameters.AddWithValue("@sha1", kv.Key);
-						gex.FillStmt(stmt);
-
-						stmt.ExecuteNonQuery();
-						stmt.Parameters.Clear();
-					}
-				}
-
-				trans.Commit();
-			}
-		}
-		#endregion
 	}
 
 
@@ -567,9 +472,6 @@ namespace GitTools
 		#region Command-Options
 		[Option("cmd-count-commits", Required = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
 		public Boolean? CmdCountCommits { get; set; }
-
-		[Option("cmd-count-keywords", Required = false, HelpText = "Command. Counts the keywords on messages in entities already existing in table Gtools_Ex and updates each with the amount of keywords found. Writes some progress to the console.")]
-		public Boolean? CmdCountKeywords { get; set; }
 
 		[Option("cmd-generate-prompts", Required = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
 		public Boolean? CmdGeneratePrompts { get; set; }
