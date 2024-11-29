@@ -19,12 +19,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace Util.Extensions
 {
-	public static class IEnumerableExtensions
+    public static class IEnumerableExtensions
 	{
 		/// <summary>
 		/// Transforms any struct or object into an <see cref="IEnumerable{T}"/> of it.
@@ -107,9 +106,11 @@ namespace Util.Extensions
         /// <param name="writer"></param>
         public static void WriteJson<T>(this IEnumerable<T> items, TextWriter writer)
 		{
-			using (writer)
+            using (writer)
+            using (var jsonWriter = new JsonTextWriter(writer))
 			{
-				writer.Write(JsonConvert.SerializeObject(items, Formatting.Indented));
+				var ser = new JsonSerializer();
+				ser.Serialize(jsonWriter, items);
 			}
 		}
 
