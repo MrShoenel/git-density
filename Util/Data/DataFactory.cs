@@ -139,7 +139,7 @@ namespace Util.Data
 		/// <param name="configuration"></param>
 		/// <param name="tempDirectory"></param>
 		/// <returns></returns>
-		private static IPersistenceConfigurer DatabaseTypeWithConnectionStringToConfigurer(Util.Configuration configuration, String tempDirectory = null)
+		private static IPersistenceConfigurer DatabaseTypeWithConnectionStringToConfigurer(Configuration configuration, String tempDirectory = null)
 		{
 			if (configuration.DatabaseType == DatabaseType.SQLiteTemp)
 			{

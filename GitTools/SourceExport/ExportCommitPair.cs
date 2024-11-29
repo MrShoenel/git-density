@@ -272,7 +272,7 @@ namespace GitTools.SourceExport
                 var parents = commit.Parents.ToList();
                 if (parents.Count == 0)
                 {
-                    parents.Add(null); // Required to collect pairs with initial (no) parent!
+                    parents.Add(null); // Required to collect pairs with initial repo state (no parent)!
                 }
 
                 return parents.Select(parent =>
