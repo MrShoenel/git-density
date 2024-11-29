@@ -254,15 +254,16 @@ namespace GitTools.SourceExport
         /// <param name="repo"></param>
         /// <param name="span"></param>
         /// <param name="numGenerations"></param>
+        /// <param name="allowIncompleteChains">If true, allow to construct incomplete chains, where not all
+        /// parent generations are present.</param>
         /// <returns></returns>
-        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, UInt32 numGenerations)
+        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, UInt32 numGenerations, bool allowIncompleteChains = false)
         {
             var allCommits = span.FilteredCommits.ToHashSet();
             var primaryCommits = allCommits.ToHashSet(); // make a copy
 
-
-            var allParents = primaryCommits.SelectMany(commit => commit.ParentGenerations(numGenerations: numGenerations)).ToHashSet();
-            var both = allCommits.Intersect(allParents).ToHashSet();
+            var allParents = primaryCommits.SelectMany(commit => commit.ParentGenerations(numGenerations: numGenerations, allowIncompleteChains: allowIncompleteChains)).ToHashSet();
+            var both = primaryCommits.Intersect(allParents).ToHashSet();
 
             // Update all commits
             allCommits = primaryCommits.Concat(allParents).ToHashSet();

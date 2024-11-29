@@ -22,7 +22,6 @@ using GitTools.Prompting;
 using GitTools.SourceExport;
 using LINQtoCSV;
 using Microsoft.Extensions.Logging;
-using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -37,7 +36,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Util;
-using Util.Data.Entities;
 using Util.Extensions;
 using Util.Logging;
 using CompareOptions = LibGit2Sharp.CompareOptions;
@@ -206,8 +204,8 @@ namespace GitTools
 							}
 						}
 						else if (options.CmdExportCode != null)
-						{
-							if (!(options.OutputFile is string))
+                        {
+                            if (!(options.OutputFile is string))
 							{
 								throw new ArgumentException("This command requires writing to a file.");
                             }
@@ -256,7 +254,7 @@ namespace GitTools
 										ContextLines = options.CmdExport_ContextLines.Value
 									};
 
-									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: options.CmdExport_ParentGens).ToList();
+									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: options.CmdExport_ParentGens, allowIncompleteChains: options.CmdExport_AllowIncompleteChains.HasValue && options.CmdExport_AllowIncompleteChains.Value).ToList();
 
 									// Let's check if parent generations should be exported.
 									if (options.CmdExport_ParentGens > 0u)
@@ -495,6 +493,9 @@ namespace GitTools
 
 		[Option("parent-gens", Required = false, DefaultValue = 0u, HelpText = "Optional. Option for the command --cmd-export-source. If greater than zero, will export data from up to n parent generations, for each commit.")]
 		public UInt32 CmdExport_ParentGens { get; set; }
+
+		[Option("allow-incomplete-chains", Required = false, HelpText = "Optional. Option for the command --cmd-export-source. If true and --parent-gens is greater 0, allows exporting chains that are shorter than the requested number.")]
+		public Boolean? CmdExport_AllowIncompleteChains { get; set; }
 		#endregion
 
 		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
