@@ -273,6 +273,7 @@
     <Compile Include="Similarity\DefaultNoSimilarityMeasurement.cs" />
     <Compile Include="Similarity\SimilarityComparisonType.cs" />
     <Compile Include="Similarity\SimilarityMeasurementType.cs" />
+    <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="ILLink\ILLink.Descriptors.LibraryBuild.xml" />

@@ -13,24 +13,49 @@
 ///
 /// ---------------------------------------------------------------------------------
 ///
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading;
+using Util.Logging;
+
 
 namespace Util
 {
-
-	/// <summary>
-	/// A class for writing colored messages to the Console conveniently. It is
-	/// recommended to use this class with an alias, e.g. 'using CC = ColoredConsole;'.
-	/// </summary>
-	/// <remarks>@Copyright Sebastian Hönel [sebastian.honel@lnu.se]</remarks>
-	public static class ColoredConsole
+    /// <summary>
+    /// A class for writing colored messages to the Console conveniently. It is
+    /// recommended to use this class with an alias, e.g. 'using CC = ColoredConsole;'.
+    /// </summary>
+    /// <remarks>@Copyright Sebastian Hönel [sebastian.honel@lnu.se]</remarks>
+    public static class ColoredConsole
 	{
 		/// <summary>
-		/// Used to convey color information that will be restored upon disposal.
+		/// This property is used by <see cref="CreateLogger{T}"/>, because it does
+		/// not allow passing in an own level.
 		/// </summary>
-		protected struct ColorScope : IDisposable
+		public static LogLevel RuntimeLogLevel { get; set; } = LogLevel.Information;
+
+        /// <summary>
+        /// Shortcut provider for obtaining equally configured loggers per <see cref="Type"/>.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static BaseLogger<T> CreateLogger<T>()
+        {
+            return new ColoredConsoleLogger<T>
+            {
+                LogCurrentScope = true,
+                LogCurrentTime = true,
+                LogCurrentType = true,
+                LogLevel = RuntimeLogLevel
+            };
+        }
+
+
+        /// <summary>
+        /// Used to convey color information that will be restored upon disposal.
+        /// </summary>
+        protected struct ColorScope : IDisposable
 		{
 			public ConsoleColor Background { get; private set; }
 

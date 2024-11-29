@@ -39,7 +39,7 @@ namespace GitTools.Analysis.ExtendedAnalyzer
 	public class ExtendedAnalyzer : BaseAnalyzer<ExtendedCommitDetails>
 	{
 		private readonly BaseLogger<ExtendedAnalyzer> logger =
-			Program.CreateLogger<ExtendedAnalyzer>();
+			Util.ColoredConsole.CreateLogger<ExtendedAnalyzer>();
 
 		/// <summary>
 		/// Concrete logger of type <see cref="BaseLogger{ExtendedAnalyzer}"/>.

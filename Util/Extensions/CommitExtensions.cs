@@ -1,9 +1,10 @@
 ﻿using LibGit2Sharp;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Util.Logging;
+
 
 namespace Util.Extensions
 {
@@ -43,6 +44,8 @@ namespace Util.Extensions
     /// </summary>
     public static class CommitExtensions
     {
+        internal static readonly BaseLogger<Util> logger = ColoredConsole.CreateLogger<Util>();
+
         /// <summary>
         /// Traverses the tree of parent commits and returns up to N generations
         /// in a <see cref="HashSet{T}"/>. Note that within this tree, some commits

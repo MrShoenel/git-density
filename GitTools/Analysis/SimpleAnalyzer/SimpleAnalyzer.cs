@@ -36,7 +36,7 @@ namespace GitTools.Analysis.SimpleAnalyzer
 	public class SimpleAnalyzer : BaseAnalyzer<SimpleCommitDetails>
 	{
 		private readonly BaseLogger<SimpleAnalyzer> logger =
-			Program.CreateLogger<SimpleAnalyzer>();
+			Util.ColoredConsole.CreateLogger<SimpleAnalyzer>();
 
 		/// <summary>
 		/// Returns a concrete <see cref="BaseLogger{SimpleAnalyzer}"/> for this analyzer.

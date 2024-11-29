@@ -58,35 +58,15 @@ namespace GitTools
 
 	internal class Program
 	{
-		/// <summary>
-		/// The current global <see cref="LogLevel"/>.
-		/// </summary>
-		public static LogLevel LogLevel { get; private set; }
+		protected internal static BaseLogger<Program> logger { get; private set; } = ColoredConsole.CreateLogger<Program>();
 
-		/// <summary>
-		/// Shortcut provider for obtaining equally configured loggers per <see cref="Type"/>.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <returns></returns>
-		public static BaseLogger<T> CreateLogger<T>()
+        /// <summary>
+        /// Main entry point for application.
+        /// </summary>
+        /// <param name="args"></param>
+        static void Main(string[] args)
 		{
-			return new ColoredConsoleLogger<T>
-			{
-				LogCurrentScope = true,
-				LogCurrentTime = true,
-				LogCurrentType = true,
-				LogLevel = Program.LogLevel
-			};
-		}
-
-		private static readonly BaseLogger<Program> logger = CreateLogger<Program>();
-
-		/// <summary>
-		/// Main entry point for application.
-		/// </summary>
-		/// <param name="args"></param>
-		static void Main(string[] args)
-		{
+			logger.LogLevel = LogLevel.Error;
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
