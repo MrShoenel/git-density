@@ -253,11 +253,12 @@ namespace GitTools.SourceExport
         /// </summary>
         /// <param name="repo"></param>
         /// <param name="span"></param>
+        /// <param name="compareOptions"></param>
         /// <param name="numGenerations"></param>
         /// <param name="allowIncompleteChains">If true, allow to construct incomplete chains, where not all
         /// parent generations are present.</param>
         /// <returns></returns>
-        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, UInt32 numGenerations, bool allowIncompleteChains = false)
+        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, CompareOptions compareOptions, UInt32 numGenerations, bool allowIncompleteChains = false)
         {
             var allCommits = span.FilteredCommits.ToHashSet();
             var primaryCommits = allCommits.ToHashSet(); // make a copy
@@ -279,7 +280,7 @@ namespace GitTools.SourceExport
                 return parents.Select(parent =>
                 {
                     var reason = both.Contains(commit) ? ExportReason.Both : (primaryCommits.Contains(commit) ? ExportReason.Primary : ExportReason.Parent);
-                    return new ExportCommitPair(repo: repo, includeReason: reason, child: commit, parent: parent);
+                    return new ExportCommitPair(repo: repo, includeReason: reason, child: commit, parent: parent, compareOptions: compareOptions);
                 });
             });
         }

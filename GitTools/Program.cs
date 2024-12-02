@@ -254,7 +254,7 @@ namespace GitTools
 										ContextLines = options.CmdExport_ContextLines.Value
 									};
 
-									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: options.CmdExport_ParentGens, allowIncompleteChains: options.CmdExport_AllowIncompleteChains.HasValue && options.CmdExport_AllowIncompleteChains.Value).ToList();
+									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, compareOptions: compOptions, numGenerations: options.CmdExport_ParentGens, allowIncompleteChains: options.CmdExport_AllowIncompleteChains.HasValue && options.CmdExport_AllowIncompleteChains.Value).ToList();
 
 									// Let's check if parent generations should be exported.
 									if (options.CmdExport_ParentGens > 0u)
