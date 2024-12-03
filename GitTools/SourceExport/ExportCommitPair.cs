@@ -65,6 +65,14 @@ namespace GitTools.SourceExport
     /// </summary>
     public class ExportCommitPair : CommitPair, IEnumerable<ExportableCommit>, IEnumerable<ExportableFile>, IEnumerable<ExportableHunk>, IEnumerable<ExportableBlock>, IEnumerable<ExportableLine>
     {
+        private Lazy<Patch> lazyPatchFull;
+
+        /// <summary>
+        /// Returns the full-source patch, where context-lines was set to the allowed
+        /// maximum. The result of this is a single hunk per file.
+        /// </summary>
+        public Patch PatchFull { get => this.lazyPatchFull.Value; }
+
         private Lazy<IList<ExportableCommit>> lazyCommits;
         private Lazy<IList<ExportableFile>> lazyFiles;
         private Lazy<IList<ExportableHunk>> lazyHunks;
@@ -100,6 +108,14 @@ namespace GitTools.SourceExport
         {
             this.ExportReason = includeReason;
             this.CompareOptions = compareOptions ?? new CompareOptions();
+
+            // Creates an extra patch that always holds the full source code.
+            // We use this to determine the number of affected lines old/new,
+            // so that we can do positional encoding of entities.
+            this.lazyPatchFull = new Lazy<Patch>(() =>
+            {
+                return this.Repository.Diff.Compare<Patch>(oldTree: this.Parent?.Tree, newTree: this.Child.Tree, compareOptions: new CompareOptions() { ContextLines = Int32.MaxValue });
+            });
 
             this.lazyCommits = new Lazy<IList<ExportableCommit>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Commits().ToList());
             this.lazyFiles = new Lazy<IList<ExportableFile>>(mode: LazyThreadSafetyMode.ExecutionAndPublication, valueFactory: () => this.Files().ToList());
