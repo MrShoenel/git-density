@@ -142,7 +142,15 @@ namespace GitTools.SourceExport
             uint fileIdx = 0;
             foreach (var rtc in this.RelevantTreeChanges)
             {
-                var file = new ExportableFile(commit, rtc, fileIdx);
+                // Let's also set the number of lines old/new:
+                var oldPatch_Full = this.PatchFull[rtc.OldPath];
+                var newPatch_Full = this.PatchFull[rtc.Path];
+                Debug.Assert(((oldPatch_Full is null) ^ (newPatch_Full is null)) || EqualityComparer<PatchEntryChanges>.Default.Equals(oldPatch_Full, newPatch_Full));
+                var patch_full = newPatch_Full ?? oldPatch_Full;
+                var hunk_full = Hunk.HunksForPatch(patch_full).Single();
+                var fileOldNumberOfLines = hunk_full.OldNumberOfLines;
+                var fileNewNumberOfLines = hunk_full.NewNumberOfLines;
+
                 var oldPatch = this.Patch[rtc.OldPath];
                 var newPatch = this.Patch[rtc.Path];
 
@@ -154,11 +162,16 @@ namespace GitTools.SourceExport
                 
                 var patch = newPatch ?? oldPatch;
                 uint hunkIdx = 0;
-                foreach (var hunk in Hunk.HunksForPatch(patch))
+                var hunks = Hunk.HunksForPatch(patch).ToList();
+
+                var file = new ExportableFile(commit, rtc, fileIdx: fileIdx, fileNewNumberOfLines: fileNewNumberOfLines, fileOldNumberOfLines: fileOldNumberOfLines, fileNumberOfHunks: (uint)hunks.Count);
+
+                foreach (var hunk in hunks)
                 {
                     var expoHunk = new ExportableHunk(file: file, hunk: hunk, hunkIdx: hunkIdx++);
                     file.AddHunk(expoHunk);
                 }
+
 
                 commit.AddFile(file);
                 fileIdx++;
@@ -174,7 +187,6 @@ namespace GitTools.SourceExport
             {
                 foreach (var file in commit)
                 {
-                    file.CopyAggregateStatisticsFrom(commit);
                     yield return file;
                 }
             }
@@ -186,7 +198,6 @@ namespace GitTools.SourceExport
             {
                 foreach (var hunk in file)
                 {
-                    hunk.CopyAggregateStatisticsFrom(file);
                     yield return hunk;
                 }
             }
@@ -199,9 +210,7 @@ namespace GitTools.SourceExport
                 uint blockIdx = 0;
                 foreach (var block in hunk)
                 {
-                    var expoblock = new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
-                    expoblock.CopyAggregateStatisticsFrom(hunk);
-                    yield return expoblock;
+                    yield return new ExportableBlock(exportableHunk: hunk, textBlock: block, blockIdx: blockIdx++);
                 }
             }
         }
@@ -212,9 +221,7 @@ namespace GitTools.SourceExport
             {
                 foreach (var line in block)
                 {
-                    var expoLine = new ExportableLine(block, line);
-                    expoLine.CopyAggregateStatisticsFrom(block);
-                    yield return expoLine;
+                    yield return new ExportableLine(block, line);
                 }
 
             }

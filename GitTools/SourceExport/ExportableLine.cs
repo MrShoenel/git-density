@@ -19,6 +19,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using JsonConverterAttribute = Newtonsoft.Json.JsonConverterAttribute;
 using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 
 namespace GitTools.SourceExport
@@ -27,10 +29,14 @@ namespace GitTools.SourceExport
     public class ExportableLine : ExportableBlock, IEnumerable<char>
     {
         [JsonIgnore]
+        public ExportableBlock ExportableBlock { get; protected set; }
+
+        [JsonIgnore]
         public Line Line { get; protected set; }
 
         public ExportableLine(ExportableBlock exportableBlock, Line line) : base(exportableBlock.ExportableHunk, exportableBlock.TextBlock, exportableBlock.BlockIdx)
         {
+            this.ExportableBlock = exportableBlock;
             this.Line = line;
         }
 
@@ -45,26 +51,11 @@ namespace GitTools.SourceExport
 
         #region override
         /// <summary>
-        /// Overridden to also copy over <see cref="BlockNumberOfLines"/>.
+        /// Overridden so we can copy down the block's number of lines.
         /// </summary>
-        /// <param name="entity"></param>
-        /// <returns><see cref="ExportableLine"/> (this instance).</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
-        {
-            var block = entity as ExportableBlock;
-            if (!(block is ExportableBlock))
-            {
-                throw new ArgumentException($"Entity must be of type {nameof(ExportableBlock)}.");
-            }
-            this.BlockNumberOfLines = block.BlockNumberOfLines;
-            return base.CopyAggregateStatisticsFrom(entity);
-        }
-
         [CsvColumn(FieldIndex = 45)]
         [JsonProperty(Order = 45)]
-        public override uint BlockNumberOfLines { get; set; }
-        #endregion
+        public sealed override uint BlockNumberOfLines { get => this.ExportableBlock.BlockNumberOfLines; }
 
         /// <summary>
         /// The returned line starts with a character that indicates wheter it is a context
@@ -72,6 +63,7 @@ namespace GitTools.SourceExport
         /// </summary>
         [JsonIgnore]
         public override String ContentInteral { get => this.Line.String; }
+        #endregion
 
         IEnumerator<char> IEnumerable<char>.GetEnumerator()
         {

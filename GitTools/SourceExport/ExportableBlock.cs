@@ -43,6 +43,9 @@ namespace GitTools.SourceExport
     [JsonObject]
     public class ExportableBlock : ExportableHunk, IEnumerable<Line>
     {
+        /// <summary>
+        /// The inherited hunk.
+        /// </summary>
         [JsonIgnore]
         public ExportableHunk ExportableHunk { get; protected set; }
 
@@ -59,7 +62,7 @@ namespace GitTools.SourceExport
         /// <param name="exportableHunk"></param>
         /// <param name="textBlock"></param>
         /// <param name="blockIdx"></param>
-        public ExportableBlock(ExportableHunk exportableHunk, LooseTextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportableFile, exportableHunk.Hunk, exportableHunk.HunkIdx)
+        public ExportableBlock(ExportableHunk exportableHunk, LooseTextBlock textBlock, uint blockIdx) : base(exportableHunk.ExportableFile, exportableHunk.Hunk, hunkIdx: exportableHunk.HunkIdx)
         {
             this.TextBlock = textBlock;
             this.ExportableHunk = exportableHunk;
@@ -109,31 +112,20 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 44, PropertyName = nameof(BlockLineNumbersUntouched))]
         public IEnumerable<UInt32> BlockLineNumbersUntouched_JSON { get => this.TextBlock.Lines.Where(l => l.Type == LineType.Untouched).OrderBy(l => l.Number).Select(l => l.Number); }
 
+        /// <summary>
+        /// This is a computed property, so it needs to be virtual.
+        /// </summary>
         [CsvColumn(FieldIndex = 45)]
         [JsonProperty(Order = 45)]
-        public virtual UInt32 BlockNumberOfLines { get => (UInt32)(this as IEnumerable<Line>).Count(); set => throw new InvalidOperationException(); }
+        public virtual UInt32 BlockNumberOfLines { get => (UInt32)(this as IEnumerable<Line>).Count(); }
 
         #region override
         /// <summary>
-        /// Overridden to also copy over <see cref="HunkNumberOfBlocks"/>.
+        /// Overridden so we can copy down this value from the encapsulated hunk.
         /// </summary>
-        /// <param name="entity"></param>
-        /// <returns><see cref="ExportableBlock"/> (this instance).</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
-        {
-            var hunk = entity as ExportableHunk;
-            if (!(hunk is ExportableHunk))
-            {
-                throw new ArgumentException($"Entity must be of type {nameof(ExportableHunk)}.");
-            }
-            this.HunkNumberOfBlocks = hunk.HunkNumberOfBlocks;
-            return base.CopyAggregateStatisticsFrom(entity);
-        }
-
         [CsvColumn(FieldIndex = 37)]
         [JsonProperty(Order = 37)]
-        public override uint HunkNumberOfBlocks { get; set; }
+        public sealed override uint HunkNumberOfBlocks { get => this.ExportableHunk.HunkNumberOfBlocks; }
         #endregion
 
 

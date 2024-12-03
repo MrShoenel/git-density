@@ -45,35 +45,15 @@ namespace GitTools.SourceExport
         [JsonIgnore]
         public TreeEntryChanges TreeChange { get; protected set; }
 
-        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange, uint fileIdx) : base(exportableCommit.ExportCommitPair)
+        public ExportableFile(ExportableCommit exportableCommit, TreeEntryChanges treeChange, uint fileIdx, uint fileNewNumberOfLines, uint fileOldNumberOfLines, uint fileNumberOfHunks) : base(exportableCommit.ExportCommitPair)
         {
             this.ExportableCommit = exportableCommit;
             this.expoHunks = new LinkedHashSet<ExportableHunk>();
             this.TreeChange = treeChange;
             this.FileIdx = fileIdx;
-        }
-
-        /// <summary>
-        /// This method needs to be called in order to properly inherit aggregation statistics
-        /// from parent entities. For example, the file itself does not know how many files a
-        /// commit actually had, so it has to inherit (copy) this from the commit. This method
-        /// should be overridden in sub-classes and also called from there.
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns><see cref="ExportableFile"/> (this instance).</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public virtual ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
-        {
-            var commit = entity as ExportableCommit;
-            if (!(commit is ExportableCommit))
-            {
-                throw new ArgumentException($"Entity must be of type {nameof(ExportableCommit)}.");
-            }
-            this.CommitNumberOfAddedFiles = commit.CommitNumberOfAddedFiles;
-            this.CommitNumberOfDeletedFiles = commit.CommitNumberOfDeletedFiles;
-            this.CommitNumberOfRenamedFiles = commit.CommitNumberOfRenamedFiles;
-            this.CommitNumberOfModifiedFiles = commit.CommitNumberOfModifiedFiles;
-            return this;
+            this.FileNewNumberOfLines = fileNewNumberOfLines;
+            this.FileOldNumberOfLines = fileOldNumberOfLines;
+            this.FileNumberOfHunks = fileNumberOfHunks;
         }
 
         /// <summary>
@@ -105,7 +85,7 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 23)]
         [JsonProperty(Order = 23)]
-        public virtual UInt32? FileNewNumberOfLines { get => this.FullCode ? (UInt32?)this.expoHunks.Single().HunkNewNumberOfLines : null; set => throw new InvalidOperationException(); }
+        public UInt32 FileNewNumberOfLines { get; protected set; }
 
         /// <summary>
         /// The line-count can only be determined if this is a full file (i.e.,
@@ -114,31 +94,31 @@ namespace GitTools.SourceExport
         /// equal to the hunk's old number of lines.
         [CsvColumn(FieldIndex = 24)]
         [JsonProperty(Order = 24)]
-        public virtual UInt32? FileOldNumberOfLines { get => this.FullCode ? (UInt32?)this.expoHunks.Single().HunkOldNumberOfLines : null; set => throw new InvalidOperationException(); }
+        public UInt32 FileOldNumberOfLines { get; protected set; }
 
         /// <summary>
         /// Returns the number of hunks in this file.
         /// </summary>
         [CsvColumn(FieldIndex = 25)]
         [JsonProperty(Order = 25)]
-        public virtual UInt32 FileNumberOfHunks { get => (UInt32)this.expoHunks.Count; set => throw new InvalidOperationException(); }
+        public UInt32 FileNumberOfHunks { get; protected set; }
 
         #region overrides
         [CsvColumn(FieldIndex = 15)]
         [JsonProperty(Order = 15)]
-        public override UInt32 CommitNumberOfAddedFiles { get; set; }
+        public sealed override UInt32 CommitNumberOfAddedFiles { get => this.ExportableCommit.CommitNumberOfAddedFiles; }
 
         [CsvColumn(FieldIndex = 16)]
         [JsonProperty(Order = 16)]
-        public override UInt32 CommitNumberOfDeletedFiles { get; set; }
+        public sealed override UInt32 CommitNumberOfDeletedFiles { get => this.ExportableCommit.CommitNumberOfDeletedFiles; }
 
         [CsvColumn(FieldIndex = 17)]
         [JsonProperty(Order = 17)]
-        public override UInt32 CommitNumberOfRenamedFiles { get; set; }
+        public sealed override UInt32 CommitNumberOfRenamedFiles { get => this.ExportableCommit.CommitNumberOfRenamedFiles; }
 
         [CsvColumn(FieldIndex = 18)]
         [JsonProperty(Order = 18)]
-        public override UInt32 CommitNumberOfModifiedFiles { get; set; }
+        public sealed override UInt32 CommitNumberOfModifiedFiles { get => this.ExportableCommit.CommitNumberOfModifiedFiles; }
         #endregion
 
         /// <summary>

@@ -120,6 +120,9 @@ namespace GitTools.SourceExport
     [JsonObject]
     public class ExportableHunk : ExportableFile, IEnumerable<LooseTextBlock>
     {
+        /// <summary>
+        /// <inheritdoc/>
+        /// </summary>
         [JsonIgnore]
         public ExportableFile ExportableFile { get; protected set; }
 
@@ -130,7 +133,7 @@ namespace GitTools.SourceExport
         public Hunk Hunk { get; protected set; }
 
 
-        public ExportableHunk(ExportableFile file, Hunk hunk, uint hunkIdx) : base(file.ExportableCommit, file.TreeChange, file.FileIdx)
+        public ExportableHunk(ExportableFile file, Hunk hunk, uint hunkIdx) : base(file.ExportableCommit, file.TreeChange, file.FileIdx, fileNewNumberOfLines: file.FileNewNumberOfLines, fileOldNumberOfLines: file.FileOldNumberOfLines, fileNumberOfHunks: file.FileNumberOfHunks)
         {
             this.ExportableFile = file;
             this.Hunk = hunk;
@@ -214,7 +217,7 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 30)]
         [JsonProperty(Order = 30)]
-        public UInt32 HunkIdx { get; protected internal set; }
+        public UInt32 HunkIdx { get; protected set; }
 
         /// <summary>
         /// A concatenation of line numbers that were added.
@@ -252,42 +255,12 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 36)]
         public UInt32 HunkNewNumberOfLines { get => this.Hunk.NewNumberOfLines; }
 
+        /// <summary>
+        /// Computed, so it needs to be virtual in order for subclasses being able to copy it.
+        /// </summary>
         [CsvColumn(FieldIndex = 37)]
         [JsonProperty(Order = 37)]
-        public virtual UInt32 HunkNumberOfBlocks { get => (UInt32)(this as IEnumerable<LooseTextBlock>).Count(); set => throw new InvalidOperationException(); }
-
-        #region override
-        /// <summary>
-        /// Overridden to also copy over <see cref="FileNumberOfHunks"/>.
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns><see cref="ExportableHunk"/> (this instance).</returns>
-        /// <exception cref="ArgumentException"></exception>
-        public override ExportableEntity CopyAggregateStatisticsFrom(ExportableEntity entity)
-        {
-            var file = entity as ExportableFile;
-            if (!(file is ExportableFile))
-            {
-                throw new ArgumentException($"Entity must be of type {nameof(ExportableFile)}.");
-            }
-            this.FileNewNumberOfLines = file.FileNewNumberOfLines;
-            this.FileOldNumberOfLines = file.FileOldNumberOfLines;
-            this.FileNumberOfHunks = file.FileNumberOfHunks;
-            return base.CopyAggregateStatisticsFrom(entity);
-        }
-
-        [CsvColumn(FieldIndex = 23)]
-        [JsonProperty(Order = 23)]
-        public override uint? FileNewNumberOfLines { get; set; }
-
-        [CsvColumn(FieldIndex = 24)]
-        [JsonProperty(Order = 24)]
-        public override uint? FileOldNumberOfLines { get; set; }
-
-        [CsvColumn(FieldIndex = 25)]
-        [JsonProperty(Order = 25)]
-        public override uint FileNumberOfHunks { get; set; }
-        #endregion
+        public virtual UInt32 HunkNumberOfBlocks { get => (UInt32)(this as IEnumerable<LooseTextBlock>).Count(); }
 
         /// <summary>
         /// The entire hunk's content as a string. Each line will have a leading character
