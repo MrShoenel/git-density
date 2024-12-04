@@ -313,5 +313,50 @@ namespace GitToolsTests.SourceExport
                 }
             }
         }
+
+
+        [TestMethod]
+        public void TestBlockOffsets_0b4cf4()
+        {
+            var tp = GetPair("0b4cf4");
+            var exp = tp.Item1;
+            var blocks = exp.AsBlocks.Where(block => block.FileName == "GitTools/SourceExport/ExportableLine.cs").OrderBy(b => b.HunkIdx).ThenBy(b => b.BlockIdx).ToList();
+
+            Assert.IsTrue(blocks.All(b => b.FileIdx == blocks[0].FileIdx));
+            Assert.AreEqual(3 + 5 + 7 + 3, blocks.Count);
+
+            tp.Item2.Dispose();
+            tp.Item3.Dispose();
+
+            TextBlockNature a = TextBlockNature.Added, c = TextBlockNature.Context, d = TextBlockNature.Deleted, r = TextBlockNature.Replaced;
+            var b1 = blocks[0];
+            Assert.IsTrue(b1.BlockNature == c && b1.BlockOldLineStart == 19u);
+            var b2 = blocks[1];
+            // The 2nd block doesn't actually have an old start because it's new.
+            // However, by logic, it can only start after 21; so, 22 it is.
+            Assert.IsTrue(b2.BlockNature == a && b2.BlockOldLineStart == 22u);
+            var b3 = blocks[2];
+            // Also 22, because the previous block (added) has an empty set of
+            // line numbers before.
+            Assert.IsTrue(b3.BlockNature == c && b3.BlockOldLineStart == 22u);
+
+
+            var b6 = blocks[5]; // 3rd in hunk2
+            Assert.IsTrue(b6.BlockNature == c && b6.BlockOldLineStart == 30u && b6.HunkIdx == 1u && b6.BlockIdx == 2);
+
+            var b10 = blocks[9]; // 2nd in hunk3
+            Assert.IsTrue(b10.BlockNature == r && b10.BlockOldLineStart == 48u && b10.HunkIdx == 2u && b10.BlockIdx == 1u);
+            var b11 = blocks[10];
+            Assert.IsTrue(b11.BlockNature == c && b11.BlockOldLineStart == 49u && b11.HunkIdx == 2u && b11.BlockIdx == 2u);
+            var b12 = blocks[11];
+            Assert.IsTrue(b12.BlockNature == d && b12.BlockOldLineStart == 50u && b12.HunkIdx == 2u && b12.BlockIdx == 3u);
+
+            var b13 = blocks[12];
+            Assert.IsTrue(b13.BlockNature == c && b13.BlockOldLineStart == 64u && b13.HunkIdx == 2u && b13.BlockIdx == 4u);
+            var b14 = blocks[13];
+            Assert.IsTrue(b14.BlockNature == r && b14.BlockOldLineStart == 66u && b14.HunkIdx == 2u && b14.BlockIdx == 5u);
+            var b15 = blocks[14];
+            Assert.IsTrue(b15.BlockNature == c && b15.BlockOldLineStart == 68u && b15.HunkIdx == 2u && b15.BlockIdx == 6u);
+        }
     }
 }
