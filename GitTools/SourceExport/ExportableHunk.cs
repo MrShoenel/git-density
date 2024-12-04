@@ -78,6 +78,15 @@ namespace GitTools.SourceExport
 
         public UInt32 LinesUntouched { get => (UInt32)this.lines.Where(l => l.Type == LineType.Untouched).Count(); }
 
+        public TextBlockNature BlockNature
+        {
+            get
+            {
+                bool added = this.LinesAdded > 0u, deleted = this.LinesDeleted > 0u, untouched = this.LinesUntouched > 0u;
+                return added && deleted ? TextBlockNature.Replaced : (added ? TextBlockNature.Added : (deleted ? TextBlockNature.Deleted : TextBlockNature.Context));
+            }
+        }
+
         public Boolean IsEmpty { get => this.lines.Count == 0; }
 
         protected LinkedHashSet<Line> lines;
