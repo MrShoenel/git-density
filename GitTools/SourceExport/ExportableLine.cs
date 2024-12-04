@@ -55,7 +55,14 @@ namespace GitTools.SourceExport
         /// </summary>
         [CsvColumn(FieldIndex = 45)]
         [JsonProperty(Order = 45)]
-        public sealed override uint BlockNumberOfLines { get => this.ExportableBlock.BlockNumberOfLines; }
+        public sealed override uint BlockNumberOfLines => this.ExportableBlock.BlockNumberOfLines;
+
+        /// <summary>
+        /// Overriden so we can copy down the block's value.
+        /// </summary>
+        [CsvColumn(FieldIndex = 46)]
+        [JsonProperty(Order = 46)]
+        public sealed override uint BlockOldLineStart => this.ExportableBlock.BlockOldLineStart;
 
         /// <summary>
         /// The returned line starts with a character that indicates wheter it is a context
