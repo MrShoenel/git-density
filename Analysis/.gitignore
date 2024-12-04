@@ -1,4 +1,0 @@
-# This file stores the credentials to the DB
-Settings.R
-# This file contains probably sensitive commands, so we ignore it
-.Rhistory
