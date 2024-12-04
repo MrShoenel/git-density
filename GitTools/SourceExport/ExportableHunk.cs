@@ -129,6 +129,8 @@ namespace GitTools.SourceExport
     [JsonObject]
     public class ExportableHunk : ExportableFile, IEnumerable<LooseTextBlock>
     {
+        private Lazy<LinkedList<LooseTextBlock>> lazyBlocks;
+
         /// <summary>
         /// <inheritdoc/>
         /// </summary>
@@ -147,6 +149,65 @@ namespace GitTools.SourceExport
             this.ExportableFile = file;
             this.Hunk = hunk;
             this.HunkIdx = hunkIdx;
+
+            this.lazyBlocks = new Lazy<LinkedList<LooseTextBlock>>(() =>
+            {
+                var lines = new Queue<String>(this.Hunk.Patch.GetLines(removeEmptyLines: false));
+                if (lines.Count == 0)
+                {
+                    return new LinkedList<LooseTextBlock>();
+                }
+
+                Func<string, LineType> getType = (string line) =>
+                {
+                    var fc = line.Length == 0 ? 'X' : line[0];
+                    // Anything that's not added or deleted is context. 'X', therefore, is just a placeholder.
+                    return fc == '+' ? LineType.Added : (fc == '-' ? LineType.Deleted : LineType.Untouched);
+                };
+
+
+                var blocks = new LinkedList<LooseTextBlock>();
+                // Create first block to be added.
+                var lastBlock = new LooseTextBlock();
+                var lastLine = "X";
+
+                var idxOld = this.Hunk.OldLineStart;
+                var idxNew = this.Hunk.NewLineStart;
+                while (lines.Count > 0)
+                {
+                    var line = lines.Peek();
+                    var type = getType(line);
+
+                    // There is already something in the last block. We need to create contiguous blocks
+                    // if untouched or added+deleted lines.
+                    var addDel = type != LineType.Untouched;
+                    var addDelLast = getType(lastLine) != LineType.Untouched;
+
+                    if (!lastBlock.IsEmpty && (addDel ^ addDelLast))
+                    {
+                        // Switch between untouched(context) lines and added/deleted lines -> new Block.
+                        blocks.AddLast(lastBlock);
+                        lastBlock = new LooseTextBlock();
+                        continue;
+                    }
+
+                    line = lines.Dequeue();
+                    lastLine = line;
+                    var number = type == LineType.Deleted ? idxOld : idxNew;
+                    // Line numbers: Deleted increases deleted, added increases added, but untouched
+                    // (context) increases either!
+                    idxOld = type == LineType.Untouched || type == LineType.Deleted ? idxOld + 1 : idxOld;
+                    idxNew = type == LineType.Untouched || type == LineType.Added ? idxNew + 1 : idxNew;
+
+                    lastBlock.AddLine(new Line(type: type, number: number, @string: line));
+                    if (lines.Count == 0)
+                    {
+                        blocks.AddLast(lastBlock);
+                    }
+                }
+
+                return blocks;
+            });
         }
 
         /// <summary>
@@ -157,66 +218,40 @@ namespace GitTools.SourceExport
         /// <returns></returns>
         public IEnumerator<LooseTextBlock> GetEnumerator()
         {
-            var lines = new Queue<String>(this.Hunk.Patch.GetLines(removeEmptyLines: false));
-            if (lines.Count == 0)
-            {
-                return Enumerable.Empty<LooseTextBlock>().GetEnumerator();
-            }
-
-            Func<string, LineType> getType = (string line) =>
-            {
-                var fc = line.Length == 0 ? 'X' : line[0];
-                // Anything that's not added or deleted is context. 'X', therefore, is just a placeholder.
-                return fc == '+' ? LineType.Added : (fc == '-' ? LineType.Deleted : LineType.Untouched);
-            };
-
-
-            var blocks = new LinkedList<LooseTextBlock>();
-            // Create first block to be added.
-            var lastBlock = new LooseTextBlock();
-            var lastLine = "X";
-
-            var idxOld = this.Hunk.OldLineStart;
-            var idxNew = this.Hunk.NewLineStart;
-            while (lines.Count > 0)
-            {
-                var line = lines.Peek();
-                var type = getType(line);
-
-                // There is already something in the last block. We need to create contiguous blocks
-                // if untouched or added+deleted lines.
-                var addDel = type != LineType.Untouched;
-                var addDelLast = getType(lastLine) != LineType.Untouched;
-
-                if (!lastBlock.IsEmpty && (addDel ^ addDelLast))
-                {
-                    // Switch between untouched(context) lines and added/deleted lines -> new Block.
-                    blocks.AddLast(lastBlock);
-                    lastBlock = new LooseTextBlock();
-                    continue;
-                }
-
-                line = lines.Dequeue();
-                lastLine = line;
-                var number = type == LineType.Deleted ? idxOld : idxNew;
-                // Line numbers: Deleted increases deleted, added increases added, but untouched
-                // (context) increases either!
-                idxOld = type == LineType.Untouched || type == LineType.Deleted ? idxOld + 1 : idxOld;
-                idxNew = type == LineType.Untouched || type == LineType.Added ? idxNew + 1 : idxNew;
-
-                lastBlock.AddLine(new Line(type: type, number: number, @string: line));
-                if (lines.Count == 0)
-                {
-                    blocks.AddLast(lastBlock);
-                }
-            }
-
-            return blocks.GetEnumerator();
+            return this.lazyBlocks.Value.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return this.GetEnumerator();
+        }
+
+        /// <summary>
+        /// Used to calculate <see cref="ExportableBlock.BlockOldLineStart"/>. This
+        /// offset depends on how many block came before and what their nature was.
+        /// </summary>
+        /// <param name="ltb"></param>
+        /// <returns></returns>
+        protected internal UInt32 NumberOfOldLinesBefore(LooseTextBlock ltb)
+        {
+            var blocks = this.lazyBlocks.Value;
+            var count = 0u;
+            foreach (var block in blocks)
+            {
+                if (block == ltb)
+                {
+                    break;
+                }
+                if (block.BlockNature == TextBlockNature.Context)
+                {
+                    count += block.LinesUntouched;
+                }
+                if (block.BlockNature == TextBlockNature.Replaced || block.BlockNature == TextBlockNature.Deleted)
+                {
+                    count += block.LinesDeleted;
+                }
+            }
+            return count;
         }
 
 
