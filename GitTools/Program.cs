@@ -63,8 +63,8 @@ namespace GitTools
         /// </summary>
         /// <param name="args"></param>
         static void Main(string[] args)
-		{
-			logger.LogLevel = LogLevel.Error;
+        {
+            logger.LogLevel = LogLevel.Information;
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
 			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
