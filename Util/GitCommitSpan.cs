@@ -23,16 +23,17 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Util.Extensions;
+using Util.Logging;
 
 namespace Util
 {
-	/// <summary>
-	/// When using since and/or until in a <see cref="GitCommitSpan"/> or other supporting
-	/// types, the <see cref="DateTime"/> can be extracted from either the author or the
-	/// commiter, as a <see cref="Commit"/> has two signatures, <see cref="Commit.Author"/>
-	/// and <see cref="Commit.Committer"/>.
-	/// </summary>
-	public enum SinceUntilUseDate
+    /// <summary>
+    /// When using since and/or until in a <see cref="GitCommitSpan"/> or other supporting
+    /// types, the <see cref="DateTime"/> can be extracted from either the author or the
+    /// commiter, as a <see cref="Commit"/> has two signatures, <see cref="Commit.Author"/>
+    /// and <see cref="Commit.Committer"/>.
+    /// </summary>
+    public enum SinceUntilUseDate
 	{
 		/// <summary>
 		/// Use the <see cref="DateTime"/> of when the commit was authored.
@@ -62,8 +63,9 @@ namespace Util
 
 		/// <summary>
 		/// <see cref="Regex"/> to detect/parse an SHA1 from a <see cref="Commit"/>.
+		/// Max-length was increased to 64 characters, to support SHA256 hashes.
 		/// </summary>
-		public static readonly Regex RegexShaCommitish = new Regex("^([a-f0-9]{3,40})$", RegexOptions.IgnoreCase);
+		public static readonly Regex RegexShaCommitish = new Regex("^([a-f0-9]{3,64})$", RegexOptions.IgnoreCase);
 
 		/// <summary>
 		/// The <see cref="Repository"/> to get the <see cref="Commit"/>s from.
@@ -221,7 +223,9 @@ namespace Util
 				}
 			}
 
-			this.lazyAllCommits = new Lazy<LinkedList<Commit>>(() =>
+            var singleCommit = this.SinceCommitSha != null && this.SinceCommitSha == this.UntilCommitSha;
+
+            this.lazyAllCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
 				return new LinkedList<Commit>(
 					this.Repository.GetAllCommits()
@@ -250,19 +254,25 @@ namespace Util
 
 				var orderedOldToNew = new List<Commit>(ie);
 
-				var idxSince = orderedOldToNew.FindIndex(commit =>
-				{
-					if (this.SinceDateTime.HasValue)
-					{
-						return signatureSinceWhenSelector(commit).UtcDateTime >= this.SinceDateTime;
-					}
-					else if (this.SinceCommitSha != null)
-					{
-						return commit.Sha.StartsWith(this.SinceCommitSha, StringComparison.InvariantCultureIgnoreCase);
-					}
+				var temp = orderedOldToNew.Select((commit, idx) => new { C = commit, I = idx }).Where(tpl =>
+                {
+                    if (this.SinceDateTime.HasValue)
+                    {
+                        return signatureSinceWhenSelector(tpl.C).UtcDateTime >= this.SinceDateTime;
+                    }
+                    else if (this.SinceCommitSha != null)
+                    {
+                        return tpl.C.Sha.StartsWith(this.SinceCommitSha, StringComparison.InvariantCultureIgnoreCase);
+                    }
 
-					return false;
-				});
+                    return false;
+                }).ToList();
+				if (singleCommit && temp.Count > 1)
+				{
+					throw new InvalidOperationException($"A single commit with ID {this.SinceCommitSha} was requested, but a total of {temp.Count} commits matching this ID were found: {String.Join(", ", temp.Select(tpl => tpl.C.ShaShort(length: 15)))}. You need to provide longer hashes in order to uniquely identify commits.");
+				}
+
+				var idxSince = temp[0].I;
 
 				var idxUntil = this.UntilDateTime.HasValue ?
 					orderedOldToNew.TakeWhile(commit => signatureUntilWhenSelector(commit).UtcDateTime <= this.UntilDateTime).Count() - 1
