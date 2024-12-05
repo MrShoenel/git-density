@@ -14,26 +14,24 @@
 /// ---------------------------------------------------------------------------------
 ///
 using LibGit2Sharp;
+using Renci.SshNet.Common;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
-using System.Collections;
 using Util.Data.Entities;
 using Util.Density;
 using Util.Metrics;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
 using Signature = LibGit2Sharp.Signature;
-using Renci.SshNet.Common;
-using System.Collections.Concurrent;
-using System.Threading;
 
 namespace Util.Extensions
 {
-	public static class RepositoryExtensions
+    public static class RepositoryExtensions
 	{
 		public enum SortOrder
 		{
@@ -639,8 +637,11 @@ namespace Util.Extensions
 		/// <returns>An <see cref="ISet{Commit}"/> with all the repository's commits.</returns>
 		public static ISet<Commit> GetAllCommits(this Repository repository)
 		{
-			return new HashSet<Commit>(repository.Branches.SelectMany(br => br.Commits));
-		}
+            return repository.Commits
+				.QueryBy(new CommitFilter { IncludeReachableFrom = repository.Refs.ToList() })
+				.Distinct<Commit>(EqualityComparer<GitObject>.Default)
+				.ToHashSet();
+        }
 
 		/// <summary>
 		/// Obtains all commits of a repository and goes to the latests, as determined
