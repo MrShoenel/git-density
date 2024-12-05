@@ -234,10 +234,15 @@ namespace Util
 
 			this.lazyFilteredCommits = new Lazy<LinkedList<Commit>>(() =>
 			{
-				IEnumerable<Commit> ie = this.AllCommits;
-				if (this.SHA1Filter.Count > 0)
+				IEnumerable<Commit> ie;
+				if (this.sha1Filter.Count > 0)
 				{
-					ie = ie.Where(c => this.SHA1Filter.Contains(c.Sha));
+					// Only return the commits used in the filter.
+					ie = this.Repository.LookupAny<Commit>(this.sha1Filter);
+				}
+				else
+				{
+					ie = this.AllCommits;
 				}
 				if (this.Limit.HasValue)
 				{
