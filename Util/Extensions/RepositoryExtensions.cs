@@ -672,5 +672,19 @@ namespace Util.Extensions
 			}
 			return commit.Sha.Substring(0, length);
 		}
+
+		/// <summary>
+		/// Uses <see cref="Repository.Lookup(string)"/> to find objects by some ID.
+		/// If an object is not found, no entity is returned for it, instead of
+		/// throwing an error.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="repo"></param>
+		/// <param name="objectish"></param>
+		/// <returns></returns>
+		public static IEnumerable<T> LookupAny<T>(this Repository repo, IEnumerable<string> objectish) where T : GitObject
+		{
+			return objectish.Select(o => repo.Lookup<T>(o)).Where(o => o is T);
+		}
 	}
 }
