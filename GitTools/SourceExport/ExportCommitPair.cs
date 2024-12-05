@@ -147,7 +147,14 @@ namespace GitTools.SourceExport
                 var newPatch_Full = this.PatchFull[rtc.Path];
                 Debug.Assert(((oldPatch_Full is null) ^ (newPatch_Full is null)) || EqualityComparer<PatchEntryChanges>.Default.Equals(oldPatch_Full, newPatch_Full));
                 var patch_full = newPatch_Full ?? oldPatch_Full;
-                var hunk_full = Hunk.HunksForPatch(patch_full).Single();
+                var hunk_full = Hunk.HunksForPatch(patch_full).SingleOrDefault();
+                if (hunk_full == null)
+                {
+                    // No hunks, no content; fully ignore this file, do not increase the index.
+                    // If the full hunk is empty, so will be the others.
+                    continue;
+                }
+
                 var fileOldNumberOfLines = hunk_full.OldNumberOfLines;
                 var fileNewNumberOfLines = hunk_full.NewNumberOfLines;
 
