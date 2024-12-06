@@ -350,13 +350,18 @@ namespace GitToolsTests.SourceExport
             Assert.IsTrue(b11.BlockNature == c && b11.BlockOldLineStart == 49u && b11.HunkIdx == 2u && b11.BlockIdx == 2u);
             var b12 = blocks[11];
             Assert.IsTrue(b12.BlockNature == d && b12.BlockOldLineStart == 50u && b12.HunkIdx == 2u && b12.BlockIdx == 3u);
+            // This is a purely deleted block, so there is no "new line start". However, in the
+            // context of the other new/untouched lines, there were 55 of these before. So, this
+            // here block should have a new "start" of 56, even if it's empty in terms of new lines.
+            // The next block 13, which is context, also starts at 56.
+            Assert.IsTrue(b12.BlockNewLineStart == 56u);
 
             var b13 = blocks[12];
-            Assert.IsTrue(b13.BlockNature == c && b13.BlockOldLineStart == 64u && b13.HunkIdx == 2u && b13.BlockIdx == 4u);
+            Assert.IsTrue(b13.BlockNature == c && b13.BlockOldLineStart == 64u && b13.HunkIdx == 2u && b13.BlockIdx == 4u && b13.BlockNewLineStart == 56u);
             var b14 = blocks[13];
-            Assert.IsTrue(b14.BlockNature == r && b14.BlockOldLineStart == 66u && b14.HunkIdx == 2u && b14.BlockIdx == 5u);
+            Assert.IsTrue(b14.BlockNature == r && b14.BlockOldLineStart == 66u && b14.HunkIdx == 2u && b14.BlockIdx == 5u && b14.BlockNewLineStart == 58u);
             var b15 = blocks[14];
-            Assert.IsTrue(b15.BlockNature == c && b15.BlockOldLineStart == 68u && b15.HunkIdx == 2u && b15.BlockIdx == 6u);
+            Assert.IsTrue(b15.BlockNature == c && b15.BlockOldLineStart == 68u && b15.HunkIdx == 2u && b15.BlockIdx == 6u && b15.BlockNewLineStart == 59u);
         }
     }
 }

@@ -65,6 +65,13 @@ namespace GitTools.SourceExport
         public sealed override uint BlockOldLineStart => this.ExportableBlock.BlockOldLineStart;
 
         /// <summary>
+        /// Overriden so we can copy down the block's value.
+        /// </summary>
+        [CsvColumn(FieldIndex = 47)]
+        [JsonProperty(Order = 47)]
+        public sealed override uint BlockNewLineStart => base.BlockNewLineStart;
+
+        /// <summary>
         /// The returned line starts with a character that indicates wheter it is a context
         /// (untouched) line, or new (+) or deleted (-).
         /// </summary>

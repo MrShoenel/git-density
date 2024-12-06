@@ -254,6 +254,34 @@ namespace GitTools.SourceExport
             return count;
         }
 
+        /// <summary>
+        /// Similar to <see cref="NumberOfOldLinesBefore(LooseTextBlock)"/>, but this time
+        /// we are counting the number of lines before a block.
+        /// </summary>
+        /// <param name="ltb"></param>
+        /// <returns></returns>
+        protected internal UInt32 NumberOfNewLinesBefore(LooseTextBlock ltb)
+        {
+            var blocks = this.lazyBlocks.Value;
+            var count = 0u;
+            foreach(var block in blocks)
+            {
+                if (block == ltb)
+                {
+                    break;
+                }
+                if (block.BlockNature == TextBlockNature.Context)
+                {
+                    count += block.LinesUntouched;
+                }
+                if (block.BlockNature == TextBlockNature.Replaced || block.BlockNature == TextBlockNature.Added)
+                {
+                    count += block.LinesAdded;
+                }
+            }
+            return count;
+        }
+
 
         /// <summary>
         /// The zero-based index of the hunk. Hunks within an affected file are ordered

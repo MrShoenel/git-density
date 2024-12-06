@@ -123,6 +123,10 @@ namespace GitTools.SourceExport
         [JsonProperty(Order = 46)]
         public virtual UInt32 BlockOldLineStart { get => this.ExportableHunk.HunkOldLineStart + this.ExportableHunk.NumberOfOldLinesBefore(ltb: this.TextBlock); }
 
+        [CsvColumn(FieldIndex = 47)]
+        [JsonProperty(Order = 47)]
+        public virtual UInt32 BlockNewLineStart { get => this.ExportableHunk.HunkNewLineStart + this.ExportableHunk.NumberOfNewLinesBefore(ltb: this.TextBlock); }
+
         #region override
         /// <summary>
         /// Overridden so we can copy down this value from the encapsulated hunk.
