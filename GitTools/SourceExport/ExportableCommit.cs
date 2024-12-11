@@ -56,7 +56,7 @@ namespace GitTools.SourceExport
             {
                 var msg = this.ExportCommitPair.Child.Message.Trim().Replace("\uFEFF", "");
                 return this.ContentEncoding == ContentEncoding.Plain ? msg :
-                    (this.ContentEncoding == ContentEncoding.Base64 ? msg.ToBase64() : Content.ToJSON());
+                    (this.ContentEncoding == ContentEncoding.Base64 ? msg.ToBase64() : msg.ToJSON());
             });
         }
 
