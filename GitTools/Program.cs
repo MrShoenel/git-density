@@ -300,7 +300,7 @@ namespace GitTools
 
 									// Write the results:
 									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommitPair.Child.Author.When.UtcDateTime).ToList();
-									if (options.OutputFile.EndsWith("csv", StringComparison.OrdinalIgnoreCase))
+									if (options.OutputFile.EndsWith("csv", StringComparison.OrdinalIgnoreCase)) // Completely ignore for JSON exports.
 									{
 										allResults.ForEach(r => r.ContentEncoding = options.CmdExport_Encoding);
 									}
@@ -481,7 +481,7 @@ namespace GitTools
         [JsonConverter(typeof(StringEnumConverter))]
         public ExportCodeType? CmdExportCode { get; set; }
 
-		[Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
+		[Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the commit message and the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
         [JsonConverter(typeof(StringEnumConverter))]
         public ContentEncoding CmdExport_Encoding { get; set; }
 
