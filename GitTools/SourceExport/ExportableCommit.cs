@@ -36,6 +36,8 @@ namespace GitTools.SourceExport
     [JsonObject]
     public class ExportableCommit : ExportableEntity, IEnumerable<ExportableFile>
     {
+        private readonly Lazy<String> lazyMessage;
+
         [JsonIgnore]
         protected LinkedHashSet<ExportableFile> expoFiles;
 
@@ -49,6 +51,13 @@ namespace GitTools.SourceExport
         public ExportableCommit(ExportCommitPair exportCommit) : base(exportCommit)
         {
             this.expoFiles = new LinkedHashSet<ExportableFile>();
+
+            this.lazyMessage = new Lazy<String>(() =>
+            {
+                var msg = this.ExportCommitPair.Child.Message.Trim().Replace("\uFEFF", "");
+                return this.ContentEncoding == ContentEncoding.Plain ? msg :
+                    (this.ContentEncoding == ContentEncoding.Base64 ? msg.ToBase64() : Content.ToJSON());
+            });
         }
 
         /// <summary>
@@ -74,7 +83,7 @@ namespace GitTools.SourceExport
 
         [CsvColumn(FieldIndex = 4)]
         [JsonProperty(Order = 4)]
-        public String Message { get => this.ExportCommitPair.Child.Message.Trim(); }
+        public String Message { get => this.lazyMessage.Value; }
 
         [CsvColumn(FieldIndex = 5)]
         [JsonProperty(Order = 5)]
