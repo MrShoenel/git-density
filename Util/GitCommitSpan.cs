@@ -272,13 +272,19 @@ namespace Util
 
                     return false;
                 }).ToList();
-				if (singleCommit && temp.Count > 1)
+				if (singleCommit)
 				{
-					throw new InvalidOperationException($"A single commit with ID {this.SinceCommitSha} was requested, but a total of {temp.Count} commits matching this ID were found: {String.Join(", ", temp.Select(tpl => tpl.C.ShaShort(length: 15)))}. You need to provide longer hashes in order to uniquely identify commits.");
+					if (temp.Count == 0)
+					{
+						throw new ArgumentException($"No single commit with ID {this.SinceCommitSha} was found. Check for typos.");
+					}
+					else if (temp.Count > 1)
+					{
+                        throw new InvalidOperationException($"A single commit with ID {this.SinceCommitSha} was requested, but a total of {temp.Count} commits matching this ID were found: {String.Join(", ", temp.Select(tpl => tpl.C.ShaShort(length: 15)))}. You need to provide longer hashes in order to uniquely identify commits.");
+                    }
 				}
 
 				var idxSince = temp[0].I;
-
 				var idxUntil = this.UntilDateTime.HasValue ?
 					orderedOldToNew.TakeWhile(commit => signatureUntilWhenSelector(commit).UtcDateTime <= this.UntilDateTime).Count() - 1
 					:
