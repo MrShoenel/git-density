@@ -85,10 +85,15 @@ namespace GitTools.SourceExport
         public CompareOptions CompareOptions { get; protected set; }
 
         /// <summary>
+        /// An optional <see cref="CodeMode"/>.
+        /// </summary>
+        public CodeMode? CodeMode { get; protected set; }
+
+        /// <summary>
         /// Returns true iff the number of context lines in <see cref="CompareOptions"/> has been
         /// set to the maximum allowed value of <see cref="Int32.MaxValue"/>.
         /// </summary>
-        public Boolean ExportFullCode {  get => this.CompareOptions.ContextLines == Int32.MaxValue; }
+        public Boolean ExportFullCode { get => this.CompareOptions.ContextLines == Int32.MaxValue; }
 
         /// <summary>
         /// Whether or not the child of this pair marks the beginning of a chain.
@@ -104,10 +109,12 @@ namespace GitTools.SourceExport
         /// <param name="parent">The parent commit. If not given, this commit is compared to
         /// the beginning of the repository.</param>
         /// <param name="compareOptions"></param>
-        public ExportCommitPair(Repository repo, Commit child, ExportReason includeReason, Commit parent = null, CompareOptions compareOptions = null) : base(repo, child, parent, compareOptions)
+        /// <param name="codeMode"></param>
+        public ExportCommitPair(Repository repo, Commit child, ExportReason includeReason, CodeMode? codeMode = null, Commit parent = null, CompareOptions compareOptions = null) : base(repo, child, parent, compareOptions)
         {
             this.ExportReason = includeReason;
             this.CompareOptions = compareOptions ?? new CompareOptions();
+            this.CodeMode = codeMode;
 
             // Creates an extra patch that always holds the full source code.
             // We use this to determine the number of affected lines old/new,
@@ -166,7 +173,7 @@ namespace GitTools.SourceExport
                 // is renamed, we get both changes here: One change is the patch for the removal
                 // and one other (separate) change is for the addition (yes, we want both).
                 Debug.Assert(((oldPatch is null) ^ (newPatch is null)) || EqualityComparer<PatchEntryChanges>.Default.Equals(oldPatch, newPatch));
-                
+
                 var patch = newPatch ?? oldPatch;
                 uint hunkIdx = 0;
                 var hunks = Hunk.HunksForPatch(patch).ToList();
@@ -271,7 +278,7 @@ namespace GitTools.SourceExport
 
         public IEnumerable<ExportableHunk> AsHunks { get => this; }
 
-        public IEnumerable<ExportableBlock> AsBlocks { get =>  this; }
+        public IEnumerable<ExportableBlock> AsBlocks { get => this; }
 
         public IEnumerable<ExportableLine> AsLines { get => this; }
 
@@ -288,7 +295,7 @@ namespace GitTools.SourceExport
         /// <param name="allowIncompleteChains">If true, allow to construct incomplete chains, where not all
         /// parent generations are present.</param>
         /// <returns></returns>
-        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, CompareOptions compareOptions, UInt32 numGenerations, bool allowIncompleteChains = false)
+        public static IEnumerable<ExportCommitPair> ExpandParents(Repository repo, GitCommitSpan span, CompareOptions compareOptions, CodeMode? codeMode, UInt32 numGenerations, bool allowIncompleteChains = false)
         {
             var allCommits = span.FilteredCommits.ToHashSet();
             var primaryCommits = allCommits.ToHashSet(); // make a copy
@@ -310,7 +317,7 @@ namespace GitTools.SourceExport
                 return parents.Select(parent =>
                 {
                     var reason = both.Contains(commit) ? ExportReason.Both : (primaryCommits.Contains(commit) ? ExportReason.Primary : ExportReason.Parent);
-                    return new ExportCommitPair(repo: repo, includeReason: reason, child: commit, parent: parent, compareOptions: compareOptions);
+                    return new ExportCommitPair(repo: repo, includeReason: reason, child: commit, parent: parent, compareOptions: compareOptions, codeMode: codeMode);
                 });
             });
         }

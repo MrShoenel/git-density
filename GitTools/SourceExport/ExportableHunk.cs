@@ -264,7 +264,7 @@ namespace GitTools.SourceExport
         {
             var blocks = this.lazyBlocks.Value;
             var count = 0u;
-            foreach(var block in blocks)
+            foreach (var block in blocks)
             {
                 if (block == ltb)
                 {
@@ -339,6 +339,6 @@ namespace GitTools.SourceExport
         /// (space, +, -) that designates if the line is unchanged, added, or deleted.
         /// </summary>
         [JsonIgnore]
-        public override String ContentInteral { get => this.Hunk.Patch; }
+        public override String ContentInteral { get => this.ExportCommitPair.CodeMode == CodeMode.MetaOnly ? String.Empty : this.Hunk.Patch; }
     }
 }

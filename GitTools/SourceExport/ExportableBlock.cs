@@ -142,7 +142,7 @@ namespace GitTools.SourceExport
         /// line starts with a character that designates its nature (i.e., space, +, or -). A
         /// block may also contain empty lines (i.e., one or more whitespace characters).
         /// </summary>
-        public override String ContentInteral { get => this.TextBlock.WholeBlock; }
+        public override String ContentInteral { get => this.ExportCommitPair.CodeMode == CodeMode.MetaOnly ? String.Empty : this.TextBlock.WholeBlock; }
 
         /// <summary>
         /// Allows this block to be enumerated as lines.

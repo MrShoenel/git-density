@@ -125,7 +125,7 @@ namespace GitTools.SourceExport
         /// Exporting all changes for one file means that we will just concatenate all
         /// <see cref="expoHunks"/> in the file using two newlines.
         /// </summary>
-        public override string ContentInteral => String.Join("\n\n", this.expoHunks.Select(eh => eh.ContentInteral));
+        public override string ContentInteral => this.ExportCommitPair.CodeMode == CodeMode.MetaOnly ? String.Empty : String.Join("\n\n", this.expoHunks.Select(eh => eh.ContentInteral));
 
         /// <summary>
         /// Add a hunk to this file.

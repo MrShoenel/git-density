@@ -76,7 +76,7 @@ namespace GitTools.SourceExport
         /// (untouched) line, or new (+) or deleted (-).
         /// </summary>
         [JsonIgnore]
-        public override String ContentInteral { get => this.Line.String; }
+        public override String ContentInteral { get => this.ExportCommitPair.CodeMode == CodeMode.MetaOnly ? String.Empty : this.Line.String; }
         #endregion
 
         IEnumerator<char> IEnumerable<char>.GetEnumerator()

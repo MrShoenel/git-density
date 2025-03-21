@@ -41,7 +41,7 @@ namespace GitToolsTests.SourceExport
             var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: sha1, untilDatetimeOrCommitSha: sha1);
 
             var commit = span.FilteredCommits.Single();
-            return Tuple.Create(new ExportCommitPair(repo, commit, ExportReason.Primary, commit.Parents.First(), new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }), repo, span);
+            return Tuple.Create(new ExportCommitPair(repo: repo, child: commit, includeReason: ExportReason.Primary, parent: commit.Parents.First(), compareOptions: new LibGit2Sharp.CompareOptions() { ContextLines = ctxLines }, codeMode: CodeMode.MetaOnly), repo, span);
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace GitToolsTests.SourceExport
             {
                 using (var span = new GitCommitSpan(repo, sinceDateTimeOrCommitSha: "85d7", untilDatetimeOrCommitSha: "8a54"))
                 {
-                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 2u, compareOptions: null);
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 2u, compareOptions: null, codeMode: CodeMode.FullCode);
 
                     var asCommits = pairs.SelectMany(pair => pair.AsCommits).ToDictionary(kv => $"{kv.SHA1}_{kv.SHA1_Parent}", kv => kv);
                     Assert.AreEqual(5, asCommits.Count);
@@ -276,7 +276,7 @@ namespace GitToolsTests.SourceExport
                 using (var span = new GitCommitSpan(repository: repo))
                 {
                     // all commits:
-                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 0, compareOptions: null);
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 0, compareOptions: null, codeMode: CodeMode.FullCode);
 
                     Assert.IsTrue(pairs.SelectMany(pair => pair.AsCommits).All(c => c.ExportReason == ExportReason.Primary));
                 }
@@ -285,7 +285,7 @@ namespace GitToolsTests.SourceExport
                 // Let's do a 3rd, more complex test.
                 using (var span = new GitCommitSpan(repository: repo, sinceDateTimeOrCommitSha: "7d94", untilDatetimeOrCommitSha: "66bb"))
                 {
-                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 3, compareOptions: null);
+                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, numGenerations: 3, compareOptions: null, codeMode: CodeMode.FullCode);
 
                     // That should be 8 commits.
                     var asCommits = pairs.SelectMany(pair => pair.AsCommits).ToList();
