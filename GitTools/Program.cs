@@ -65,245 +65,240 @@ namespace GitTools
         static void Main(string[] args)
         {
             logger.LogLevel = LogLevel.Information;
-			Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
-			Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("en-us");
+            Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-us");
 
-			var options = new CommandLineOptions();
-			var optionsParseSuccess = Parser.Default.ParseArguments(args, options);
+            var options = new CommandLineOptions();
+            var optionsParseSuccess = Parser.Default.ParseArguments(args, options);
 
-			if (optionsParseSuccess)
-			{
-				#region Initialize, DataFactory, temp-dir etc.
-				Util.ColoredConsole.RuntimeLogLevel = options.LogLevel;
-				logger.LogLevel = options.LogLevel;
+            if (optionsParseSuccess)
+            {
+                #region Initialize, DataFactory, temp-dir etc.
+                Util.ColoredConsole.RuntimeLogLevel = options.LogLevel;
+                logger.LogLevel = options.LogLevel;
 
-				if (options.ShowHelp)
-				{
-					logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-					logger.LogInformation(options.GetUsage(wasHelpRequested: true));
-					Environment.Exit((int)ExitCodes.OK);
-				}
+                if (options.ShowHelp)
+                {
+                    logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
+                    logger.LogInformation(options.GetUsage(wasHelpRequested: true));
+                    Environment.Exit((int)ExitCodes.OK);
+                }
 
-				logger.LogWarning("Hello, this is GitTools.");
-				logger.LogDebug("You supplied the following arguments: {0}",
-					String.Join(", ", args.Select(a => $"'{a}'")));
-				logger.LogDebug($"Settings:\n{JsonConvert.SerializeObject(options, Formatting.Indented)}");
-				logger.LogWarning("Initializing..");
-
-
-				// Now let's read the configuration and probe the configured DB:
-				try
-				{
-					// First let's create an actual temp-directory in the folder specified:
-					Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
-						options.TempDirectory ?? Path.GetTempPath(), nameof(GitTools)));
-					if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
-					Configuration.TempDirectory.Create();
-					options.TempDirectory = Configuration.TempDirectory.FullName;
-					logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
-				}
-				catch (Exception ex)
-				{
-					logger.LogError("Exception caught: {0}", ex.Message);
-					logger.LogTrace("Exception trace: {0}", ex.StackTrace);
-					Environment.Exit((int)ExitCodes.ConfigError);
-				}
-				#endregion
+                logger.LogWarning("Hello, this is GitTools.");
+                logger.LogDebug("You supplied the following arguments: {0}",
+                    String.Join(", ", args.Select(a => $"'{a}'")));
+                logger.LogDebug($"Settings:\n{JsonConvert.SerializeObject(options, Formatting.Indented)}");
+                logger.LogWarning("Initializing..");
 
 
-				// Now let's try to open the specified repository:
-				try
-				{
-					var repoTempPath = Path.Combine(
-						new DirectoryInfo(options.TempDirectory).Parent.FullName,
-						$"{nameof(GitTools)}_repos");
-					if (!Directory.Exists(repoTempPath))
-					{
-						Directory.CreateDirectory(repoTempPath);
-					}
+                // Now let's read the configuration and probe the configured DB:
+                try
+                {
+                    // First let's create an actual temp-directory in the folder specified:
+                    Configuration.TempDirectory = new DirectoryInfo(Path.Combine(
+                        options.TempDirectory ?? Path.GetTempPath(), nameof(GitTools)));
+                    if (Configuration.TempDirectory.Exists) { Configuration.TempDirectory.TryDelete(); }
+                    Configuration.TempDirectory.Create();
+                    options.TempDirectory = Configuration.TempDirectory.FullName;
+                    logger.LogDebug("Using temporary directory: {0}", options.TempDirectory);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Exception caught: {0}", ex.Message);
+                    logger.LogTrace("Exception trace: {0}", ex.StackTrace);
+                    Environment.Exit((int)ExitCodes.ConfigError);
+                }
+                #endregion
 
-					logger.LogInformation($"Opening repository {options.RepoPath}..");
-					using (var repo = options.RepoPath.OpenRepository(
-						repoTempPath, pullIfAlreadyExists: true))
-					{
-						logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 
-						ISet<String> sha1IDs = null;
-						if (!String.IsNullOrEmpty(options.InputCommitIDs))
-						{
-							sha1IDs = new HashSet<String>(
-								File.ReadAllLines(Path.GetFullPath(options.InputCommitIDs)).Where(l => l.Length >= 40));
-						}
+                // Now let's try to open the specified repository:
+                try
+                {
+                    var repoTempPath = Path.Combine(
+                        new DirectoryInfo(options.TempDirectory).Parent.FullName,
+                        $"{nameof(GitTools)}_repos");
+                    if (!Directory.Exists(repoTempPath))
+                    {
+                        Directory.CreateDirectory(repoTempPath);
+                    }
 
-						var span = new GitCommitSpan(
-							repo, options.Since, options.Until, options.Limit, sha1IDs, options.SinceUseDate, options.UntilUseDate);
-						if (span.SHA1Filter.Count > 0)
-						{
-							logger.LogTrace($"Using the following commit-IDs for the {nameof(GitCommitSpan)}: {String.Join(", ", span.SHA1Filter)}");
-						}
+                    logger.LogInformation($"Opening repository {options.RepoPath}..");
+                    using (var repo = options.RepoPath.OpenRepository(
+                        repoTempPath, pullIfAlreadyExists: true))
+                    {
+                        logger.LogInformation($"Repository is located in {repo.Info.WorkingDirectory}");
 
-						#region Check for commands
-						if (options.CmdCountCommits.HasValue && options.CmdCountCommits.Value)
-						{
-							logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
-
-							var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
-
-							var json = JsonConvert.SerializeObject(new
-							{
-								commits.Count,
-								SHA1s = commits.Select(c => c.ShaShort())
-							});
-
-							using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
-								Console.Out : File.CreateText(options.OutputFile))
-							{
-								writer.Write(json);
-							}
-							logger.LogInformation($"Wrote JSON to {(String.IsNullOrWhiteSpace(options.OutputFile) ? "console" : options.OutputFile)}.");
-							Environment.Exit((int)ExitCodes.OK);
-						}
-						else if (options.CmdGeneratePrompts.HasValue && options.CmdGeneratePrompts.Value)
-						{
-							if (String.IsNullOrEmpty(options.TempDirectory))
-							{
-								logger.LogError("You must specify a temporary directory when generating prompts, because an individual output file is generated for each commit.");
-								Environment.Exit((int)ExitCodes.UsageInvalid);
-							}
-
-							String inputTemplate = null;
-							if (String.IsNullOrEmpty(options.CmdGeneratePrompts_Template))
-							{
-								logger.LogWarning("No input prompt template was given, using the empty default template: __SUMMARY__ \\n __CHANGELIST__.");
-								inputTemplate = "__SUMMARY__ \n __CHANGELIST__";
-							}
-							else
-							{
-								inputTemplate = File.ReadAllText(path: options.CmdGeneratePrompts_Template);
-							}
-
-							using (span)
-							{
-								if (options.AnalysisType != AnalysisType.Extended)
-								{
-									logger.LogWarning($"Switching to {nameof(AnalysisType.Extended)} analysis because it is required for generating prompts.");
-									options.AnalysisType = AnalysisType.Extended;
-								}
-								logger.LogInformation($"Generating prompts for Commits with IDs {String.Join(separator: ", ", values: sha1IDs)}..");
-
-								var ea = new ExtendedAnalyzer(repoPathOrUrl: options.RepoPath, span: span, skipSizeAnalysis: false)
-								{ ExecutionPolicy = options.ExecutionPolicy };
-								var pg = new PromptGenerator(analyzer: ea, template: inputTemplate);
-
-								foreach (var commitPrompt in pg)
-								{
-									var outputPath = Path.Combine(options.TempDirectory, $"{commitPrompt.CommitPair.Child.Id.Sha.Substring(0, 8)}.txt");
-									File.WriteAllText(path: outputPath, contents: commitPrompt.ToString(), encoding: Encoding.UTF8);
-								}
-								Environment.Exit((int)ExitCodes.OK);
-							}
-						}
-						else if (options.CmdExportCode != null)
+                        ISet<String> sha1IDs = null;
+                        if (!String.IsNullOrEmpty(options.InputCommitIDs))
                         {
-                            if (!(options.OutputFile is string))
-							{
-								throw new ArgumentException("This command requires writing to a file.");
+                            sha1IDs = new HashSet<String>(
+                                File.ReadAllLines(Path.GetFullPath(options.InputCommitIDs)).Where(l => l.Length >= 40));
+                        }
+
+                        var span = new GitCommitSpan(
+                            repo, options.Since, options.Until, options.Limit, sha1IDs, options.SinceUseDate, options.UntilUseDate);
+                        if (span.SHA1Filter.Count > 0)
+                        {
+                            logger.LogTrace($"Using the following commit-IDs for the {nameof(GitCommitSpan)}: {String.Join(", ", span.SHA1Filter)}");
+                        }
+
+                        #region Check for commands
+                        if (options.CmdCountCommits.HasValue && options.CmdCountCommits.Value)
+                        {
+                            logger.LogInformation($"Counting commits between {span.SinceAsString} and {span.UntilAsString}..");
+
+                            var commits = span.OrderBy(c => c.Author.When.UtcDateTime).ToList();
+
+                            var json = JsonConvert.SerializeObject(new
+                            {
+                                commits.Count,
+                                SHA1s = commits.Select(c => c.ShaShort())
+                            });
+
+                            using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
+                                Console.Out : File.CreateText(options.OutputFile))
+                            {
+                                writer.Write(json);
+                            }
+                            logger.LogInformation($"Wrote JSON to {(String.IsNullOrWhiteSpace(options.OutputFile) ? "console" : options.OutputFile)}.");
+                            Environment.Exit((int)ExitCodes.OK);
+                        }
+                        else if (options.CmdGeneratePrompts.HasValue && options.CmdGeneratePrompts.Value)
+                        {
+                            if (String.IsNullOrEmpty(options.TempDirectory))
+                            {
+                                logger.LogError("You must specify a temporary directory when generating prompts, because an individual output file is generated for each commit.");
+                                Environment.Exit((int)ExitCodes.UsageInvalid);
                             }
 
-							try
+                            String inputTemplate = null;
+                            if (String.IsNullOrEmpty(options.CmdGeneratePrompts_Template))
                             {
-								using (span)
-								{
-									if (options.CmdExport_ContextLines.HasValue)
-									{
-										Debug.Assert(options.CmdExport_ContextLines.Value >= 0);
-										if (options.CmdExport_FullCode ?? false)
-										{
-											options.CmdExport_ContextLines = Int32.MaxValue;
-										}
-									}
-									else
-									{
-										options.CmdExport_ContextLines = 3; // Set the default.
-                                        if (options.CmdExport_FullCode.HasValue)
-										{
-											if (options.CmdExport_FullCode.Value)
-                                            {
-                                                options.CmdExport_ContextLines = Int32.MaxValue;
-                                            }
-										}
-										else if (options.CmdExportCode == ExportCodeType.Files || options.CmdExportCode == ExportCodeType.Commits)
+                                logger.LogWarning("No input prompt template was given, using the empty default template: __SUMMARY__ \\n __CHANGELIST__.");
+                                inputTemplate = "__SUMMARY__ \n __CHANGELIST__";
+                            }
+                            else
+                            {
+                                inputTemplate = File.ReadAllText(path: options.CmdGeneratePrompts_Template);
+                            }
+
+                            using (span)
+                            {
+                                if (options.AnalysisType != AnalysisType.Extended)
+                                {
+                                    logger.LogWarning($"Switching to {nameof(AnalysisType.Extended)} analysis because it is required for generating prompts.");
+                                    options.AnalysisType = AnalysisType.Extended;
+                                }
+                                logger.LogInformation($"Generating prompts for Commits with IDs {String.Join(separator: ", ", values: sha1IDs)}..");
+
+                                var ea = new ExtendedAnalyzer(repoPathOrUrl: options.RepoPath, span: span, skipSizeAnalysis: false)
+                                { ExecutionPolicy = options.ExecutionPolicy };
+                                var pg = new PromptGenerator(analyzer: ea, template: inputTemplate);
+
+                                foreach (var commitPrompt in pg)
+                                {
+                                    var outputPath = Path.Combine(options.TempDirectory, $"{commitPrompt.CommitPair.Child.Id.Sha.Substring(0, 8)}.txt");
+                                    File.WriteAllText(path: outputPath, contents: commitPrompt.ToString(), encoding: Encoding.UTF8);
+                                }
+                                Environment.Exit((int)ExitCodes.OK);
+                            }
+                        }
+                        else if (options.CmdExportCode != null)
+                        {
+                            if (!(options.OutputFile is string))
+                            {
+                                throw new ArgumentException("This command requires writing to a file.");
+                            }
+
+                            try
+                            {
+                                using (span)
+                                {
+                                    if (options.CmdExport_ContextLines.HasValue && options.CmdExport_CodeMode.HasValue)
+                                    {
+                                        throw new ArgumentException("--context-lines cannot be used in conjunction with --code-mode and vice versa. Only one of these is allowed at a time.");
+                                    }
+
+
+                                    if (options.CmdExport_ContextLines.HasValue)
+                                    {
+                                        Debug.Assert(options.CmdExport_ContextLines.Value >= 0);
+                                    }
+                                    else if (options.CmdExport_CodeMode.HasValue)
+                                    {
+                                        if (options.CmdExport_CodeMode.Value == CodeMode.FullCode)
                                         {
+                                            logger.LogWarning($"Context-Lines has been set to the maximum value of ({Int32.MaxValue}).");
                                             options.CmdExport_ContextLines = Int32.MaxValue;
                                         }
-									}
-									if (options.CmdExport_ContextLines.HasValue && options.CmdExport_ContextLines.Value == Int32.MaxValue)
-									{
-										logger.LogWarning($"Context-Lines has been set to the maximum value of ({Int32.MaxValue}).");
-									}
+                                    }
+
+                                    var compOptions = new CompareOptions();
+                                    if (options.CmdExport_ContextLines.HasValue)
+                                    {
+                                        compOptions.ContextLines = options.CmdExport_ContextLines.Value;
+                                    }
 
                                     var allCommits = span.FilteredCommits.ToHashSet();
-									// Make a copy so we can later check for which "primary" commits we have
-									// actually exported parents (where the chains should start).
-									var primaryCommits = allCommits.ToHashSet();
-									// For each of the span's commits, we will make pairs of commit and parent.
-									// This means, we will create one pair for each parent. Then, these pairs
-									// are processed according to the policy and returned.
-									var compOptions = new CompareOptions()
-									{
-										ContextLines = options.CmdExport_ContextLines.Value
-									};
-
-									var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, compareOptions: compOptions, numGenerations: options.CmdExport_ParentGens, allowIncompleteChains: options.CmdExport_AllowIncompleteChains.HasValue && options.CmdExport_AllowIncompleteChains.Value).ToList();
-
-									// Let's check if parent generations should be exported.
-									if (options.CmdExport_ParentGens > 0u)
-									{
-										// Make a new set containing the original commits and their parents
-										logger.LogWarning($"Including {options.CmdExport_ParentGens} parent generations. Original number of commits is {allCommits.Count}.");
-										logger.LogWarning($"Number of commits increased to {pairs.Count} by including parent generations.");
-									}
+                                    // Make a copy so we can later check for which "primary" commits we have
+                                    // actually exported parents (where the chains should start).
+                                    var primaryCommits = allCommits.ToHashSet();
+                                    // For each of the span's commits, we will make pairs of commit and parent.
+                                    // This means, we will create one pair for each parent. Then, these pairs
+                                    // are processed according to the policy and returned.
 
 
-									logger.LogInformation($"Found {allCommits.Count()} Commits and {pairs.Count} pairs.");
-									logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
+                                    var pairs = ExportCommitPair.ExpandParents(repo: repo, span: span, compareOptions: compOptions, numGenerations: options.CmdExport_ParentGens, allowIncompleteChains: options.CmdExport_AllowIncompleteChains.HasValue && options.CmdExport_AllowIncompleteChains.Value, codeMode: options.CmdExport_CodeMode).ToList();
+
+                                    // Let's check if parent generations should be exported.
+                                    if (options.CmdExport_ParentGens > 0u)
+                                    {
+                                        // Make a new set containing the original commits and their parents
+                                        logger.LogWarning($"Including {options.CmdExport_ParentGens} parent generations. Original number of commits is {allCommits.Count}.");
+                                        logger.LogWarning($"Number of commits increased to {pairs.Count} by including parent generations.");
+                                    }
 
 
-									var resultsBag = new ConcurrentBag<IEnumerable<ExportableEntity>>();
-									Parallel.ForEach(source: pairs, parallelOptions: new ParallelOptions() {
-										MaxDegreeOfParallelism = options.ExecutionPolicy == ExecutionPolicy.Linear ? 1 :
-											Math.Min(Environment.ProcessorCount, pairs.Count)
-									}, body: pair =>
-									{
-										if (options.CmdExportCode == ExportCodeType.Commits)
-										{
-											resultsBag.Add(pair.AsCommits.ToList());
-										}
-										else if (options.CmdExportCode == ExportCodeType.Files)
-										{
-											resultsBag.Add(pair.AsFiles.ToList());
-										}
-										else if (options.CmdExportCode == ExportCodeType.Hunks)
-										{
-											resultsBag.Add(pair.AsHunks.ToList());
-										}
-										else if (options.CmdExportCode == ExportCodeType.Blocks)
-										{
-											resultsBag.Add(pair.AsBlocks.ToList());
-										}
-										else if (options.CmdExportCode == ExportCodeType.Lines)
-										{
-											resultsBag.Add(pair.AsLines.ToList());
-										}
-									});
+                                    logger.LogInformation($"Found {allCommits.Count()} Commits and {pairs.Count} pairs.");
+                                    logger.LogInformation($"Processing all pairs {(options.ExecutionPolicy == ExecutionPolicy.Linear ? "sequentially" : "in parallel")}.");
 
 
-									// Write the results:
-									var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommitPair.Child.Author.When.UtcDateTime).ToList();
-									if (options.OutputFile.EndsWith("csv", StringComparison.OrdinalIgnoreCase)) // Completely ignore for JSON exports.
-									{
-										allResults.ForEach(r => r.ContentEncoding = options.CmdExport_Encoding);
-									}
+                                    var resultsBag = new ConcurrentBag<IEnumerable<ExportableEntity>>();
+                                    Parallel.ForEach(source: pairs, parallelOptions: new ParallelOptions()
+                                    {
+                                        MaxDegreeOfParallelism = options.ExecutionPolicy == ExecutionPolicy.Linear ? 1 :
+                                            Math.Min(Environment.ProcessorCount, pairs.Count)
+                                    }, body: pair =>
+                                    {
+                                        if (options.CmdExportCode == ExportCodeType.Commits)
+                                        {
+                                            resultsBag.Add(pair.AsCommits.ToList());
+                                        }
+                                        else if (options.CmdExportCode == ExportCodeType.Files)
+                                        {
+                                            resultsBag.Add(pair.AsFiles.ToList());
+                                        }
+                                        else if (options.CmdExportCode == ExportCodeType.Hunks)
+                                        {
+                                            resultsBag.Add(pair.AsHunks.ToList());
+                                        }
+                                        else if (options.CmdExportCode == ExportCodeType.Blocks)
+                                        {
+                                            resultsBag.Add(pair.AsBlocks.ToList());
+                                        }
+                                        else if (options.CmdExportCode == ExportCodeType.Lines)
+                                        {
+                                            resultsBag.Add(pair.AsLines.ToList());
+                                        }
+                                    });
+
+
+                                    // Write the results:
+                                    var allResults = resultsBag.SelectMany(x => x).OrderByDescending(ee => ee.ExportCommitPair.Child.Author.When.UtcDateTime).ToList();
+                                    if (options.OutputFile.EndsWith("csv", StringComparison.OrdinalIgnoreCase)) // Completely ignore for JSON exports.
+                                    {
+                                        allResults.ForEach(r => r.ContentEncoding = options.CmdExport_Encoding);
+                                    }
 
 
                                     if (options.CmdExportCode == ExportCodeType.Commits)
@@ -327,152 +322,152 @@ namespace GitTools
                                         allResults.Cast<ExportableLine>().WriteCsvOrJson(options.OutputFile);
                                     }
 
-									logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} to {options.OutputFile}.");
+                                    logger.LogInformation($"Wrote a total of {allResults.Count} {options.CmdExportCode.ToString()} to {options.OutputFile}.");
                                     Environment.Exit((int)ExitCodes.OK);
                                 }
                             }
-							catch (Exception ex)
-							{
-								logger.LogError($"An exception occurred: {ex.Message}");
-								Environment.Exit((int)ExitCodes.CmdError);
-							}
-						}
-						#endregion
+                            catch (Exception ex)
+                            {
+                                logger.LogError($"An exception occurred: {ex.Message}");
+                                Environment.Exit((int)ExitCodes.CmdError);
+                            }
+                        }
+                        #endregion
 
 
-						using (span)
-						using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
-								Console.Out : File.CreateText(options.OutputFile))
-						{
-							// Now we extract some info and write it out later.
-							var csvc = new CsvContext();
-							var outd = new CsvFileDescription
-							{
-								FirstLineHasColumnNames = true,
-								FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
-								SeparatorChar = ',',
-								QuoteAllFields = true,
-								EnforceCsvColumnAttribute = true,
-								TextEncoding = System.Text.Encoding.UTF8
-							};
+                        using (span)
+                        using (var writer = String.IsNullOrWhiteSpace(options.OutputFile) ?
+                                Console.Out : File.CreateText(options.OutputFile))
+                        {
+                            // Now we extract some info and write it out later.
+                            var csvc = new CsvContext();
+                            var outd = new CsvFileDescription
+                            {
+                                FirstLineHasColumnNames = true,
+                                FileCultureInfo = Thread.CurrentThread.CurrentUICulture,
+                                SeparatorChar = ',',
+                                QuoteAllFields = true,
+                                EnforceCsvColumnAttribute = true,
+                                TextEncoding = System.Text.Encoding.UTF8
+                            };
 
-							IAnalyzer<IAnalyzedCommit> analyzer = null;
-							switch (options.AnalysisType)
-							{
-								case AnalysisType.Simple:
-									analyzer = new SimpleAnalyzer(options.RepoPath, span);
-									break;
-								case AnalysisType.Extended:
-									analyzer = new ExtendedAnalyzer(options.RepoPath, span, options.SkipSizeInExtendedAnalysis);
-									break;
-								default:
-									throw new Exception($"The {nameof(AnalysisType)} '{options.AnalysisType.ToString()}' is not supported.");
-							}
+                            IAnalyzer<IAnalyzedCommit> analyzer = null;
+                            switch (options.AnalysisType)
+                            {
+                                case AnalysisType.Simple:
+                                    analyzer = new SimpleAnalyzer(options.RepoPath, span);
+                                    break;
+                                case AnalysisType.Extended:
+                                    analyzer = new ExtendedAnalyzer(options.RepoPath, span, options.SkipSizeInExtendedAnalysis);
+                                    break;
+                                default:
+                                    throw new Exception($"The {nameof(AnalysisType)} '{options.AnalysisType.ToString()}' is not supported.");
+                            }
 
-							logger.LogDebug($"Using analyzer: {analyzer.GetType().Name}");
+                            logger.LogDebug($"Using analyzer: {analyzer.GetType().Name}");
 
-							analyzer.ExecutionPolicy = options.ExecutionPolicy;
-							var details = analyzer.AnalyzeCommits().ToList();
-							logger.LogInformation("Analysis done, attempting to write to CSV..");
-							if (options.AnalysisType == AnalysisType.Simple)
-							{
-								csvc.Write(details.Cast<SimpleCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
-							}
-							else if (options.AnalysisType == AnalysisType.Extended)
-							{
-								csvc.Write(details.Cast<ExtendedCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
-							}
+                            analyzer.ExecutionPolicy = options.ExecutionPolicy;
+                            var details = analyzer.AnalyzeCommits().ToList();
+                            logger.LogInformation("Analysis done, attempting to write to CSV..");
+                            if (options.AnalysisType == AnalysisType.Simple)
+                            {
+                                csvc.Write(details.Cast<SimpleCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
+                            }
+                            else if (options.AnalysisType == AnalysisType.Extended)
+                            {
+                                csvc.Write(details.Cast<ExtendedCommitDetails>().OrderBy(c => c.CommitterTime), writer, outd);
+                            }
 
-							logger.LogInformation($"Wrote {details.Count} rows to file {options.OutputFile}.");
-						}
-					}
-				}
-				catch (Exception ex)
-				{
-					logger.LogError(
-						"Cannot open the repository specified by path or URL '{0}'.", options.RepoPath);
-					logger.LogError("Exception caught: {0}", ex.Message);
-					logger.LogTrace("Exception trace: {0}", ex.StackTrace);
-					if (ex is AggregateException)
-					{
-						foreach (var innerEx in (ex as AggregateException).InnerExceptions)
-						{
-							logger.LogError("Message: {0}", innerEx.Message);
-							logger.LogError("Trace: {0}", innerEx.StackTrace);
-						}
-					}
-					Environment.Exit((int)ExitCodes.RepoInvalid);
-				}
-			}
-			else
-			{
-				logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
-				logger.LogInformation(options.GetUsage(
-					ExitCodes.UsageInvalid, wasHelpRequested: options.ShowHelp));
-				Environment.Exit((int)ExitCodes.UsageInvalid);
-			}
+                            logger.LogInformation($"Wrote {details.Count} rows to file {options.OutputFile}.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(
+                        "Cannot open the repository specified by path or URL '{0}'.", options.RepoPath);
+                    logger.LogError("Exception caught: {0}", ex.Message);
+                    logger.LogTrace("Exception trace: {0}", ex.StackTrace);
+                    if (ex is AggregateException)
+                    {
+                        foreach (var innerEx in (ex as AggregateException).InnerExceptions)
+                        {
+                            logger.LogError("Message: {0}", innerEx.Message);
+                            logger.LogError("Trace: {0}", innerEx.StackTrace);
+                        }
+                    }
+                    Environment.Exit((int)ExitCodes.RepoInvalid);
+                }
+            }
+            else
+            {
+                logger.LogCurrentScope = logger.LogCurrentTime = logger.LogCurrentType = false;
+                logger.LogInformation(options.GetUsage(
+                    ExitCodes.UsageInvalid, wasHelpRequested: options.ShowHelp));
+                Environment.Exit((int)ExitCodes.UsageInvalid);
+            }
 
-			Environment.Exit((int)ExitCodes.OK);
-		}
-	}
+            Environment.Exit((int)ExitCodes.OK);
+        }
+    }
 
 
-	/// <summary>
-	/// Class that represents all options that can be supplied using
-	/// the command-line interface of this application.
-	/// </summary>
-	internal class CommandLineOptions
-	{
-		[Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
-		public String RepoPath { get; set; }
+    /// <summary>
+    /// Class that represents all options that can be supplied using
+    /// the command-line interface of this application.
+    /// </summary>
+    internal class CommandLineOptions
+    {
+        [Option('r', "repo-path", Required = true, HelpText = "Absolute path or HTTP(S) URL to a git-repository. If a URL is provided, the repository will be cloned to a temporary folder first, using its defined default branch. Also allows passing in an Internal-ID of a project from the database.")]
+        public String RepoPath { get; set; }
 
-		[Option('o', "out-file", Required = false, HelpText = "A path to a file to write the analysis' result to. If left unspecified, output is written to the console.")]
-		public String OutputFile { get; set; }
+        [Option('o', "out-file", Required = false, HelpText = "A path to a file to write the analysis' result to. If left unspecified, output is written to the console.")]
+        public String OutputFile { get; set; }
 
-		[Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
-		public String TempDirectory { get; set; }
+        [Option('t', "temp-dir", Required = false, HelpText = "Optional. A fully qualified path to a custom temporary directory. If not specified, will use the system's default. Be aware that the directory may be wiped at any point in time.")]
+        public String TempDirectory { get; set; }
 
-		[Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
-		public String Since { get; set; }
+        [Option('s', "since", Required = false, HelpText = "Optional. Analyze data since a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+        public String Since { get; set; }
 
-		[Option("since-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using a since-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
-		[JsonConverter(typeof(StringEnumConverter))]
-		public SinceUntilUseDate SinceUseDate { get; set; }
+        [Option("since-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using a since-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public SinceUntilUseDate SinceUseDate { get; set; }
 
-		[Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
-		public String Until { get; set; }
+        [Option('u', "until", Required = false, HelpText = "Optional. Analyze data until (inclusive) a certain date or SHA1. The required format for a date/time is 'yyyy-MM-dd HH:mm'. If using a hash, at least 3 characters are required.")]
+        public String Until { get; set; }
 
-		[Option("until-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using an until-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
-		[JsonConverter(typeof(StringEnumConverter))]
-		public SinceUntilUseDate UntilUseDate { get; set; }
+        [Option("until-use-date", Required = false, DefaultValue = SinceUntilUseDate.Committer, HelpText = "Optional. If using an until-date to delimit the range of commits, it can either be extracted from the " + nameof(SinceUntilUseDate.Author) + " or the " + nameof(SinceUntilUseDate.Committer) + ".")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public SinceUntilUseDate UntilUseDate { get; set; }
 
-		[Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Extended, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
-		[JsonConverter(typeof(StringEnumConverter))]
-		public AnalysisType AnalysisType { get; set; } = AnalysisType.Extended;
+        [Option('a', "analysis-type", Required = false, DefaultValue = AnalysisType.Extended, HelpText = "Optional. The type of analysis to run. Allowed values are " + nameof(AnalysisType.Simple) + " and " + nameof(AnalysisType.Extended) + ". The extended analysis extracts all supported properties of any Git-repository.")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public AnalysisType AnalysisType { get; set; } = AnalysisType.Extended;
 
-		[Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
-		public Boolean SkipSizeInExtendedAnalysis { get; set; }
+        [Option('k', "skip-size", Required = false, DefaultValue = false, HelpText = "If specified, will skip any size-related measurements in the " + nameof(ExtendedCommitDetails) + ".")]
+        public Boolean SkipSizeInExtendedAnalysis { get; set; }
 
-		[Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
-		[JsonConverter(typeof(StringEnumConverter))]
-		public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
+        [Option('e', "exec-policy", Required = false, DefaultValue = ExecutionPolicy.Parallel, HelpText = "Optional. Set the execution policy for the analysis. Allowed values are " + nameof(ExecutionPolicy.Parallel) + " and " + nameof(ExecutionPolicy.Linear) + ". The former is faster while the latter uses only minimal resources.")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ExecutionPolicy ExecutionPolicy { get; set; } = ExecutionPolicy.Parallel;
 
-		[Option('i', "input-ids", Required = false, HelpText = "Optional. A path to a file with SHA1's of commits to analyze (one SHA1 per line). If given, then only those commits will be analyzed and all others will be skipped. Can be used in conjunction with --limit.")]
-		public String InputCommitIDs { get; set; }
+        [Option('i', "input-ids", Required = false, HelpText = "Optional. A path to a file with SHA1's of commits to analyze (one SHA1 per line). If given, then only those commits will be analyzed and all others will be skipped. Can be used in conjunction with --limit.")]
+        public String InputCommitIDs { get; set; }
 
-		[Option("limit", Required = false, HelpText = "Optional. A positive integer to limit the amount of commits analyzed. Can be used in conjunction with any other options (such as -i).")]
-		public UInt32? Limit { get; set; }
+        [Option("limit", Required = false, HelpText = "Optional. A positive integer to limit the amount of commits analyzed. Can be used in conjunction with any other options (such as -i).")]
+        public UInt32? Limit { get; set; }
 
-		[Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
-		[JsonConverter(typeof(StringEnumConverter))]
-		public LogLevel LogLevel { get; set; } = LogLevel.Information;
+        [Option('l', "log-level", Required = false, DefaultValue = LogLevel.Information, HelpText = "Optional. The Log-level can be one of (highest/most verbose to lowest/least verbose) Trace, Debug, Information, Warning, Error, Critical, None.")]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public LogLevel LogLevel { get; set; } = LogLevel.Information;
 
-		#region Command-Options
-		[Option("cmd-count-commits", Required = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
-		public Boolean? CmdCountCommits { get; set; }
+        #region Command-Options
+        [Option("cmd-count-commits", Required = false, HelpText = "Command. Counts the amount of commits as delimited by since/until. Writes a JSON-formatted object to the console, including the commits' IDs.")]
+        public Boolean? CmdCountCommits { get; set; }
 
-		[Option("cmd-generate-prompts", Required = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
-		public Boolean? CmdGeneratePrompts { get; set; }
+        [Option("cmd-generate-prompts", Required = false, HelpText = "Command. Generate prompts using a template for the selected commits. These prompts can be used for, e.g., Large Language Models.")]
+        public Boolean? CmdGeneratePrompts { get; set; }
 
         [Option('p', "prompt-template", Required = false, HelpText = "Optional. Option for the command --cmd-generate-prompts. A path to a file that holds a template for generating prompts.")]
         public String CmdGeneratePrompts_Template { get; set; }
@@ -481,60 +476,60 @@ namespace GitTools
         [JsonConverter(typeof(StringEnumConverter))]
         public ExportCodeType? CmdExportCode { get; set; }
 
-		[Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the commit message and the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
+        [Option("content-encoding", Required = false, DefaultValue = ContentEncoding.Plain, HelpText = "Option for the command --cmd-export-source. Sets how the commit message and the content of entities is encoded when exporting CSV. Must be one of " + nameof(ContentEncoding.Plain) + ", " + nameof(ContentEncoding.Base64) + ", or " + nameof(ContentEncoding.JSON) + ". " + nameof(ContentEncoding.Plain) + " is not recommended for CSV files. When exporting as JSON, this setting is ignored.")]
         [JsonConverter(typeof(StringEnumConverter))]
         public ContentEncoding CmdExport_Encoding { get; set; }
 
-		[Option("context-lines", Required = false, HelpText = "Optional (no default). Option for the command --cmd-export-source. The number of unchanged lines that define the boundary of a hunk (and to display before and after). If this value is large, then hunks will start to collapse into each other. This option is useful when exporting hunks, files, and commits. E.g., setting it to " + nameof(Int32) + "." + nameof(Int32.MaxValue) + " yields one hunk per file and per commit. The common git-default is 3 lines.")]
-		public Int32? CmdExport_ContextLines { get; set; }
+        [Option("context-lines", Required = false, HelpText = "Optional (no default). Option for the command --cmd-export-source. Cannot be used in conjunction with --code-mode. The number of unchanged lines that define the boundary of a hunk (and to display before and after). If this value is large, then hunks will start to collapse into each other. This option is useful when exporting hunks, files, and commits. E.g., setting it to " + nameof(Int32) + "." + nameof(Int32.MaxValue) + " yields one hunk per file and per commit. The common git-default is 3 lines.")]
+        public Int32? CmdExport_ContextLines { get; set; }
 
-		[Option("full-code", Required = false, HelpText = "Optional Boolean. Option for the command --cmd-export-source. If present, overrides the command --context-lines by setting it to " + nameof(Int32) + "." + nameof(Int32.MaxValue) + " if true. If --context-lines was not specified, this option *defaults to true* if --cmd-export-source is either Files or Commits. Exporting full code allows to fully reconstruct the original source code.")]
-		public Boolean? CmdExport_FullCode { get; set; }
+        [Option("code-mode", Required = false, HelpText = "Optional. Option for the command --cmd-export-source. Cannot be used in conjunction with --context-lines. Options are " + nameof(CodeMode.FullCode) + " and " + nameof(CodeMode.MetaOnly) + ". The first option essentially sets --context-lines by setting it to " + nameof(Int32) + ", thereby exporting all code. This is perhaps useful when extracting Commits or Files. The second option does not export any code, but all other properties.")]
+        public CodeMode? CmdExport_CodeMode { get; set; }
 
-		[Option("parent-gens", Required = false, DefaultValue = 0u, HelpText = "Optional. Option for the command --cmd-export-source. If greater than zero, will export data from up to n parent generations, for each commit.")]
-		public UInt32 CmdExport_ParentGens { get; set; }
+        [Option("parent-gens", Required = false, DefaultValue = 0u, HelpText = "Optional. Option for the command --cmd-export-source. If greater than zero, will export data from up to n parent generations, for each commit.")]
+        public UInt32 CmdExport_ParentGens { get; set; }
 
-		[Option("allow-incomplete-chains", Required = false, HelpText = "Optional. Option for the command --cmd-export-source. If true and --parent-gens is greater 0, allows exporting chains that are shorter than the requested number.")]
-		public Boolean? CmdExport_AllowIncompleteChains { get; set; }
-		#endregion
+        [Option("allow-incomplete-chains", Required = false, HelpText = "Optional. Option for the command --cmd-export-source. If true and --parent-gens is greater 0, allows exporting chains that are shorter than the requested number.")]
+        public Boolean? CmdExport_AllowIncompleteChains { get; set; }
+        #endregion
 
-		[Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
-		public Boolean ShowHelp { get; set; }
+        [Option('h', "help", Required = false, DefaultValue = false, HelpText = "Print this help-text and exit.")]
+        public Boolean ShowHelp { get; set; }
 
-		[ParserState]
-		public IParserState LastParserState { get; set; }
+        [ParserState]
+        public IParserState LastParserState { get; set; }
 
-		/// <summary>
-		/// Returns a help-text generated using the options of this class.
-		/// </summary>
-		/// <returns></returns>
-		public String GetUsage(ExitCodes exitCode = ExitCodes.OK, Boolean wasHelpRequested = false)
-		{
-			var fullLine = new String('-', ColoredConsole.WindowWidthSafe);
-			var ht = new HelpText
-			{
-				Heading = HeadingInfo.Default,
-				Copyright = CopyrightInfo.Default,
-				AdditionalNewLineAfterOption = true,
-				AddDashesToOption = true,
-				MaximumDisplayWidth = ColoredConsole.WindowWidthSafe
-			};
+        /// <summary>
+        /// Returns a help-text generated using the options of this class.
+        /// </summary>
+        /// <returns></returns>
+        public String GetUsage(ExitCodes exitCode = ExitCodes.OK, Boolean wasHelpRequested = false)
+        {
+            var fullLine = new String('-', ColoredConsole.WindowWidthSafe);
+            var ht = new HelpText
+            {
+                Heading = HeadingInfo.Default,
+                Copyright = CopyrightInfo.Default,
+                AdditionalNewLineAfterOption = true,
+                AddDashesToOption = true,
+                MaximumDisplayWidth = ColoredConsole.WindowWidthSafe
+            };
 
-			if (wasHelpRequested)
-			{
-				ht.AddOptions(this);
-			}
-			else
-			{
-				HelpText.DefaultParsingErrorsHandler(this, ht);
-			}
+            if (wasHelpRequested)
+            {
+                ht.AddOptions(this);
+            }
+            else
+            {
+                HelpText.DefaultParsingErrorsHandler(this, ht);
+            }
 
-			var exitCodes = !wasHelpRequested ? String.Empty : "\n\nPossible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
-				.OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
-			var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
-				"Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
+            var exitCodes = !wasHelpRequested ? String.Empty : "\n\nPossible Exit-Codes: " + String.Join(", ", Enum.GetValues(typeof(ExitCodes)).Cast<ExitCodes>()
+                .OrderByDescending(e => (int)e).Select(ec => $"{ec.ToString()} ({(int)ec})"));
+            var exitReason = exitCode == ExitCodes.UsageInvalid && !wasHelpRequested ?
+                "Error: The given parameters are invalid and cannot be parsed. You must not specify unrecognized parameters. Use '-h' or '--help' to get the full usage info.\n\n" : String.Empty;
 
-			return $"{fullLine}\n{exitReason}{ht}{exitCodes}\n\n{fullLine}";
-		}
-	}
+            return $"{fullLine}\n{exitReason}{ht}{exitCodes}\n\n{fullLine}";
+        }
+    }
 }
