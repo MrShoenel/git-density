@@ -25,6 +25,26 @@ using JsonIgnoreAttribute = Newtonsoft.Json.JsonIgnoreAttribute;
 namespace GitTools.SourceExport
 {
     /// <summary>
+    /// Used as an option to GitTools. Cannot be used in conjunction with the
+    /// number of context lines.
+    /// </summary>
+    public enum CodeMode
+    {
+        /// <summary>
+        /// Export full code. This will set the number of context lines to the
+        /// maximum as to include all surrounding code, effectively collapsing
+        /// all hunks.
+        /// </summary>
+        FullCode,
+
+        /// <summary>
+        /// Do not export the source code itself, but rather only the metadata
+        /// associated with the entity (e.g., block index, line number, etc..).
+        /// </summary>
+        MetaOnly
+    }
+
+    /// <summary>
     /// The content value of each <see cref="ExportableEntity"/> can be encoded to
     /// Base64 or JSON. This is useful when exporting CSV, for example. No encoding
     /// should be applied when exporting entities to JSON.
